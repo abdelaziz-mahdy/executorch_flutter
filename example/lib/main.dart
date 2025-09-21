@@ -13,6 +13,7 @@
 library;
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -364,17 +365,24 @@ class _ExecuTorchHomePageState extends State<ExecuTorchHomePage> {
     // For classification models, find the class with highest probability
     if (output.dataType == TensorType.float32) {
       final byteData = ByteData.sublistView(output.data);
-      final probabilities = <double>[];
+      final logits = <double>[];
 
       for (int i = 0; i < output.data.length ~/ 4; i++) {
-        probabilities.add(byteData.getFloat32(i * 4, Endian.host));
+        logits.add(byteData.getFloat32(i * 4, Endian.host));
       }
+
+      debugPrint('Raw logits: first 5 = [${logits.take(5).map((e) => e.toStringAsFixed(3)).join(', ')}]');
+
+      // Apply softmax to convert logits to probabilities
+      final probabilities = _applySoftmax(logits);
 
       // Find top-5 predictions
       final indexed = List.generate(probabilities.length, (i) => MapEntry(i, probabilities[i]));
       indexed.sort((a, b) => b.value.compareTo(a.value));
 
       final top5 = indexed.take(5).toList();
+
+      debugPrint('Top prediction: class ${top5.first.key}, confidence ${(top5.first.value * 100).toStringAsFixed(1)}%');
 
       // Build result string with labels if available
       if (_imageNetLabels.isNotEmpty) {
@@ -395,6 +403,20 @@ class _ExecuTorchHomePageState extends State<ExecuTorchHomePage> {
     }
 
     return 'Output shape: ${output.shape}, type: ${output.dataType}';
+  }
+
+  List<double> _applySoftmax(List<double> logits) {
+    // Find max for numerical stability
+    final maxLogit = logits.reduce((a, b) => a > b ? a : b);
+
+    // Compute exp(logit - max) for each logit
+    final expValues = logits.map((logit) => math.exp(logit - maxLogit)).toList();
+
+    // Compute sum of all exp values
+    final sumExp = expValues.reduce((a, b) => a + b);
+
+    // Normalize to get probabilities
+    return expValues.map((exp) => exp / sumExp).toList();
   }
 
   Future<void> _updateMemoryUsage() async {
