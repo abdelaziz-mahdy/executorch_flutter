@@ -4,8 +4,8 @@ library executorch_model;
 import 'dart:async';
 import 'package:meta/meta.dart';
 
-import 'executorch_types.dart';
-import '../src/generated/executorch_api.dart' as pigeon;
+import 'generated/executorch_api.dart';
+import 'executorch_errors.dart';
 
 /// High-level wrapper for an ExecuTorch model instance
 ///
@@ -23,10 +23,10 @@ class ExecuTorchModel {
   final String modelId;
 
   /// Metadata describing the model's structure and requirements
-  final ModelMetadataWrapper metadata;
+  final ModelMetadata metadata;
 
   /// Reference to the host API for platform communication
-  final pigeon.ExecutorchHostApi hostApi;
+  final ExecutorchHostApi hostApi;
 
   /// Whether this model instance has been disposed
   bool _disposed = false;
@@ -36,10 +36,10 @@ class ExecuTorchModel {
   /// [filePath] must point to a valid ExecuTorch .pte model file.
   /// Returns the loaded model instance or throws an exception if loading fails.
   static Future<ExecuTorchModel> loadFromFile(String filePath) async {
-    final hostApi = pigeon.ExecutorchHostApi();
+    final hostApi = ExecutorchHostApi();
     final loadResult = await hostApi.loadModel(filePath);
 
-    if (loadResult.state != pigeon.ModelState.ready) {
+    if (loadResult.state != ModelState.ready) {
       throw ExecuTorchException(
         'Failed to load model from $filePath: ${loadResult.errorMessage ?? "Unknown error"}',
       );
@@ -53,7 +53,7 @@ class ExecuTorchModel {
 
     return ExecuTorchModel._(
       modelId: loadResult.modelId,
-      metadata: ModelMetadataWrapper.fromPigeon(loadResult.metadata!),
+      metadata: loadResult.metadata!,
       hostApi: hostApi,
     );
   }
@@ -64,7 +64,7 @@ class ExecuTorchModel {
   /// and want to wrap it in the high-level interface.
   static Future<ExecuTorchModel> fromExisting({
     required String modelId,
-    required pigeon.ExecutorchHostApi hostApi,
+    required ExecutorchHostApi hostApi,
   }) async {
     final metadata = await hostApi.getModelMetadata(modelId);
     if (metadata == null) {
@@ -74,7 +74,7 @@ class ExecuTorchModel {
     }
 
     final state = await hostApi.getModelState(modelId);
-    if (state != pigeon.ModelState.ready) {
+    if (state != ModelState.ready) {
       throw ExecuTorchException(
         'Model $modelId is not in ready state: $state',
       );
@@ -82,7 +82,7 @@ class ExecuTorchModel {
 
     return ExecuTorchModel._(
       modelId: modelId,
-      metadata: ModelMetadataWrapper.fromPigeon(metadata),
+      metadata: metadata,
       hostApi: hostApi,
     );
   }
@@ -95,8 +95,8 @@ class ExecuTorchModel {
   /// [requestId] provides a unique identifier for tracking (optional).
   ///
   /// Returns the inference result or throws an exception if inference fails.
-  Future<InferenceResultWrapper> runInference({
-    required List<TensorDataWrapper> inputs,
+  Future<InferenceResult> runInference({
+    required List<TensorData> inputs,
     Map<String, Object>? options,
     int? timeoutMs,
     String? requestId,
@@ -104,21 +104,20 @@ class ExecuTorchModel {
     _checkNotDisposed();
     _validateInputs(inputs);
 
-    final request = InferenceRequestWrapper(
+    final request = InferenceRequest(
       modelId: modelId,
-      inputs: inputs,
-      options: options,
+      inputs: inputs.cast<TensorData?>(),
+      options: options?.cast<String?, Object?>(),
       timeoutMs: timeoutMs,
       requestId: requestId,
     );
 
-    final pigeonResult = await hostApi.runInference(request.toPigeon());
-    final result = InferenceResultWrapper.fromPigeon(pigeonResult);
+    final result = await hostApi.runInference(request);
 
-    if (!result.isSuccess) {
+    if (result.status != InferenceStatus.success) {
       throw ExecuTorchInferenceException(
         'Inference failed: ${result.errorMessage ?? "Unknown error"}',
-        result: result,
+        result.errorMessage,
       );
     }
 
@@ -129,8 +128,8 @@ class ExecuTorchModel {
   ///
   /// This is a convenience method for models that take a single input.
   /// Equivalent to calling [runInference] with a single-element input list.
-  Future<InferenceResultWrapper> runSingleInput({
-    required TensorDataWrapper input,
+  Future<InferenceResult> runSingleInput({
+    required TensorData input,
     Map<String, Object>? options,
     int? timeoutMs,
     String? requestId,
@@ -144,7 +143,7 @@ class ExecuTorchModel {
   }
 
   /// Get the current state of this model
-  Future<pigeon.ModelState> getState() async {
+  Future<ModelState> getState() async {
     return hostApi.getModelState(modelId);
   }
 
@@ -152,7 +151,7 @@ class ExecuTorchModel {
   Future<bool> get isReady async {
     if (_disposed) return false;
     final state = await getState();
-    return state == pigeon.ModelState.ready;
+    return state == ModelState.ready;
   }
 
   /// Check if this model has been disposed
@@ -161,24 +160,26 @@ class ExecuTorchModel {
   /// Get the primary (first) input specification
   ///
   /// This is a convenience property for models with a single primary input.
-  pigeon.TensorSpec? get primaryInputSpec => metadata.primaryInput;
+  TensorSpec? get primaryInputSpec => metadata.inputSpecs.isNotEmpty ? metadata.inputSpecs.first : null;
 
   /// Get the primary (first) output specification
   ///
   /// This is a convenience property for models with a single primary output.
-  pigeon.TensorSpec? get primaryOutputSpec => metadata.primaryOutput;
+  TensorSpec? get primaryOutputSpec => metadata.outputSpecs.isNotEmpty ? metadata.outputSpecs.first : null;
 
   /// Validate that inputs match the model's input specifications
-  void _validateInputs(List<TensorDataWrapper> inputs) {
-    if (inputs.length != metadata.inputSpecs.length) {
+  void _validateInputs(List<TensorData> inputs) {
+    final inputSpecs = metadata.inputSpecs.whereType<TensorSpec>().toList();
+
+    if (inputs.length != inputSpecs.length) {
       throw ExecuTorchValidationException(
-        'Input count mismatch: expected ${metadata.inputSpecs.length}, got ${inputs.length}',
+        'Input count mismatch: expected ${inputSpecs.length}, got ${inputs.length}',
       );
     }
 
     for (int i = 0; i < inputs.length; i++) {
       final input = inputs[i];
-      final spec = metadata.inputSpecs[i];
+      final spec = inputSpecs[i];
 
       // Validate data type
       if (input.dataType != spec.dataType) {
@@ -188,15 +189,18 @@ class ExecuTorchModel {
       }
 
       // Validate shape (allowing dynamic dimensions marked as -1)
-      if (input.shape.length != spec.shape.length) {
+      final inputShape = input.shape.whereType<int>().toList();
+      final specShape = spec.shape.whereType<int>().toList();
+
+      if (inputShape.length != specShape.length) {
         throw ExecuTorchValidationException(
-          'Input $i shape rank mismatch: expected ${spec.shape.length}D, got ${input.shape.length}D',
+          'Input $i shape rank mismatch: expected ${specShape.length}D, got ${inputShape.length}D',
         );
       }
 
-      for (int j = 0; j < input.shape.length; j++) {
-        final inputDim = input.shape[j];
-        final specDim = spec.shape[j];
+      for (int j = 0; j < inputShape.length; j++) {
+        final inputDim = inputShape[j];
+        final specDim = specShape[j];
 
         // Skip validation for dynamic dimensions (-1)
         if (specDim == -1) continue;
@@ -208,10 +212,10 @@ class ExecuTorchModel {
         }
       }
 
-      // Validate tensor data integrity
-      if (!input.isValid) {
+      // Basic tensor data validation - just check data is not empty
+      if (input.data.isEmpty) {
         throw ExecuTorchValidationException(
-          'Input $i has invalid data: expected ${input.expectedSizeBytes} bytes, got ${input.data.length} bytes',
+          'Input $i has empty data',
         );
       }
     }
@@ -247,48 +251,7 @@ class ExecuTorchModel {
   @override
   String toString() {
     final disposedStr = _disposed ? ' (DISPOSED)' : '';
-    return 'ExecuTorchModel($modelId: ${metadata.description})$disposedStr';
+    return 'ExecuTorchModel($modelId: ${metadata.modelName})$disposedStr';
   }
 }
 
-/// Base exception class for ExecuTorch-related errors
-class ExecuTorchException implements Exception {
-  const ExecuTorchException(this.message, {this.details});
-
-  final String message;
-  final Map<String, Object>? details;
-
-  @override
-  String toString() => 'ExecuTorchException: $message';
-}
-
-/// Exception thrown when model validation fails
-class ExecuTorchValidationException extends ExecuTorchException {
-  const ExecuTorchValidationException(String message, {Map<String, Object>? details})
-      : super(message, details: details);
-
-  @override
-  String toString() => 'ExecuTorchValidationException: $message';
-}
-
-/// Exception thrown when inference execution fails
-class ExecuTorchInferenceException extends ExecuTorchException {
-  const ExecuTorchInferenceException(String message, {
-    Map<String, Object>? details,
-    this.result,
-  }) : super(message, details: details);
-
-  final InferenceResultWrapper? result;
-
-  @override
-  String toString() => 'ExecuTorchInferenceException: $message';
-}
-
-/// Exception thrown when model loading fails
-class ExecuTorchModelLoadException extends ExecuTorchException {
-  const ExecuTorchModelLoadException(String message, {Map<String, Object>? details})
-      : super(message, details: details);
-
-  @override
-  String toString() => 'ExecuTorchModelLoadException: $message';
-}

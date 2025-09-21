@@ -5,9 +5,9 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'executorch_types.dart';
 import 'executorch_model.dart';
-import '../src/generated/executorch_api.dart' as pigeon;
+import 'executorch_errors.dart';
+import 'generated/executorch_api.dart';
 
 /// High-level manager for ExecuTorch inference operations
 ///
@@ -26,7 +26,7 @@ class ExecutorchManager {
   }
 
   /// Internal reference to the Pigeon host API
-  late final pigeon.ExecutorchHostApi _hostApi = pigeon.ExecutorchHostApi();
+  late final ExecutorchHostApi _hostApi = ExecutorchHostApi();
 
   /// Cache of loaded models by model ID
   final Map<String, ExecuTorchModel> _loadedModels = {};
@@ -47,10 +47,10 @@ class ExecutorchManager {
       await _hostApi.getLoadedModels();
       _initialized = true;
     } catch (e) {
-      throw ExecuTorchException(
+      throw ExecuTorchPlatformException(
         'Failed to initialize ExecutorchManager: $e\n'
         'Make sure ExecuTorch native libraries are properly installed.',
-        details: {'initialization_error': e.toString()},
+        e.toString(),
       );
     }
   }
@@ -67,9 +67,9 @@ class ExecutorchManager {
 
     // Validate file path
     if (!File(filePath).existsSync()) {
-      throw ExecuTorchModelLoadException(
+      throw ExecuTorchModelException(
         'Model file not found: $filePath',
-        details: {'file_path': filePath},
+        'file_path: $filePath',
       );
     }
 
@@ -79,9 +79,9 @@ class ExecutorchManager {
       return model;
     } catch (e) {
       if (e is ExecuTorchException) rethrow;
-      throw ExecuTorchModelLoadException(
+      throw ExecuTorchModelException(
         'Failed to load model from $filePath: $e',
-        details: {'file_path': filePath, 'error': e.toString()},
+        'file_path: $filePath, error: ${e.toString()}',
       );
     }
   }
@@ -125,9 +125,9 @@ class ExecutorchManager {
       final ids = await _hostApi.getLoadedModels();
       return ids.whereType<String>().toList();
     } catch (e) {
-      throw ExecuTorchException(
+      throw ExecuTorchPlatformException(
         'Failed to get loaded model IDs: $e',
-        details: {'error': e.toString()},
+        e.toString(),
       );
     }
   }
@@ -136,9 +136,9 @@ class ExecutorchManager {
   ///
   /// This is a convenience method that looks up the model by ID and runs inference.
   /// For better performance and type safety, prefer using [ExecuTorchModel.runInference] directly.
-  Future<InferenceResultWrapper> runInference({
+  Future<InferenceResult> runInference({
     required String modelId,
-    required List<TensorDataWrapper> inputs,
+    required List<TensorData> inputs,
     Map<String, Object>? options,
     int? timeoutMs,
     String? requestId,
@@ -147,9 +147,9 @@ class ExecutorchManager {
 
     final model = _loadedModels[modelId];
     if (model == null) {
-      throw ExecuTorchException(
+      throw ExecuTorchModelException(
         'Model $modelId not found. Load the model first using loadModel().',
-        details: {'model_id': modelId},
+        'model_id: $modelId',
       );
     }
 
@@ -239,56 +239,44 @@ class ExecutorchManager {
     };
   }
 
-  /// Create a tensor data wrapper with validation
+  /// Create tensor data with validation
   ///
   /// This is a convenience factory method for creating properly validated
-  /// TensorDataWrapper instances. It performs shape and data size validation.
-  TensorDataWrapper createTensorData({
+  /// TensorData instances. It performs shape and data size validation.
+  TensorData createTensorData({
     required List<int> shape,
-    required pigeon.TensorType dataType,
+    required TensorType dataType,
     required List<num> data,
     String? name,
   }) {
     // Convert numeric data to bytes based on data type
     final bytes = _convertNumericDataToBytes(data, dataType);
 
-    final tensor = TensorDataWrapper(
-      shape: shape,
+    final tensor = TensorData(
+      shape: shape.cast<int?>(),
       dataType: dataType,
       data: bytes,
       name: name,
     );
 
-    if (!tensor.isValid) {
-      throw ExecuTorchValidationException(
-        'Invalid tensor data: expected ${tensor.expectedSizeBytes} bytes for shape $shape and type $dataType, got ${bytes.length} bytes',
-        details: {
-          'shape': shape,
-          'data_type': dataType.toString(),
-          'expected_bytes': tensor.expectedSizeBytes,
-          'actual_bytes': bytes.length,
-        },
-      );
-    }
-
     return tensor;
   }
 
   /// Utility method to convert numeric data to bytes
-  static Uint8List _convertNumericDataToBytes(List<num> data, pigeon.TensorType dataType) {
+  static Uint8List _convertNumericDataToBytes(List<num> data, TensorType dataType) {
     switch (dataType) {
-      case pigeon.TensorType.float32:
+      case TensorType.float32:
         final float32List = Float32List.fromList(data.map((e) => e.toDouble()).toList());
         return float32List.buffer.asUint8List();
 
-      case pigeon.TensorType.int32:
+      case TensorType.int32:
         final int32List = Int32List.fromList(data.map((e) => e.toInt()).toList());
         return int32List.buffer.asUint8List();
 
-      case pigeon.TensorType.int8:
+      case TensorType.int8:
         return Uint8List.fromList(data.map((e) => e.toInt().clamp(-128, 127) + 128).toList());
 
-      case pigeon.TensorType.uint8:
+      case TensorType.uint8:
         return Uint8List.fromList(data.map((e) => e.toInt().clamp(0, 255)).toList());
     }
   }
@@ -296,8 +284,9 @@ class ExecutorchManager {
   /// Ensure the manager has been initialized
   void _ensureInitialized() {
     if (!_initialized) {
-      throw ExecuTorchException(
+      throw ExecuTorchPlatformException(
         'ExecutorchManager not initialized. Call initialize() first.',
+        null,
       );
     }
   }
@@ -320,7 +309,7 @@ class TensorUtils {
   TensorUtils._();
 
   /// Create a float32 tensor from a 2D list (commonly used for images)
-  static TensorDataWrapper createFloat32Tensor2D({
+  static TensorData createFloat32Tensor2D({
     required List<List<double>> data,
     String? name,
   }) {
@@ -330,14 +319,14 @@ class TensorUtils {
 
     return ExecutorchManager.instance.createTensorData(
       shape: [height, width],
-      dataType: pigeon.TensorType.float32,
+      dataType: TensorType.float32,
       data: flatData,
       name: name,
     );
   }
 
   /// Create a float32 tensor from a 3D list (commonly used for RGB images)
-  static TensorDataWrapper createFloat32Tensor3D({
+  static TensorData createFloat32Tensor3D({
     required List<List<List<double>>> data,
     String? name,
   }) {
@@ -348,14 +337,14 @@ class TensorUtils {
 
     return ExecutorchManager.instance.createTensorData(
       shape: [depth, height, width],
-      dataType: pigeon.TensorType.float32,
+      dataType: TensorType.float32,
       data: flatData,
       name: name,
     );
   }
 
   /// Create a float32 tensor from a 4D list (commonly used for batched images)
-  static TensorDataWrapper createFloat32Tensor4D({
+  static TensorData createFloat32Tensor4D({
     required List<List<List<List<double>>>> data,
     String? name,
   }) {
@@ -370,15 +359,15 @@ class TensorUtils {
 
     return ExecutorchManager.instance.createTensorData(
       shape: [batch, depth, height, width],
-      dataType: pigeon.TensorType.float32,
+      dataType: TensorType.float32,
       data: flatData,
       name: name,
     );
   }
 
-  /// Extract numeric data from a tensor wrapper
-  static List<double> extractFloat32Data(TensorDataWrapper tensor) {
-    if (tensor.dataType != pigeon.TensorType.float32) {
+  /// Extract numeric data from a tensor
+  static List<double> extractFloat32Data(TensorData tensor) {
+    if (tensor.dataType != TensorType.float32) {
       throw ArgumentError('Tensor is not float32 type');
     }
 
@@ -386,9 +375,9 @@ class TensorUtils {
     return float32List.toList();
   }
 
-  /// Extract integer data from a tensor wrapper
-  static List<int> extractInt32Data(TensorDataWrapper tensor) {
-    if (tensor.dataType != pigeon.TensorType.int32) {
+  /// Extract integer data from a tensor
+  static List<int> extractInt32Data(TensorData tensor) {
+    if (tensor.dataType != TensorType.int32) {
       throw ArgumentError('Tensor is not int32 type');
     }
 

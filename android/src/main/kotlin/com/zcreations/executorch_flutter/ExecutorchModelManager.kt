@@ -306,6 +306,7 @@ class ExecutorchModelManager(
         )
     }
 
+
     private fun validateInputTensors(inputs: List<TensorData>, metadata: ModelMetadata) {
         if (inputs.size != metadata.inputSpecs.size) {
             throw ValidationException(

@@ -15,11 +15,18 @@ import 'package:executorch_flutter/executorch_flutter.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('getPlatformVersion test', (WidgetTester tester) async {
-    final ExecutorchFlutter plugin = ExecutorchFlutter();
-    final String? version = await plugin.getPlatformVersion();
-    // The version string depends on the host platform running the test, so
-    // just assert that some non-empty string is returned.
-    expect(version?.isNotEmpty, true);
+  testWidgets('ExecutorchManager initialization test', (WidgetTester tester) async {
+    final manager = ExecutorchManager.instance;
+
+    // Test that manager can be initialized
+    await manager.initialize();
+
+    // Test that manager is available after initialization
+    final isAvailable = await manager.isAvailable();
+    expect(isAvailable, true);
+
+    // Test version info
+    final versionInfo = manager.getVersionInfo();
+    expect(versionInfo.containsKey('executorch_flutter_version'), true);
   });
 }

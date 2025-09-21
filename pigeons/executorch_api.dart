@@ -33,6 +33,7 @@ enum ModelState {
   disposed,
 }
 
+
 /// Inference execution status
 enum InferenceStatus {
   success,
@@ -142,6 +143,7 @@ class ModelLoadResult {
   ModelMetadata? metadata;
   String? errorMessage;
 }
+
 
 /// Host API - Called from Dart to native platforms
 @HostApi()

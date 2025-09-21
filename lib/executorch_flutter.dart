@@ -25,7 +25,7 @@
 /// final model = await ExecutorchManager.instance.loadModel('path/to/model.pte');
 ///
 /// // Prepare input data
-/// final inputTensor = TensorDataWrapper(
+/// final inputTensor = TensorData(
 ///   shape: [1, 3, 224, 224],
 ///   dataType: TensorType.float32,
 ///   data: imageBytes,
@@ -35,7 +35,7 @@
 /// // Run inference
 /// final result = await model.runInference(inputs: [inputTensor]);
 ///
-/// if (result.isSuccess) {
+/// if (result.status == InferenceStatus.success) {
 ///   print('Inference completed in ${result.executionTimeMs}ms');
 ///   // Process result.outputs
 /// }
@@ -48,9 +48,9 @@
 ///
 /// - [ExecutorchManager]: Main entry point for ExecuTorch operations
 /// - [ExecuTorchModel]: Represents a loaded model instance
-/// - [TensorDataWrapper]: High-level tensor data representation
-/// - [InferenceResultWrapper]: Inference execution results
-/// - [TensorUtils]: Utility functions for tensor operations
+/// - [TensorData]: Tensor data representation
+/// - [InferenceResult]: Inference execution results
+/// - [ModelMetadata]: Model information and specifications
 ///
 /// ## Platform Support
 ///
@@ -67,38 +67,9 @@
 library executorch_flutter;
 
 // Core API exports
-export 'src/executorch_inference.dart' show
-    ExecutorchManager,
-    TensorUtils;
-
-export 'src/executorch_model.dart' show
-    ExecuTorchModel,
-    ExecuTorchModelLoadException;
-
-export 'src/executorch_types.dart' show
-    TensorDataWrapper,
-    ModelMetadataWrapper,
-    InferenceRequestWrapper,
-    InferenceResultWrapper;
-
-// Error handling
+export 'src/executorch_inference.dart';
+export 'src/executorch_model.dart';
 export 'src/executorch_errors.dart';
 
-// Generated Pigeon types (selective export of commonly used enums and classes)
-export 'src/generated/executorch_api.dart' show
-    // Enums
-    TensorType,
-    ModelState,
-    InferenceStatus,
-
-    // Core data classes that users might need to interact with
-    TensorSpec,
-    ModelMetadata,
-    TensorData,
-    InferenceRequest,
-    InferenceResult,
-    ModelLoadResult;
-
-// Note: ExecutorchHostApi and ExecutorchFlutterApi are not exported
-// as they are internal platform communication interfaces.
-// Users should interact with the high-level wrapper classes instead.
+// Generated Pigeon types - direct export for type safety
+export 'src/generated/executorch_api.dart';

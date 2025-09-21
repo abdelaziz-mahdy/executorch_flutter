@@ -264,7 +264,7 @@ class _ExecuTorchHomePageState extends State<ExecuTorchHomePage> {
       final inferenceTime = endTime.difference(startTime).inMilliseconds.toDouble();
 
       // Process results
-      final prediction = _postprocessResults(result.outputs ?? []);
+      final prediction = _postprocessResults(result.outputs?.whereType<TensorData>().toList());
 
       setState(() {
         _lastInferenceResult = prediction;
@@ -285,7 +285,7 @@ class _ExecuTorchHomePageState extends State<ExecuTorchHomePage> {
     }
   }
 
-  Future<TensorDataWrapper> _preprocessImage(Uint8List imageBytes) async {
+  Future<TensorData> _preprocessImage(Uint8List imageBytes) async {
     try {
       // Decode image
       final decodedImage = img.decodeImage(imageBytes);
@@ -340,8 +340,8 @@ class _ExecuTorchHomePageState extends State<ExecuTorchHomePage> {
 
       debugPrint('Preprocessed tensor: min=${floats.reduce((a, b) => a < b ? a : b).toStringAsFixed(3)}, max=${floats.reduce((a, b) => a > b ? a : b).toStringAsFixed(3)}');
 
-      final tensorData = TensorDataWrapper(
-        shape: [1, 3, 224, 224], // NCHW format
+      final tensorData = TensorData(
+        shape: [1, 3, 224, 224].cast<int?>(), // NCHW format
         dataType: TensorType.float32,
         data: floats.buffer.asUint8List(),
         name: 'input',
@@ -355,7 +355,7 @@ class _ExecuTorchHomePageState extends State<ExecuTorchHomePage> {
     }
   }
 
-  String _postprocessResults(List<TensorDataWrapper>? outputs) {
+  String _postprocessResults(List<TensorData>? outputs) {
     if (outputs == null || outputs.isEmpty) {
       return 'No outputs received';
     }
@@ -489,6 +489,7 @@ class _ExecuTorchHomePageState extends State<ExecuTorchHomePage> {
                     Text('Memory Usage: $_memoryUsage'),
                     const SizedBox(height: 8),
                     Text('Active Model: ${_activeModel?.source.name ?? "None"}'),
+                    const SizedBox(height: 8),
                     const SizedBox(height: 16),
                     Wrap(
                       spacing: 8.0,

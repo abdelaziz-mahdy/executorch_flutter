@@ -486,15 +486,19 @@ python generate_test_models.py
 
 When creating your own export process, keep these Flutter-specific considerations in mind:
 
-1. **Platform Optimization**:
-   - **iOS**: Prefer CoreML and MPS backends for best performance
-   - **Android**: Use XNNPACK for CPU optimization
-   - **Cross-platform**: Use portable backend as fallback
+1. **Backend Selection at Export Time**:
+   - **ExecuTorch backends are compile-time, not runtime choices**
+   - Models are compiled with specific backends baked in (e.g., CoreML, XNNPACK)
+   - The Flutter app loads pre-compiled models - no runtime backend detection needed
+   - **iOS**: Export models with CoreML and MPS backends for best performance
+   - **Android**: Export models with XNNPACK for CPU optimization
+   - **Cross-platform**: Export portable backend version as fallback
 
 2. **Asset Management**:
    - Export multiple platform-specific versions of your model
    - Use descriptive filenames (e.g., `model_ios_coreml.pte`, `model_android_xnnpack.pte`)
    - Keep models under 100MB for optimal app store distribution
+   - Flutter app can show which backends a model was compiled with via metadata
 
 3. **Input Validation**:
    - Match exact input shapes your Flutter app will provide

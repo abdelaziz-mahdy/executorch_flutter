@@ -5,10 +5,10 @@
  * ensuring consistent error reporting and debugging capabilities for ExecuTorch operations.
  */
 
-import 'generated/executorch_api.dart' as pigeon;
+import 'generated/executorch_api.dart';
 
 /// Base exception class for all ExecuTorch-related errors
-abstract class ExecuTorchException implements Exception {
+class ExecuTorchException implements Exception {
   const ExecuTorchException(this.message, [this.details]);
 
   final String message;
@@ -97,16 +97,16 @@ class ExecuTorchErrorMapper {
   }
 
   /// Create standardized error from ModelLoadResult
-  static ExecuTorchException? fromModelLoadResult(pigeon.ModelLoadResult result) {
-    if (result.state == pigeon.ModelState.error && result.errorMessage != null) {
+  static ExecuTorchException? fromModelLoadResult(ModelLoadResult result) {
+    if (result.state == ModelState.error && result.errorMessage != null) {
       return mapPlatformError(result.errorMessage!);
     }
     return null;
   }
 
   /// Create standardized error from InferenceResult
-  static ExecuTorchException? fromInferenceResult(pigeon.InferenceResult result) {
-    if (result.status == pigeon.InferenceStatus.error && result.errorMessage != null) {
+  static ExecuTorchException? fromInferenceResult(InferenceResult result) {
+    if (result.status == InferenceStatus.error && result.errorMessage != null) {
       return mapPlatformError(result.errorMessage!);
     }
     return null;
