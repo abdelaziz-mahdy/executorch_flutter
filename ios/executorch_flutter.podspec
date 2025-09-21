@@ -8,6 +8,7 @@ Pod::Spec.new do |s|
   s.summary          = 'A Flutter plugin for ExecuTorch on-device ML inference.'
   s.description      = <<-DESC
 A Flutter plugin package that enables on-device machine learning inference using ExecuTorch on iOS platforms.
+Supports ARM64 devices and simulators with optimized performance for mobile ML workloads.
                        DESC
   s.homepage         = 'https://github.com/pytorch/executorch'
   s.license          = { :file => '../LICENSE' }
@@ -16,34 +17,40 @@ A Flutter plugin package that enables on-device machine learning inference using
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.platform = :ios, '13.0'
 
-  # Flutter.framework does not contain a i386 slice.
-  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
+  # iOS deployment target aligned with ExecuTorch requirements
+  s.platform = :ios, '13.0'
   s.swift_version = '5.9'
 
-  # ExecuTorch framework dependencies
-  # Note: In a real implementation, these would reference the built frameworks
-  # For now, this is a placeholder for the framework integration
-  s.vendored_frameworks = [
-    'Frameworks/executorch.xcframework',
-    'Frameworks/backend_coreml.xcframework',
-    'Frameworks/backend_mps.xcframework',
-    'Frameworks/backend_xnnpack.xcframework'
-  ]
+  # ExecuTorch dependency is handled via Package.swift when Swift Package Manager is enabled
+  # The Package.swift file contains the ExecuTorch dependency configuration
 
-  # Required system frameworks for ExecuTorch iOS integration
+  # Required iOS system frameworks for ExecuTorch operation
   s.frameworks = [
-    'Accelerate',
-    'CoreML',
-    'MetalPerformanceShaders'
+    'Accelerate',          # BLAS/LAPACK operations
+    'CoreML',              # CoreML backend support
+    'MetalPerformanceShaders', # MPS backend support
+    'Foundation',          # Base iOS framework
+    'UIKit'               # iOS UI framework
   ]
 
-  # Compiler flags for ExecuTorch integration
+  # Additional system libraries required by ExecuTorch
+  s.libraries = ['c++', 'resolv']
+
+  # Basic build configuration for Swift package integration
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
-    'OTHER_CFLAGS' => '-DEXECUTORCH_BUILD_FLAVOR_OPTIMIZED',
-    'GCC_PREPROCESSOR_DEFINITIONS' => 'EXECUTORCH_BUILD_FLAVOR_OPTIMIZED=1'
+    'VALID_ARCHS' => 'arm64 x86_64',
+    'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
+    'CLANG_CXX_LIBRARY' => 'libc++',
+    'OTHER_LDFLAGS' => '-ObjC'
   }
+
+  # Additional build settings for release optimization
+  s.user_target_xcconfig = {
+    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386'
+  }
+
+  # Note: ExecuTorch dependency will be resolved via CocoaPods from the Swift package
 end

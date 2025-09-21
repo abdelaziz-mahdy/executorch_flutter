@@ -25,7 +25,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    namespace 'com.executorch.flutter'
+    namespace 'com.zcreations.executorch_flutter'
     compileSdk 34
 
     compileOptions {
@@ -49,10 +49,17 @@ android {
     dependencies {
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
-        // ExecuTorch dependencies (verified 2025-09-20)
+        // Kotlin coroutines for async operations
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+        // ExecuTorch dependencies (verified latest versions 2025-09-20)
         implementation 'org.pytorch:executorch-android:0.7.0'
         implementation 'com.facebook.soloader:soloader:0.10.5'
-        implementation 'com.facebook.fbjni:fbjni:0.5.1'
+        implementation 'com.facebook.fbjni:fbjni:0.7.0'  // Updated to latest
+
+        // AndroidX annotations
+        implementation 'androidx.annotation:annotation:1.7.1'
     }
 
     testOptions {

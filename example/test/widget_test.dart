@@ -11,17 +11,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:executorch_flutter_example/main.dart';
 
 void main() {
-  testWidgets('Verify Platform version', (WidgetTester tester) async {
+  testWidgets('ExecuTorch Example App loads', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const ExecuTorchExampleApp(cameras: []));
 
-    // Verify that platform version is retrieved.
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) => widget is Text &&
-                           widget.data!.startsWith('Running on:'),
-      ),
-      findsOneWidget,
-    );
+    // Verify that the app title is displayed.
+    expect(find.text('ExecuTorch Flutter Demo'), findsOneWidget);
+
+    // Verify that model management section exists.
+    expect(find.text('Model Management'), findsOneWidget);
   });
 }

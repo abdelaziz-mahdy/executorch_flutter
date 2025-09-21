@@ -1,0 +1,32 @@
+# ExecuTorch Flutter Plugin - Model Export Dependencies
+#
+# This file contains the Python dependencies required to export
+# PyTorch models to ExecuTorch format for use with the Flutter plugin.
+#
+# Requirements:
+# - Python 3.10, 3.11, or 3.12
+# - Consider using a virtual environment (conda or venv)
+#
+# Install with: pip install -r requirements.txt
+
+# Core ExecuTorch package (includes PyTorch dependencies)
+# This package includes export capabilities and Python runtime bindings
+executorch
+
+# Backend-specific dependencies
+# CoreML backend (macOS/iOS only) - included in executorch on macOS
+# XNNPACK backend - included in executorch
+# MPS backend (macOS/iOS only) - included in executorch on macOS
+
+# For additional backend support, you may need:
+# coremltools>=7.0  # For advanced CoreML features (macOS only)
+
+# Utilities for model handling and examples
+torchvision  # For pretrained models and vision utilities
+numpy        # For tensor operations
+pillow       # For image processing examples
+
+# Development and testing (optional)
+# pytest      # For testing export scripts
+# black       # Code formatting
+# isort       # Import sorting

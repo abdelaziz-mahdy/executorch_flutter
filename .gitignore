@@ -31,3 +31,12 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 /build/
 /coverage/
+
+# ExecuTorch model files (generated locally)
+*.pte
+example/assets/models/*.pte
+
+# Python virtual environment and cache
+python/executorch_env/
+python/__pycache__/
+python/*.pyc
