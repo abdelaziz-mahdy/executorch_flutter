@@ -207,9 +207,16 @@ class ExecutorchLifecycleManager {
             self?.handleBackgroundTaskExpiration()
         }
 
-        // Perform background cleanup
-        Task {
-            await performBackgroundCleanup()
+        // TODO: Consider less aggressive background cleanup for demo apps
+        // For now, skip automatic model disposal to prevent user frustration
+        // Task {
+        //     await performBackgroundCleanup()
+        // }
+
+        // End background task immediately since we're not doing cleanup
+        if backgroundTaskIdentifier != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+            backgroundTaskIdentifier = .invalid
         }
     }
 

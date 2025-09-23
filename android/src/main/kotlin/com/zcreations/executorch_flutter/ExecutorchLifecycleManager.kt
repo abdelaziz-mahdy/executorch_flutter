@@ -200,9 +200,11 @@ class ExecutorchLifecycleManager private constructor(
     private fun handleAppEnteredBackground() {
         Log.d(TAG, "App entered background")
 
-        lifecycleScope.launch {
-            performBackgroundCleanup()
-        }
+        // TODO: Consider less aggressive background cleanup for demo apps
+        // For now, skip automatic model disposal to prevent user frustration
+        // lifecycleScope.launch {
+        //     performBackgroundCleanup()
+        // }
     }
 
     private fun handleMemoryPressure(level: Int) {

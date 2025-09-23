@@ -145,31 +145,64 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
   @override
   Future<List<TensorData>> preprocess(Uint8List input, {ModelMetadata? metadata}) async {
     try {
-      // Decode image
-      final image = img.decodeImage(input);
-      if (image == null) {
+      // Decode image - exactly like working code
+      final decodedImage = img.decodeImage(input);
+      if (decodedImage == null) {
         throw PreprocessingException('Failed to decode image');
       }
 
-      // Resize/crop image
-      final processedImage = _resizeImage(image);
+      // Resize to model input size (224x224 for most image models) - exactly like working code
+      final resized = img.copyResize(decodedImage, width: config.targetWidth, height: config.targetHeight);
 
-      // Ensure we have RGB format (3 channels)
-      final rgbImage = processedImage.numChannels >= 3
-          ? processedImage
-          : processedImage; // Keep as is for now - in practice would convert grayscale to RGB
+      // Convert to RGB if needed - exactly like working code
+      final rgbImage = resized.convert(numChannels: 3);
 
-      // Convert to tensor data
-      final tensorData = _imageToTensor(rgbImage);
+      // ImageNet normalization constants - exactly like working code
+      const mean = [0.485, 0.456, 0.406];
+      const std = [0.229, 0.224, 0.225];
 
-      final tensor = ProcessorTensorUtils.createTensor(
-        shape: [1, 3, config.targetHeight, config.targetWidth], // NCHW format
+      // Create float32 tensor in NCHW format - exactly like working code
+      final floats = Float32List(1 * 3 * config.targetHeight * config.targetWidth);
+
+      // Fill tensor in NCHW format: [batch, channel, height, width] - exactly like working code
+      int index = 0;
+
+      // Channel 0 (Red) - exactly like working code
+      for (int y = 0; y < config.targetHeight; y++) {
+        for (int x = 0; x < config.targetWidth; x++) {
+          final pixel = rgbImage.getPixel(x, y);
+          final normalizedValue = (pixel.r / 255.0 - mean[0]) / std[0];
+          floats[index++] = normalizedValue;
+        }
+      }
+
+      // Channel 1 (Green) - exactly like working code
+      for (int y = 0; y < config.targetHeight; y++) {
+        for (int x = 0; x < config.targetWidth; x++) {
+          final pixel = rgbImage.getPixel(x, y);
+          final normalizedValue = (pixel.g / 255.0 - mean[1]) / std[1];
+          floats[index++] = normalizedValue;
+        }
+      }
+
+      // Channel 2 (Blue) - exactly like working code
+      for (int y = 0; y < config.targetHeight; y++) {
+        for (int x = 0; x < config.targetWidth; x++) {
+          final pixel = rgbImage.getPixel(x, y);
+          final normalizedValue = (pixel.b / 255.0 - mean[2]) / std[2];
+          floats[index++] = normalizedValue;
+        }
+      }
+
+      // Create tensor data - exactly like working code
+      final tensorData = TensorData(
+        shape: [1, 3, config.targetHeight, config.targetWidth].cast<int?>(), // NCHW format
         dataType: TensorType.float32,
-        data: tensorData,
+        data: floats.buffer.asUint8List(),
         name: 'input',
       );
 
-      return [tensor];
+      return [tensorData];
     } catch (e) {
       if (e is ProcessorException) rethrow;
       throw PreprocessingException('Image preprocessing failed: $e', e);
@@ -251,42 +284,79 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
   List<double> _imageToTensor(img.Image image) {
     final data = <double>[];
 
+    // Convert to RGB if needed - ensure we have exactly 3 channels
+    final rgbImage = image.convert(numChannels: 3);
+
     // Convert to NCHW format (batch=1, channels=3, height, width)
     // Channel order: R, G, B
+    // This matches the working implementation exactly
 
-    for (int c = 0; c < 3; c++) {
-      for (int y = 0; y < image.height; y++) {
-        for (int x = 0; x < image.width; x++) {
-          final pixel = image.getPixel(x, y);
-          late double value;
+    // Channel 0 (Red)
+    for (int y = 0; y < rgbImage.height; y++) {
+      for (int x = 0; x < rgbImage.width; x++) {
+        final pixel = rgbImage.getPixel(x, y);
+        double value = pixel.r.toDouble();
 
-          switch (c) {
-            case 0: // Red channel
-              value = pixel.r.toDouble();
-              break;
-            case 1: // Green channel
-              value = pixel.g.toDouble();
-              break;
-            case 2: // Blue channel
-              value = pixel.b.toDouble();
-              break;
-          }
-
-          // Normalize to [0, 1] if enabled
-          if (config.normalizeToFloat) {
-            value /= 255.0;
-          }
-
-          // Apply mean subtraction and standard deviation
-          if (config.meanSubtraction.isNotEmpty &&
-              config.standardDeviation.isNotEmpty &&
-              c < config.meanSubtraction.length &&
-              c < config.standardDeviation.length) {
-            value = (value - config.meanSubtraction[c]) / config.standardDeviation[c];
-          }
-
-          data.add(value);
+        // Normalize to [0, 1] if enabled
+        if (config.normalizeToFloat) {
+          value /= 255.0;
         }
+
+        // Apply mean subtraction and standard deviation for red channel
+        if (config.meanSubtraction.isNotEmpty &&
+            config.standardDeviation.isNotEmpty &&
+            config.meanSubtraction.length > 0 &&
+            config.standardDeviation.length > 0) {
+          value = (value - config.meanSubtraction[0]) / config.standardDeviation[0];
+        }
+
+        data.add(value);
+      }
+    }
+
+    // Channel 1 (Green)
+    for (int y = 0; y < rgbImage.height; y++) {
+      for (int x = 0; x < rgbImage.width; x++) {
+        final pixel = rgbImage.getPixel(x, y);
+        double value = pixel.g.toDouble();
+
+        // Normalize to [0, 1] if enabled
+        if (config.normalizeToFloat) {
+          value /= 255.0;
+        }
+
+        // Apply mean subtraction and standard deviation for green channel
+        if (config.meanSubtraction.isNotEmpty &&
+            config.standardDeviation.isNotEmpty &&
+            config.meanSubtraction.length > 1 &&
+            config.standardDeviation.length > 1) {
+          value = (value - config.meanSubtraction[1]) / config.standardDeviation[1];
+        }
+
+        data.add(value);
+      }
+    }
+
+    // Channel 2 (Blue)
+    for (int y = 0; y < rgbImage.height; y++) {
+      for (int x = 0; x < rgbImage.width; x++) {
+        final pixel = rgbImage.getPixel(x, y);
+        double value = pixel.b.toDouble();
+
+        // Normalize to [0, 1] if enabled
+        if (config.normalizeToFloat) {
+          value /= 255.0;
+        }
+
+        // Apply mean subtraction and standard deviation for blue channel
+        if (config.meanSubtraction.isNotEmpty &&
+            config.standardDeviation.isNotEmpty &&
+            config.meanSubtraction.length > 2 &&
+            config.standardDeviation.length > 2) {
+          value = (value - config.meanSubtraction[2]) / config.standardDeviation[2];
+        }
+
+        data.add(value);
       }
     }
 
@@ -316,9 +386,9 @@ class ImageNetPostprocessor extends ExecuTorchPostprocessor<ClassificationResult
     final shape = output.shape?.where((dim) => dim != null).toList() ?? [];
     if (shape.isEmpty) return false;
 
-    // Should have at least as many outputs as we have labels
+    // Should have reasonable number of outputs (at least 100 classes, max 100k)
     final outputSize = shape.last!;
-    return outputSize >= classLabels.length;
+    return outputSize >= 100 && outputSize <= 100000;
   }
 
   @override
@@ -329,61 +399,65 @@ class ImageNetPostprocessor extends ExecuTorchPostprocessor<ClassificationResult
       }
 
       final output = outputs.first;
-      final logits = ProcessorTensorUtils.extractFloat32Data(output);
 
-      // Apply softmax to get probabilities
-      final probabilities = _applySoftmax(logits);
+      // For classification models, find the class with highest probability - exactly like working code
+      if (output.dataType == TensorType.float32) {
+        final byteData = ByteData.sublistView(output.data);
+        final logits = <double>[];
 
-      // Find the class with highest probability
-      double maxProb = 0.0;
-      int maxIndex = 0;
-
-      for (int i = 0; i < probabilities.length; i++) {
-        if (probabilities[i] > maxProb) {
-          maxProb = probabilities[i];
-          maxIndex = i;
+        for (int i = 0; i < output.data.length ~/ 4; i++) {
+          logits.add(byteData.getFloat32(i * 4, Endian.host));
         }
-      }
 
-      // Get class name
-      String className;
-      if (maxIndex < classLabels.length) {
-        className = classLabels[maxIndex];
-      } else {
-        className = 'Unknown Class $maxIndex';
-      }
+        // Apply softmax to convert logits to probabilities - exactly like working code
+        final probabilities = _applySoftmax(logits);
 
-      // Validate confidence range
-      if (maxProb < 0.0 || maxProb > 1.0) {
-        throw PostprocessingException(
-          'Invalid confidence value: $maxProb (should be between 0.0 and 1.0)'
+        // Find top-5 predictions - exactly like working code
+        final indexed = List.generate(probabilities.length, (i) => MapEntry(i, probabilities[i]));
+        indexed.sort((a, b) => b.value.compareTo(a.value));
+
+        final top5 = indexed.take(5).toList();
+
+        // Get top result
+        final topResult = top5.first;
+        final maxIndex = topResult.key;
+        final maxProb = topResult.value;
+
+        // Get class name
+        String className;
+        if (maxIndex < classLabels.length) {
+          className = classLabels[maxIndex];
+        } else {
+          className = 'Unknown';
+        }
+
+        return ClassificationResult(
+          className: className,
+          confidence: maxProb,
+          classIndex: maxIndex,
+          allProbabilities: probabilities,
         );
       }
 
-      return ClassificationResult(
-        className: className,
-        confidence: maxProb,
-        classIndex: maxIndex,
-        allProbabilities: probabilities,
-      );
+      throw PostprocessingException('Unsupported output data type: ${output.dataType}');
     } catch (e) {
       if (e is ProcessorException) rethrow;
       throw PostprocessingException('Classification postprocessing failed: $e', e);
     }
   }
 
-  List<double> _applySoftmax(Float32List logits) {
-    // Find max value for numerical stability
-    double maxLogit = logits.reduce(math.max);
+  List<double> _applySoftmax(List<double> logits) {
+    // Find max for numerical stability - exactly like working code
+    final maxLogit = logits.reduce((a, b) => a > b ? a : b);
 
-    // Compute exp(x - max) for each element
-    final expValues = logits.map((x) => math.exp(x - maxLogit)).toList();
+    // Compute exp(logit - max) for each logit - exactly like working code
+    final expValues = logits.map((logit) => math.exp(logit - maxLogit)).toList();
 
-    // Compute sum of exponentials
+    // Compute sum of all exp values - exactly like working code
     final sumExp = expValues.reduce((a, b) => a + b);
 
-    // Normalize to get probabilities
-    return expValues.map((x) => x / sumExp).toList();
+    // Normalize to get probabilities - exactly like working code
+    return expValues.map((exp) => exp / sumExp).toList();
   }
 }
 

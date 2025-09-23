@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../services/performance_service.dart';
+import 'package:image/image.dart' as img;
 
 enum ImageModel {
   mobileNetV3('MobileNet V3 Small', 'mobilenet_v3_small', 'ImageNet classification'),
@@ -176,14 +178,27 @@ class _EnhancedImageDemoState extends State<EnhancedImageDemo> {
       throw Exception('ImageNet processor or model not initialized');
     }
 
-    // Use the structured processor interface
-    final result = await _imageNetProcessor!.process(imageBytes, _loadedModel!);
+    debugPrint('🔍 Starting image classification...');
+    debugPrint('📷 Image size: ${imageBytes.length} bytes');
 
-    if (mounted) {
-      setState(() {
-        _classificationResult = result;
-        _detectedObjects = null;
-      });
+    try {
+      // Use the fixed structured processor interface
+      final result = await _imageNetProcessor!.process(imageBytes, _loadedModel!);
+
+      debugPrint('✅ Classification result:');
+      debugPrint('   Class: ${result.className}');
+      debugPrint('   Confidence: ${(result.confidence * 100).toStringAsFixed(2)}%');
+      debugPrint('   Index: ${result.classIndex}');
+
+      if (mounted) {
+        setState(() {
+          _classificationResult = result;
+          _detectedObjects = null;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Classification failed: $e');
+      rethrow;
     }
   }
 
