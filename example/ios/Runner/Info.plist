@@ -45,5 +45,8 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Camera permission for real-time ML processing -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera for real-time machine learning inference and object detection.</string>
 </dict>
 </plist>

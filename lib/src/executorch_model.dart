@@ -2,7 +2,6 @@
 library executorch_model;
 
 import 'dart:async';
-import 'package:meta/meta.dart';
 
 import 'generated/executorch_api.dart';
 import 'executorch_errors.dart';

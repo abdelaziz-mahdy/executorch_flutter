@@ -46,7 +46,6 @@ class ExecutorchModelManager(
 ) {
     companion object {
         private const val TAG = "ExecutorchModelManager"
-        private const val MAX_CONCURRENT_MODELS = 5
         private const val MODEL_ID_PREFIX = "executorch_model_"
     }
 
@@ -80,11 +79,6 @@ class ExecutorchModelManager(
 
             if (!file.canRead()) {
                 throw ModelLoadException("Model file not readable: $filePath")
-            }
-
-            // Check model count limit
-            if (loadedModels.size >= MAX_CONCURRENT_MODELS) {
-                throw ModelLoadException("Maximum number of concurrent models ($MAX_CONCURRENT_MODELS) reached")
             }
 
             // Generate unique model ID

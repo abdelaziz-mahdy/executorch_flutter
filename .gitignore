@@ -35,8 +35,11 @@ migrate_working_dir/
 # ExecuTorch model files (generated locally)
 *.pte
 example/assets/models/*.pte
+example/assets/models/*.json
+example/assets/models/*.txt
 
 # Python virtual environment and cache
 python/executorch_env/
 python/__pycache__/
 python/*.pyc
+example/assets/models/audio_class_labels.json

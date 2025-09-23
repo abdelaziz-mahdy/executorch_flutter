@@ -52,6 +52,15 @@
 /// - [InferenceResult]: Inference execution results
 /// - [ModelMetadata]: Model information and specifications
 ///
+/// ## Processors
+///
+/// - [ExecuTorchPreprocessor]: Base class for input preprocessing
+/// - [ExecuTorchPostprocessor]: Base class for output postprocessing
+/// - [ExecuTorchProcessor]: Combined preprocessing and postprocessing
+/// - [ImageClassificationProcessor]: Ready-to-use image classification
+/// - [TextClassificationProcessor]: Ready-to-use text classification
+/// - [AudioClassificationProcessor]: Ready-to-use audio classification
+///
 /// ## Platform Support
 ///
 /// - **Android**: API 23+ (Android 6.0+), arm64-v8a architecture
@@ -73,3 +82,6 @@ export 'src/executorch_errors.dart';
 
 // Generated Pigeon types - direct export for type safety
 export 'src/generated/executorch_api.dart';
+
+// Preprocessing and postprocessing utilities
+export 'src/processors/processors.dart';

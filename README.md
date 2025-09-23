@@ -412,6 +412,178 @@ extension TensorValidation on TensorDataWrapper {
 }
 ```
 
+## Processor Interfaces
+
+ExecuTorch Flutter provides high-level processor interfaces that handle the complete ML pipeline from input preprocessing to output postprocessing. These processors make it easy to work with common ML tasks while maintaining type safety and performance.
+
+### Image Classification with ImageNetProcessor
+
+```dart
+import 'package:executorch_flutter/executorch_flutter.dart';
+import 'dart:typed_data';
+
+class ImageClassificationExample {
+  late ImageNetProcessor _processor;
+  late ExecuTorchModel _model;
+
+  Future<void> initialize() async {
+    // Initialize ExecuTorch manager
+    await ExecutorchManager.instance.initialize();
+
+    // Load your ImageNet model
+    _model = await ExecutorchManager.instance.loadModel('assets/models/mobilenet_v3.pte');
+
+    // Create processor with ImageNet configuration
+    _processor = ImageNetProcessor(
+      preprocessConfig: const ImagePreprocessConfig(
+        targetWidth: 224,
+        targetHeight: 224,
+        normalizeToFloat: true,
+        meanSubtraction: [0.485, 0.456, 0.406], // ImageNet standards
+        standardDeviation: [0.229, 0.224, 0.225],
+        cropMode: ImageCropMode.centerCrop,
+      ),
+      classLabels: await _loadImageNetLabels(),
+    );
+  }
+
+  Future<ClassificationResult> classifyImage(Uint8List imageBytes) async {
+    // One-line processing: handles preprocessing → inference → postprocessing
+    final result = await _processor.process(imageBytes, _model);
+
+    print('Predicted: ${result.className}');
+    print('Confidence: ${(result.confidence * 100).toStringAsFixed(1)}%');
+    print('Class Index: ${result.classIndex}');
+
+    return result;
+  }
+
+  Future<List<String>> _loadImageNetLabels() async {
+    // Load your ImageNet class labels
+    final labelsText = await rootBundle.loadString('assets/imagenet_classes.txt');
+    return labelsText.trim().split('\n');
+  }
+}
+```
+
+### Text Classification with SentimentAnalysisProcessor
+
+```dart
+import 'package:executorch_flutter/executorch_flutter.dart';
+
+class TextSentimentExample {
+  late SentimentAnalysisProcessor _processor;
+  late ExecuTorchModel _model;
+
+  Future<void> initialize() async {
+    await ExecutorchManager.instance.initialize();
+    _model = await ExecutorchManager.instance.loadModel('assets/models/sentiment_model.pte');
+
+    // Create tokenizer with your vocabulary
+    final tokenizer = SimpleTokenizer(
+      vocabulary: await _loadVocabulary(),
+      maxLength: 128,
+    );
+
+    // Create sentiment analysis processor
+    _processor = SentimentAnalysisProcessor(tokenizer: tokenizer);
+  }
+
+  Future<TextClassificationResult> analyzeSentiment(String text) async {
+    final result = await _processor.process(text, _model);
+
+    print('Text: "$text"');
+    print('Sentiment: ${result.className}'); // 'positive', 'negative', 'neutral'
+    print('Confidence: ${(result.confidence * 100).toStringAsFixed(1)}%');
+
+    return result;
+  }
+
+  Future<Map<String, int>> _loadVocabulary() async {
+    // Load your model's vocabulary
+    final vocabJson = await rootBundle.loadString('assets/vocabulary.json');
+    return Map<String, int>.from(json.decode(vocabJson));
+  }
+}
+```
+
+### Audio Classification with EnvironmentalSoundProcessor
+
+```dart
+import 'package:executorch_flutter/executorch_flutter.dart';
+import 'dart:typed_data';
+
+class AudioClassificationExample {
+  late EnvironmentalSoundProcessor _processor;
+  late ExecuTorchModel _model;
+
+  Future<void> initialize() async {
+    await ExecutorchManager.instance.initialize();
+    _model = await ExecutorchManager.instance.loadModel('assets/models/audio_classifier.pte');
+
+    // Create environmental sound processor
+    _processor = EnvironmentalSoundProcessor(
+      sampleRate: 16000,
+      windowSize: 1024,
+    );
+  }
+
+  Future<AudioClassificationResult> classifyAudio(Float32List audioSamples) async {
+    final result = await _processor.process(audioSamples, _model);
+
+    print('Detected Sound: ${result.className}');
+    print('Confidence: ${(result.confidence * 100).toStringAsFixed(1)}%');
+    print('Audio Duration: ${result.audioDurationMs}ms');
+
+    return result;
+  }
+}
+```
+
+### Custom Processor Implementation
+
+You can create custom processors for your specific use cases:
+
+```dart
+class CustomImageProcessor extends ExecuTorchProcessor<Uint8List, MyCustomResult> {
+  @override
+  ExecuTorchPreprocessor<Uint8List> get preprocessor => _CustomPreprocessor();
+
+  @override
+  ExecuTorchPostprocessor<MyCustomResult> get postprocessor => _CustomPostprocessor();
+}
+
+class _CustomPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
+  @override
+  String get inputTypeName => 'Custom Image Input';
+
+  @override
+  bool validateInput(Uint8List input) {
+    return input.isNotEmpty;
+  }
+
+  @override
+  Future<List<TensorData>> preprocess(Uint8List input, {ModelMetadata? metadata}) async {
+    // Your custom preprocessing logic
+    final processedData = await customImageProcessing(input);
+
+    return [ProcessorTensorUtils.createTensor(
+      shape: [1, 3, 256, 256],
+      dataType: TensorType.float32,
+      data: processedData,
+    )];
+  }
+}
+```
+
+### Processor Benefits
+
+- **Type Safety**: Generic type parameters prevent runtime errors
+- **Error Handling**: Comprehensive exception hierarchy with clear messages
+- **Performance**: Optimized tensor operations with built-in timing metrics
+- **Flexibility**: Configurable preprocessing parameters
+- **Extensibility**: Easy to create custom processors for new model types
+
 ## Example Applications
 
 Check the `/example` directory for complete sample applications:

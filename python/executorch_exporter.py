@@ -220,16 +220,7 @@ class ExecuTorchExporter:
             print(f"\nExporting for {backend} backend...")
 
             if not self.available_backends.get(backend, False):
-                result = ExportResult(
-                    model_name=config.model_name,
-                    backend=backend,
-                    output_path="",
-                    file_size_mb=0.0,
-                    success=False,
-                    error_message=f"Backend {backend} not available in environment"
-                )
-                results.append(result)
-                continue
+                raise RuntimeError(f"Backend {backend} not available in environment")
 
             try:
                 import time
@@ -265,7 +256,11 @@ class ExecuTorchExporter:
 
                 # Generate filename
                 suffix = "_quantized" if config.quantize else ""
-                filename = f"{config.model_name}_{backend}{suffix}.{config.export_format}"
+                # Don't add backend suffix if model name already ends with it
+                if config.model_name.endswith(f"_{backend}"):
+                    filename = f"{config.model_name}{suffix}.{config.export_format}"
+                else:
+                    filename = f"{config.model_name}_{backend}{suffix}.{config.export_format}"
                 output_path = os.path.join(config.output_dir, filename)
 
                 # Write model to file

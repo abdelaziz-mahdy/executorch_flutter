@@ -12,6 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   pigeon: ^17.1.2
+  image: ^4.0.17
+  meta: ^1.9.1
 
 dev_dependencies:
   flutter_test:

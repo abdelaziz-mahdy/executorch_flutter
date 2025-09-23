@@ -13,12 +13,15 @@ import 'package:executorch_flutter_example/main.dart';
 void main() {
   testWidgets('ExecuTorch Example App loads', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const ExecuTorchExampleApp(cameras: []));
+    await tester.pumpWidget(const ExecuTorchProcessorExampleApp());
 
     // Verify that the app title is displayed.
-    expect(find.text('ExecuTorch Flutter Demo'), findsOneWidget);
+    expect(find.text('ExecuTorch Processor Demo'), findsOneWidget);
 
-    // Verify that model management section exists.
-    expect(find.text('Model Management'), findsOneWidget);
+    // Verify that processor tabs exist.
+    expect(find.text('Image'), findsOneWidget);
+    expect(find.text('Text'), findsOneWidget);
+    expect(find.text('Audio'), findsOneWidget);
+    expect(find.text('Camera'), findsOneWidget);
   });
 }

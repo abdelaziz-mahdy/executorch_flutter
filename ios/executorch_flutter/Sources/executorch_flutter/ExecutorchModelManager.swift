@@ -34,7 +34,6 @@ import ExecuTorch
 actor ExecutorchModelManager {
 
     private static let TAG = "ExecutorchModelManager"
-    private static let MAX_CONCURRENT_MODELS = 5
     private static let MODEL_ID_PREFIX = "executorch_model_"
 
     // Model storage and state management
@@ -80,10 +79,6 @@ actor ExecutorchModelManager {
             throw ExecutorchError.modelLoadFailed(filePath, nil)
         }
 
-        // Check model count limit
-        guard loadedModels.count < Self.MAX_CONCURRENT_MODELS else {
-            throw ExecutorchError.memoryError("Maximum number of concurrent models (\(Self.MAX_CONCURRENT_MODELS)) reached")
-        }
 
         // Generate unique model ID
         let modelId = generateModelId()
