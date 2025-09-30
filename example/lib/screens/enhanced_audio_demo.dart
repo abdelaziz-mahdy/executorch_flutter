@@ -216,12 +216,12 @@ class _EnhancedAudioDemoState extends State<EnhancedAudioDemo>
     try {
       final stopwatch = Stopwatch()..start();
 
-      // Generate mock mel-spectrogram data (100 time frames, 80 mel bands)
+      // Generate mock mel-spectrogram data (224 time frames, 224 mel bands)
       final melSpectrogram = _generateMockMelSpectrogram(demoSound);
 
       final inputTensor = TensorData(
         data: melSpectrogram.buffer.asUint8List(),
-        shape: [1, 1, 100, 80],
+        shape: [1, 3, 224, 224],
         dataType: TensorType.float32,
         name: 'input',
       );
@@ -252,7 +252,7 @@ class _EnhancedAudioDemoState extends State<EnhancedAudioDemo>
 
   Float32List _generateMockMelSpectrogram(String? demoSound) {
     final random = Random();
-    final data = Float32List(1 * 1 * 100 * 80);
+    final data = Float32List(1 * 3 * 224 * 224);
 
     // Generate realistic mel-spectrogram patterns based on demo sound
     for (int i = 0; i < data.length; i++) {

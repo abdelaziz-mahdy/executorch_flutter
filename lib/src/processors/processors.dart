@@ -1,9 +1,9 @@
-/// ExecuTorch Flutter Processors
+/// ExecuTorch Flutter Base Processors
 ///
-/// This library provides preprocessing and postprocessing classes for common
-/// machine learning tasks. These processors convert domain-specific input
-/// (images, text, audio) into tensors for ExecuTorch model inference and
-/// convert model outputs back into meaningful results.
+/// This library provides the base classes and utilities for building
+/// preprocessing and postprocessing components for ExecuTorch models.
+/// These abstract classes define the interface for converting domain-specific
+/// input into tensors and model outputs back into meaningful results.
 ///
 /// ## Core Architecture
 ///
@@ -12,35 +12,6 @@
 /// - [ExecuTorchPreprocessor]: Converts input data to tensors
 /// - [ExecuTorchPostprocessor]: Converts output tensors to results
 /// - [ExecuTorchProcessor]: Combines preprocessing and postprocessing
-///
-/// ## Available Processors
-///
-/// ### Image Classification
-/// - [ImageNetProcessor]: Complete ImageNet classification pipeline
-/// - [ImageNetPreprocessor]: Image preprocessing with normalization
-/// - [ImageNetPostprocessor]: Classification result postprocessing
-/// - [ImagePreprocessConfig]: Configuration for image preprocessing
-/// - [ClassificationResult]: Image classification results
-///
-/// ### Text Classification
-/// - [TextClassificationProcessor]: Complete text classification pipeline
-/// - [TextClassificationPreprocessor]: Text tokenization and preprocessing
-/// - [TextClassificationPostprocessor]: Text classification postprocessing
-/// - [SentimentAnalysisProcessor]: Specialized sentiment analysis
-/// - [TopicClassificationProcessor]: Specialized topic classification
-/// - [TextClassificationResult]: Text classification results
-/// - [SimpleTokenizer]: Simple word-based tokenizer
-/// - [BPETokenizer]: Byte Pair Encoding tokenizer
-///
-/// ### Audio Classification
-/// - [AudioClassificationProcessor]: Complete audio classification pipeline
-/// - [AudioClassificationPreprocessor]: Audio preprocessing and feature extraction
-/// - [AudioClassificationPostprocessor]: Audio classification postprocessing
-/// - [SpeechCommandProcessor]: Specialized speech command recognition
-/// - [MusicGenreProcessor]: Specialized music genre classification
-/// - [EnvironmentalSoundProcessor]: Environmental sound classification
-/// - [AudioClassificationResult]: Audio classification results
-/// - [AudioPreprocessConfig]: Configuration for audio preprocessing
 ///
 /// ## Utilities
 /// - [ProcessorTensorUtils]: Tensor creation and manipulation utilities
@@ -52,57 +23,50 @@
 ///
 /// ## Usage Examples
 ///
-/// ### Image Classification
+/// ### Creating a Custom Preprocessor
 /// ```dart
-/// final processor = ImageNetProcessor(
-///   preprocessConfig: const ImagePreprocessConfig(
-///     targetWidth: 224,
-///     targetHeight: 224,
-///     normalizeToFloat: true,
-///     meanSubtraction: [0.485, 0.456, 0.406],
-///     standardDeviation: [0.229, 0.224, 0.225],
-///   ),
-///   classLabels: imageNetLabels,
-/// );
+/// class MyImagePreprocessor extends ExecuTorchPreprocessor<Uint8List> {
+///   @override
+///   String get inputTypeName => 'Image';
 ///
-/// final result = await processor.process(imageBytes, model);
-/// print('Predicted: ${result.className} (${result.confidence})');
+///   @override
+///   bool validateInput(Uint8List input) => input.isNotEmpty;
+///
+///   @override
+///   Future<List<TensorData>> preprocess(Uint8List input, {ModelMetadata? metadata}) async {
+///     // Convert image to tensor
+///     final tensorData = ProcessorTensorUtils.createTensor(
+///       shape: [1, 3, 224, 224],
+///       dataType: TensorType.float32,
+///       data: processedImageData,
+///       name: 'input',
+///     );
+///     return [tensorData];
+///   }
+/// }
 /// ```
 ///
-/// ### Text Classification
+/// ### Creating a Custom Postprocessor
 /// ```dart
-/// final processor = SentimentAnalysisProcessor(
-///   tokenizer: SimpleTokenizer(
-///     vocabulary: vocabulary,
-///     maxLength: 128,
-///   ),
-/// );
+/// class MyClassificationPostprocessor extends ExecuTorchPostprocessor<MyResult> {
+///   @override
+///   String get outputTypeName => 'Classification';
 ///
-/// final result = await processor.process('This movie is great!', model);
-/// print('Sentiment: ${result.className}');
+///   @override
+///   bool validateOutputs(List<TensorData> outputs) => outputs.isNotEmpty;
+///
+///   @override
+///   Future<MyResult> postprocess(List<TensorData> outputs, {ModelMetadata? metadata}) async {
+///     // Process model outputs
+///     return MyResult(/* ... */);
+///   }
+/// }
 /// ```
 ///
-/// ### Audio Classification
-/// ```dart
-/// final processor = SpeechCommandProcessor(
-///   sampleRate: 16000,
-///   windowSize: 1024,
-///   commands: ['yes', 'no', 'stop', 'go'],
-/// );
-///
-/// final result = await processor.process(audioSamples, model);
-/// print('Command: ${result.className}');
-/// ```
+/// For complete processor implementations, see the example app which contains
+/// reference implementations for image classification, object detection,
+/// text processing, and audio processing.
 library processors;
 
-// Base processor classes and utilities
+// Base processor classes and utilities only
 export 'base_processor.dart';
-
-// Image processing
-export 'image_processor.dart';
-
-// Text processing
-export 'text_processor.dart';
-
-// Audio processing
-export 'audio_processor.dart';

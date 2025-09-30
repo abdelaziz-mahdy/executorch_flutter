@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../services/performance_service.dart';
+import '../processors/processors.dart';
 import 'package:image/image.dart' as img;
 
 enum ImageModel {
@@ -45,6 +46,7 @@ class _EnhancedImageDemoState extends State<EnhancedImageDemo> {
   // Results
   ClassificationResult? _classificationResult;
   List<String>? _detectedObjects;
+  ObjectDetectionResult? _objectDetectionResult;
   bool _isProcessing = false;
   String? _errorMessage;
 
@@ -203,24 +205,40 @@ class _EnhancedImageDemoState extends State<EnhancedImageDemo> {
   }
 
   Future<void> _runObjectDetection(Uint8List imageBytes) async {
-    // Create mock input tensor for object detection (320x320)
-    // TODO: Create proper object detection processor when available
-    final inputData = Float32List.fromList(List.generate(1 * 3 * 320 * 320, (i) => (i % 256) / 255.0));
-    final inputTensor = TensorData(
-      data: inputData.buffer.asUint8List(),
-      shape: [1, 3, 320, 320],
-      dataType: TensorType.float32,
-      name: 'input',
+    // Process real image for object detection using proper object detection processor
+    final processor = ObjectDetectionProcessor(
+      preprocessConfig: ObjectDetectionPreprocessConfig(
+        targetWidth: 224,
+        targetHeight: 224,
+        normalizeToFloat: true,
+        meanSubtraction: [0.485, 0.456, 0.406],
+        standardDeviation: [0.229, 0.224, 0.225],
+        cropMode: ObjectDetectionCropMode.centerCrop,
+      ),
+      classLabels: _classLabels ?? [],
+      confidenceThreshold: 0.3,
+      nmsThreshold: 0.4,
+      maxDetections: 10,
     );
+
+    final tensorDataList = await processor.preprocessor.preprocess(imageBytes);
+    final inputTensor = tensorDataList.first;
 
     final result = await _loadedModel!.runInference(
       inputs: [inputTensor],
     );
 
     if (result.outputs != null && result.outputs!.isNotEmpty) {
+      // Process real object detection results
+      final nonNullOutputs = result.outputs!.where((output) => output != null).cast<TensorData>().toList();
+      final detectionResult = await processor.postprocessor.postprocess(nonNullOutputs);
+
       if (mounted) {
         setState(() {
-          _detectedObjects = ['Mock detected: ${_classLabels?.take(3).join(', ') ?? 'Objects'}'];
+          _detectedObjects = detectionResult.detectedObjects
+              .map((obj) => '${obj.className}: ${(obj.confidence * 100).toStringAsFixed(1)}%')
+              .toList();
+          _objectDetectionResult = detectionResult;
           _classificationResult = null;
         });
       }
@@ -372,12 +390,7 @@ class _EnhancedImageDemoState extends State<EnhancedImageDemo> {
               const SizedBox(height: 16),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  capturedImage!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                child: _buildImageWithDetections(),
               ),
             ],
           ],
@@ -518,10 +531,140 @@ class _EnhancedImageDemoState extends State<EnhancedImageDemo> {
     }
   }
 
+  Widget _buildImageWithDetections() {
+    if (capturedImage == null) return const SizedBox();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          children: [
+            // Base image
+            Image.file(
+              capturedImage!,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+            // Bounding boxes overlay
+            if (_objectDetectionResult != null && _objectDetectionResult!.detectedObjects.isNotEmpty)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: BoundingBoxPainter(
+                    detections: _objectDetectionResult!.detectedObjects,
+                    imageSize: const Size(200, 200), // Match the image display size
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   void dispose() {
     _loadedModel?.dispose();
     super.dispose();
+  }
+}
+
+/// Custom painter for drawing bounding boxes over detected objects
+class BoundingBoxPainter extends CustomPainter {
+  BoundingBoxPainter({
+    required this.detections,
+    required this.imageSize,
+  });
+
+  final List<DetectedObject> detections;
+  final Size imageSize;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Calculate scale factors to map normalized coordinates to display coordinates
+    final scaleX = size.width;
+    final scaleY = size.height;
+
+    for (int i = 0; i < detections.length; i++) {
+      final detection = detections[i];
+      final box = detection.boundingBox;
+
+      // Convert normalized coordinates to display coordinates
+      final left = box.x * scaleX;
+      final top = box.y * scaleY;
+      final width = box.width * scaleX;
+      final height = box.height * scaleY;
+
+      // Create rectangle for bounding box
+      final rect = Rect.fromLTWH(left, top, width, height);
+
+      // Generate color based on class index for consistency
+      final color = _getColorForClass(detection.classIndex);
+
+      // Draw bounding box
+      final boxPaint = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      canvas.drawRect(rect, boxPaint);
+
+      // Draw filled background for label
+      final labelText = '${detection.className} ${(detection.confidence * 100).toStringAsFixed(0)}%';
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: labelText,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+
+      // Calculate label position (above the box, or below if near top)
+      final labelTop = top > textPainter.height + 4 ? top - textPainter.height - 4 : top + height + 4;
+      final labelRect = Rect.fromLTWH(
+        left,
+        labelTop,
+        textPainter.width + 8,
+        textPainter.height + 4,
+      );
+
+      // Draw label background
+      final labelPaint = Paint()
+        ..color = color.withOpacity(0.8)
+        ..style = PaintingStyle.fill;
+
+      canvas.drawRect(labelRect, labelPaint);
+
+      // Draw label text
+      textPainter.paint(canvas, Offset(left + 4, labelTop + 2));
+    }
+  }
+
+  Color _getColorForClass(int classIndex) {
+    // Generate consistent colors for different classes
+    final colors = [
+      Colors.red,
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.pink,
+      Colors.amber,
+      Colors.cyan,
+      Colors.lime,
+    ];
+
+    return colors[classIndex % colors.length];
+  }
+
+  @override
+  bool shouldRepaint(BoundingBoxPainter oldDelegate) {
+    return detections != oldDelegate.detections || imageSize != oldDelegate.imageSize;
   }
 }

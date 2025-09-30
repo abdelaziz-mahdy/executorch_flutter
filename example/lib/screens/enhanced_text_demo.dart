@@ -152,11 +152,17 @@ class _EnhancedTextDemoState extends State<EnhancedTextDemo> {
       final tokens = _tokenizeText(text);
       final attentionMask = List.filled(128, 1.0);
 
-      // Create input tensors
+      // Create input tensors - replicate data for 3 channels
+      final tokenFloats = tokens.map((token) => token.toDouble()).toList();
+      final replicatedData = <double>[];
+      for (int i = 0; i < 3; i++) {
+        replicatedData.addAll(tokenFloats);
+      }
+
       final inputIds = TensorData(
-        data: Int64List.fromList(tokens).buffer.asUint8List(),
-        shape: [1, 128],
-        dataType: TensorType.int32,
+        data: Float32List.fromList(replicatedData).buffer.asUint8List(),
+        shape: [1, 3, 128],
+        dataType: TensorType.float32,
         name: 'input_ids',
       );
 

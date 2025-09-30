@@ -4,8 +4,7 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:meta/meta.dart';
 
-import '../generated/executorch_api.dart';
-import 'base_processor.dart';
+import 'package:executorch_flutter/executorch_flutter.dart';
 
 /// Configuration for image preprocessing
 @immutable
