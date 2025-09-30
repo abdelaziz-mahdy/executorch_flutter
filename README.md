@@ -185,7 +185,9 @@ Future<ExecuTorchModel> loadModelFromNetwork(String url) async {
 - **Input Types**: float32, int8, int32, uint8 tensors
 - **Model Size**: Tested with models up to 500MB
 
-> 📖 **Need to export your PyTorch models?** See our comprehensive [Model Export Guide](MODEL_EXPORT_GUIDE.md) for step-by-step instructions on converting PyTorch models to ExecuTorch format with platform-specific optimizations.
+> 📖 **Need to export your PyTorch models?** See our comprehensive **[Model Export Guide](MODEL_EXPORT_GUIDE.md)** for step-by-step instructions on converting PyTorch models to ExecuTorch format with platform-specific optimizations.
+>
+> 📱 **For example app setup:** See [Example App Model Guide](example/MODEL_EXPORT_GUIDE.md) for complete integration examples.
 
 ## Platform Requirements
 
@@ -596,38 +598,35 @@ Check the `/example` directory for complete sample applications:
 
 ### Converting PyTorch Models to ExecuTorch
 
-To use your PyTorch models with this package, you need to convert them to ExecuTorch format.
+To use your PyTorch models with this package, you need to convert them to ExecuTorch format (`.pte` files).
 
-**📖 For comprehensive conversion instructions, see our [Model Export Guide](MODEL_EXPORT_GUIDE.md)**
+**📖 See the complete [Model Export Guide](MODEL_EXPORT_GUIDE.md)** for detailed instructions including:
+- Basic model export process with `torch.export`
+- Platform-specific backend selection (XNNPACK, CoreML, MPS, Vulkan)
+- Complete code examples and best practices
+- Integration with Flutter apps
 
-**Recommended approach**: Follow the [official PyTorch ExecuTorch export documentation](https://docs.pytorch.org/executorch/stable/using-executorch-export.html)
+**Quick Setup for Example App:**
 
-Quick example:
-
-```python
-import torch
-from executorch.exir import to_edge
-
-# Load your PyTorch model
-model = torch.jit.load('your_model.pt')
-model.eval()
-
-# Export to ExecuTorch
-example_input = torch.randn(1, 3, 224, 224)
-exported_program = torch.export.export(model, (example_input,))
-edge_program = to_edge(exported_program)
-executorch_program = edge_program.to_executorch()
-
-# Save as .pte file
-with open("your_model.pte", "wb") as f:
-    executorch_program.write_to_file(f)
+```bash
+# One-command setup: installs dependencies and exports all models
+cd python
+python3 setup_models.py
 ```
 
-The [Model Export Guide](MODEL_EXPORT_GUIDE.md) covers:
-- Official PyTorch ExecuTorch export process
-- Platform-specific backend selection (CoreML, MPS, XNNPACK, Vulkan)
-- Flutter integration patterns and best practices
-- Example export scripts for reference
+This will:
+- ✅ Install all required dependencies (torch, ultralytics, executorch)
+- ✅ Export MobileNet V3 for image classification
+- ✅ Export YOLO11n for object detection
+- ✅ Generate COCO labels file
+- ✅ Verify all models are ready
+
+**Manual export:**
+```bash
+cd python
+python3 export_models.py  # MobileNet V3 + COCO labels
+python3 export_yolo.py     # YOLO models (v5, v8, v11)
+```
 
 ## Development Status
 

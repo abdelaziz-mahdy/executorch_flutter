@@ -1,115 +1,134 @@
-# ExecuTorch Test Models
+# ExecuTorch Models Directory
 
-This directory contains ExecuTorch model files (.pte) for testing the Flutter plugin. **These models are not committed to git** and must be generated locally.
+This directory contains ExecuTorch model files (`.pte`) for the example app. **Model files are not committed to git** and must be generated locally.
 
 ## 🚀 Quick Start
 
-### Generate Test Models
+### One-Command Setup (Recommended)
 
 From the project root, run:
 
 ```bash
 cd python
-pip install -r requirements.txt
-python generate_test_models.py
+python3 setup_models.py
 ```
 
-This will create the following models in this directory:
+This automated script will:
+- ✅ Install all required Python dependencies
+- ✅ Export MobileNet V3 Small for image classification
+- ✅ Export YOLO11 Nano for object detection
+- ✅ Generate COCO labels file (80 classes)
+- ✅ Verify all models are ready
 
-| Model File | Backend | Platform | Use Case |
-|-----------|---------|----------|----------|
-| `simple_demo_portable.pte` | Portable | Any | Basic API testing |
-| `mobilenet_v3_small_ios_coreml.pte` | CoreML | iOS | Neural Engine optimization |
-| `mobilenet_v3_small_ios_mps.pte` | MPS | iOS | Metal GPU acceleration |
-| `mobilenet_v3_small_android_cpu_xnnpack.pte` | XNNPACK | Android | CPU optimization |
+### Manual Model Export
 
-Additional files automatically included:
-- `imagenet_classes.txt` - ImageNet class labels for meaningful classification results
-
-## 📱 Usage in Example App
-
-The example app uses camera feed for real-time inference. Models are loaded from local assets:
-
-```dart
-// Load platform-specific model
-String getModelPath() {
-  if (Platform.isIOS) {
-    return 'assets/models/mobilenet_v3_small_ios_coreml.pte';
-  } else {
-    return 'assets/models/mobilenet_v3_small_android_cpu_xnnpack.pte';
-  }
-}
-
-// Load model in Flutter
-final model = await ExecutorchManager.instance.loadModel(getModelPath());
-
-// Process camera frame for inference
-Future<void> processCameraFrame(CameraImage cameraImage) async {
-  final inputTensor = preprocessCameraImage(cameraImage);
-
-  final result = await model.runInference(
-    inputs: [inputTensor],
-    timeoutMs: 100, // Fast inference for camera
-  );
-
-  if (result.isSuccess) {
-    // Update UI with classification results
-    updateUI(result.outputs);
-  }
-}
-```
-
-## 🔧 Custom Models
-
-To export your own PyTorch models:
+If you prefer to export models individually:
 
 ```bash
 cd python
-python executorch_exporter.py your_model.pth \
-  --model-name my_model \
-  --input-shapes 1,3,224,224 \
-  --backends xnnpack coreml
+python3 export_models.py  # MobileNet V3 + COCO labels
+python3 export_yolo.py     # YOLO models
 ```
+
+## 📦 Current Models
+
+| Model File | Type | Backend | Size | Use Case |
+|-----------|------|---------|------|----------|
+| `mobilenet_v3_small_xnnpack.pte` | Classification | XNNPACK | 9.8 MB | ImageNet 1000 classes |
+| `yolo12n_xnnpack.pte` | Detection | XNNPACK | 10 MB | COCO 80 classes (latest) |
+| `yolo11n_xnnpack.pte` | Detection | XNNPACK | 10 MB | COCO 80 classes |
+| `yolov8n_xnnpack.pte` | Detection | XNNPACK | 12 MB | COCO 80 classes |
+| `yolov5n_xnnpack.pte` | Detection | XNNPACK | 10 MB | COCO 80 classes |
+
+Additional files:
+- `imagenet_classes.txt` - 1000 ImageNet class labels
+- `../coco_labels.txt` - 80 COCO object class labels
+
+## 📱 Usage in Example App
+
+The example app demonstrates a modern single-page playground where you:
+
+1. **Select a Model** - Choose between image classification or object detection
+2. **Pick an Image** - From camera or gallery
+3. **View Results** - See predictions with confidence scores
+
+```dart
+// Models are automatically loaded based on user selection
+final model = await ExecutorchManager.instance.loadModel(
+  config.assetPath // e.g., 'assets/models/mobilenet_v3_small_xnnpack.pte'
+);
+
+// Processors handle preprocessing and postprocessing
+final processor = ImageNetProcessor(
+  preprocessConfig: ImagePreprocessConfig(
+    targetWidth: 224,
+    targetHeight: 224,
+  ),
+  classLabels: classLabels,
+);
+
+final result = await processor.process(imageBytes, model);
+```
+
+## 🔧 Export Your Own Models
+
+### For Image Classification
+
+Use the unified export script:
+
+```bash
+cd python
+python3 export_models.py
+```
+
+Or customize with `executorch_exporter.py`:
+
+```bash
+python3 executorch_exporter.py
+```
+
+### For Object Detection (YOLO)
+
+Follow the detailed guide in `python/export_yolo.py` or the complete [Model Export Guide](../MODEL_EXPORT_GUIDE.md).
+
+Quick summary:
+1. Install ultralytics: `pip install ultralytics`
+2. Export to ONNX: `model.export(format='onnx')`
+3. Convert ONNX to ExecuTorch using ExecuTorch tools
+4. Place `.pte` file in this directory
 
 ## ❓ Troubleshooting
 
-### No Models Generated?
-1. Check Python version (3.10-3.12 required)
-2. Ensure virtual environment: `python -m venv executorch_env && source executorch_env/bin/activate`
-3. Install dependencies: `pip install -r requirements.txt`
+### Models Not Generated?
+1. Check Python version: `python3 --version` (3.10+ required)
+2. Install dependencies: `pip install -r requirements.txt`
+3. Ensure PyTorch and ExecuTorch are installed correctly
 
-### Models Not Loading in Flutter?
-1. Ensure models are in this directory (`example/assets/models/`)
+### Models Not Loading in App?
+1. Verify models exist in this directory
 2. Check `pubspec.yaml` includes `assets/models/`
-3. Use exact filenames in Flutter code
-4. Models must be generated locally (not downloaded)
+3. Ensure model file names match the app configuration
+4. Check Flutter console for specific error messages
 
-### Camera Inference Issues?
-- Use appropriate timeouts (100ms for real-time)
-- Preprocess camera frames to match model input (224x224 for MobileNetV3)
-- Handle inference on background isolate for performance
-- Consider reducing inference frequency for better UX
+### Wrong Results?
+- Verify preprocessing matches model training (normalization, input size)
+- Check class labels file matches model output
+- Ensure tensor format is correct (NCHW vs NHWC)
 
-### Backend Issues?
-- **CoreML/MPS**: Only available on iOS devices
-- **XNNPACK**: Universal fallback, works on all platforms
-- **Portable**: Always available, basic performance
+## 📖 Complete Documentation
 
-## 🏗️ Example App Architecture
+For detailed model export instructions, see:
+- **[Model Export Guide](../MODEL_EXPORT_GUIDE.md)** - Complete conversion guide
+- **[Python Scripts README](../../python/README.md)** - Export script documentation
+- **[ExecuTorch Docs](https://pytorch.org/executorch/)** - Official PyTorch ExecuTorch documentation
 
-The example app demonstrates:
-- **Real-time camera inference** with ExecuTorch models
-- **Platform-specific model loading** (CoreML for iOS, XNNPACK for Android)
-- **Background processing** to avoid blocking UI
-- **Performance monitoring** with inference timing
-- **Model switching** between different backends
+## 🎯 Next Steps
 
-## 📖 Documentation
-
-- [Python Export Scripts](../../python/README.md)
-- [Flutter Plugin API](../../README.md)
-- [ExecuTorch Documentation](https://docs.pytorch.org/executorch/)
+1. Generate the MobileNet model: `cd python && python3 export_models.py`
+2. (Optional) Export YOLO model following the guide
+3. Run the example app: `cd example && flutter run`
+4. Try different images and models in the playground
 
 ---
 
-**Note**: Model files (.pte) are ignored by git. Each developer must generate them locally using the Python scripts.
+**Note**: Model files (`.pte`) are in `.gitignore`. Each developer generates them locally using the Python export scripts.

@@ -11,17 +11,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:executorch_flutter_example/main.dart';
 
 void main() {
-  testWidgets('ExecuTorch Example App loads', (WidgetTester tester) async {
+  testWidgets('ExecuTorch Playground App loads', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const ExecuTorchProcessorExampleApp());
+    await tester.pumpWidget(const ExecuTorchPlaygroundApp());
 
     // Verify that the app title is displayed.
-    expect(find.text('ExecuTorch Processor Demo'), findsOneWidget);
+    expect(find.text('ExecuTorch Playground'), findsOneWidget);
 
-    // Verify that processor tabs exist.
-    expect(find.text('Image'), findsOneWidget);
-    expect(find.text('Text'), findsOneWidget);
-    expect(find.text('Audio'), findsOneWidget);
-    expect(find.text('Camera'), findsOneWidget);
+    // Verify that model selection screen is shown.
+    expect(find.text('Choose a Model'), findsOneWidget);
   });
 }

@@ -100,6 +100,25 @@ class ClassificationResult {
   /// All class probabilities (softmax outputs)
   final List<double> allProbabilities;
 
+  /// Get top K classification results (including this one as the first result)
+  List<({String className, double confidence, int classIndex})> get topK {
+    // Return top 5 results from allProbabilities
+    final indexed = <({int index, double probability})>[];
+    for (int i = 0; i < allProbabilities.length; i++) {
+      indexed.add((index: i, probability: allProbabilities[i]));
+    }
+
+    // Sort by probability descending
+    indexed.sort((a, b) => b.probability.compareTo(a.probability));
+
+    // Take top 5 and return
+    return indexed.take(5).map((item) => (
+      className: 'Class ${item.index}',  // Default class name
+      confidence: item.probability,
+      classIndex: item.index,
+    )).toList();
+  }
+
   @override
   String toString() =>
       'ClassificationResult(class: $className, confidence: ${(confidence * 100).toStringAsFixed(1)}%, index: $classIndex)';

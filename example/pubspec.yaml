@@ -77,9 +77,11 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # ExecuTorch model files (generated locally via python/generate_test_models.py)
+  # ExecuTorch model files and labels
   assets:
     - assets/models/
+    - assets/imagenet_classes.txt
+    - assets/coco_labels.txt
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -71,6 +71,9 @@ export 'image_processor.dart';
 // Object detection
 export 'object_detection_processor.dart';
 
+// YOLO-specific object detection
+export 'yolo_processor.dart';
+
 // Text processing
 export 'text_processor.dart';
 
