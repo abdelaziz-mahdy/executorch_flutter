@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,8 +11,16 @@ import '../services/performance_service.dart';
 
 /// Supported model types in the playground
 enum ModelType {
-  imageClassification('Image Classification', Icons.image, 'Classify images using ImageNet'),
-  objectDetection('Object Detection', Icons.center_focus_strong, 'Detect and locate objects with YOLO');
+  imageClassification(
+    'Image Classification',
+    Icons.image,
+    'Classify images using ImageNet',
+  ),
+  objectDetection(
+    'Object Detection',
+    Icons.center_focus_strong,
+    'Detect and locate objects with YOLO',
+  );
 
   const ModelType(this.displayName, this.icon, this.description);
   final String displayName;
@@ -76,7 +85,8 @@ class ModelPlayground extends StatefulWidget {
   State<ModelPlayground> createState() => _ModelPlaygroundState();
 }
 
-class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProviderStateMixin {
+class _ModelPlaygroundState extends State<ModelPlayground>
+    with SingleTickerProviderStateMixin {
   // Model state
   ModelConfig? _selectedModelConfig;
   ExecuTorchModel? _loadedModel;
@@ -122,15 +132,23 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
   Future<void> _loadClassLabels() async {
     try {
       // Load ImageNet labels (for classification models)
-      final imageNetLabels = await rootBundle.loadString('assets/imagenet_classes.txt');
+      final imageNetLabels = await rootBundle.loadString(
+        'assets/imagenet_classes.txt',
+      );
 
       // Load COCO labels (for YOLO detection models)
       final cocoLabels = await rootBundle.loadString('assets/coco_labels.txt');
 
       setState(() {
         // Use ImageNet by default, will switch to COCO for object detection
-        _classLabels = imageNetLabels.split('\n').where((line) => line.isNotEmpty).toList();
-        _cocoLabels = cocoLabels.split('\n').where((line) => line.isNotEmpty).toList();
+        _classLabels = imageNetLabels
+            .split('\n')
+            .where((line) => line.isNotEmpty)
+            .toList();
+        _cocoLabels = cocoLabels
+            .split('\n')
+            .where((line) => line.isNotEmpty)
+            .toList();
       });
     } catch (e) {
       debugPrint('Failed to load class labels: $e');
@@ -172,7 +190,7 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
 
   Future<String> _loadAssetModel(String assetPath) async {
     final byteData = await rootBundle.load(assetPath);
-    final directory = await getApplicationDocumentsDirectory();
+    final directory = await getApplicationCacheDirectory();
     final fileName = assetPath.split('/').last;
     final file = File('${directory.path}/$fileName');
     await file.writeAsBytes(byteData.buffer.asUint8List());
@@ -198,6 +216,7 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
       setState(() {
         _errorMessage = 'Failed to pick image: $e';
       });
+      debugPrint('❌ Image pick error: $e');
     }
   }
 
@@ -340,7 +359,9 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
                 Text(
                   _selectedModelConfig?.name ?? 'Select a model to begin',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -376,9 +397,9 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
         children: [
           Text(
             'Choose a Model',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
@@ -388,10 +409,12 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
             ),
           ),
           const SizedBox(height: 32),
-          ...availableModels.map((model) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: _buildModelCard(model),
-          )),
+          ...availableModels.map(
+            (model) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _buildModelCard(model),
+            ),
+          ),
         ],
       ),
     );
@@ -402,9 +425,7 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: InkWell(
         onTap: () => _loadModel(config),
@@ -416,7 +437,9 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -448,7 +471,9 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
                     Text(
                       config.type.description,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],
@@ -498,7 +523,9 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
               const SizedBox(height: 24),
               _buildImagePreview(),
             ],
-            if (_classificationResult != null || _objectDetectionResult != null || _errorMessage != null) ...[
+            if (_classificationResult != null ||
+                _objectDetectionResult != null ||
+                _errorMessage != null) ...[
               const SizedBox(height: 24),
               _buildResultsSection(),
             ],
@@ -513,9 +540,7 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -538,37 +563,58 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
               ],
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isProcessing ? null : () => _pickImage(ImageSource.camera),
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Camera'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            // Hide camera button on desktop platforms (not supported)
+            if (!kIsWeb && (Platform.isAndroid || Platform.isIOS))
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _isProcessing
+                          ? null
+                          : () => _pickImage(ImageSource.camera),
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Camera'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    onPressed: _isProcessing ? null : () => _pickImage(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('Gallery'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: _isProcessing
+                          ? null
+                          : () => _pickImage(ImageSource.gallery),
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Gallery'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
+                ],
+              )
+            else
+              // Desktop: Gallery only
+              FilledButton.tonalIcon(
+                onPressed: _isProcessing
+                    ? null
+                    : () => _pickImage(ImageSource.gallery),
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Select from Files'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              ],
-            ),
+              ),
           ],
         ),
       ),
@@ -580,16 +626,16 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           if (_isProcessing)
             LinearProgressIndicator(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest,
             ),
           Stack(
             children: [
@@ -620,9 +666,7 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
       return Card(
         elevation: 0,
         color: Theme.of(context).colorScheme.errorContainer,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -650,9 +694,7 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -675,7 +717,10 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
                 const Spacer(),
                 if (_processingTime != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(20),
@@ -721,10 +766,15 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
             ),
           ),
           const SizedBox(height: 8),
-          ...(_classificationResult!.topK.skip(1).take(4).map((result) => Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: _buildResultItem(result.className, result.confidence),
-          ))),
+          ...(_classificationResult!.topK
+              .skip(1)
+              .take(4)
+              .map(
+                (result) => Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _buildResultItem(result.className, result.confidence),
+                ),
+              )),
         ],
       ],
     );
@@ -752,45 +802,53 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
       children: [
         Text(
           '${detections.length} object${detections.length != 1 ? 's' : ''} detected',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        ...detections.take(10).map((detection) => Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: _getColorForClass(detection.classIndex),
-                  shape: BoxShape.circle,
+        ...detections
+            .take(10)
+            .map(
+              (detection) => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: _getColorForClass(detection.classIndex),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        detection.className,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    Text(
+                      '${(detection.confidence * 100).toStringAsFixed(1)}%',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  detection.className,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-              Text(
-                '${(detection.confidence * 100).toStringAsFixed(1)}%',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-        )),
+            ),
       ],
     );
   }
 
-  Widget _buildResultItem(String label, double confidence, {bool isPrimary = false}) {
+  Widget _buildResultItem(
+    String label,
+    double confidence, {
+    bool isPrimary = false,
+  }) {
     return Row(
       children: [
         Expanded(
@@ -843,10 +901,7 @@ class _ModelPlaygroundState extends State<ModelPlayground> with SingleTickerProv
 
 /// Custom painter for drawing bounding boxes over detected objects
 class BoundingBoxPainter extends CustomPainter {
-  BoundingBoxPainter({
-    required this.detections,
-    required this.imageSize,
-  });
+  BoundingBoxPainter({required this.detections, required this.imageSize});
 
   final List<DetectedObject> detections;
   final Size imageSize;
@@ -877,7 +932,8 @@ class BoundingBoxPainter extends CustomPainter {
       canvas.drawRect(rect, boxPaint);
 
       // Draw label background
-      final labelText = '${detection.className} ${(detection.confidence * 100).toStringAsFixed(0)}%';
+      final labelText =
+          '${detection.className} ${(detection.confidence * 100).toStringAsFixed(0)}%';
       final textPainter = TextPainter(
         text: TextSpan(
           text: labelText,
@@ -891,7 +947,9 @@ class BoundingBoxPainter extends CustomPainter {
       );
       textPainter.layout();
 
-      final labelTop = top > textPainter.height + 8 ? top - textPainter.height - 8 : top + height + 8;
+      final labelTop = top > textPainter.height + 8
+          ? top - textPainter.height - 8
+          : top + height + 8;
       final labelRect = Rect.fromLTWH(
         left,
         labelTop,
@@ -930,6 +988,7 @@ class BoundingBoxPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(BoundingBoxPainter oldDelegate) {
-    return detections != oldDelegate.detections || imageSize != oldDelegate.imageSize;
+    return detections != oldDelegate.detections ||
+        imageSize != oldDelegate.imageSize;
   }
 }

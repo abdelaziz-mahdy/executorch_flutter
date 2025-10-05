@@ -392,6 +392,11 @@ interface ExecutorchHostApi {
   fun getLoadedModels(): List<String?>
   /** Check if a model is currently loaded and ready */
   fun getModelState(modelId: String): ModelState
+  /**
+   * Enable or disable ExecuTorch debug logging
+   * Only works in debug builds
+   */
+  fun setDebugLogging(enabled: Boolean)
 
   companion object {
     /** The codec used by ExecutorchHostApi. */
@@ -503,6 +508,25 @@ interface ExecutorchHostApi {
             var wrapped: List<Any?>
             try {
               wrapped = listOf<Any?>(api.getModelState(modelIdArg).raw)
+            } catch (exception: Throwable) {
+              wrapped = wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.setDebugLogging", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val enabledArg = args[0] as Boolean
+            var wrapped: List<Any?>
+            try {
+              api.setDebugLogging(enabledArg)
+              wrapped = listOf<Any?>(null)
             } catch (exception: Throwable) {
               wrapped = wrapError(exception)
             }

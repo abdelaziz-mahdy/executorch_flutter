@@ -11,6 +11,9 @@ import Foundation
   #error("Unsupported platform.")
 #endif
 
+/// Make FlutterError conform to Error protocol (required for SPM)
+extension FlutterError: Error {}
+
 private func wrapResult(_ result: Any?) -> [Any?] {
   return [result]
 }
@@ -44,7 +47,7 @@ private func nilOrValue<T>(_ value: Any?) -> T? {
 }
 
 /// Tensor data type enumeration
-enum TensorType: Int {
+public enum TensorType: Int {
   case float32 = 0
   case int8 = 1
   case int32 = 2
@@ -52,7 +55,7 @@ enum TensorType: Int {
 }
 
 /// Model loading and execution states
-enum ModelState: Int {
+public enum ModelState: Int {
   case loading = 0
   case ready = 1
   case error = 2
@@ -60,7 +63,7 @@ enum ModelState: Int {
 }
 
 /// Inference execution status
-enum InferenceStatus: Int {
+public enum InferenceStatus: Int {
   case success = 0
   case error = 1
   case timeout = 2
@@ -70,7 +73,7 @@ enum InferenceStatus: Int {
 /// Tensor specification for input/output requirements
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct TensorSpec {
+public struct TensorSpec {
   var name: String
   var shape: [Int64?]
   var dataType: TensorType
@@ -106,7 +109,7 @@ struct TensorSpec {
 /// Model metadata and capabilities
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct ModelMetadata {
+public struct ModelMetadata {
   var modelName: String
   var version: String
   var inputSpecs: [TensorSpec?]
@@ -146,7 +149,7 @@ struct ModelMetadata {
 /// Tensor data for input/output
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct TensorData {
+public struct TensorData {
   var shape: [Int64?]
   var dataType: TensorType
   var data: FlutterStandardTypedData
@@ -178,7 +181,7 @@ struct TensorData {
 /// Inference request parameters
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct InferenceRequest {
+public struct InferenceRequest {
   var modelId: String
   var inputs: [TensorData?]
   var options: [String?: Any?]? = nil
@@ -214,7 +217,7 @@ struct InferenceRequest {
 /// Inference execution result
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct InferenceResult {
+public struct InferenceResult {
   var status: InferenceStatus
   var executionTimeMs: Double
   var requestId: String? = nil
@@ -254,7 +257,7 @@ struct InferenceResult {
 /// Model loading result
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct ModelLoadResult {
+public struct ModelLoadResult {
   var modelId: String
   var state: ModelState
   var metadata: ModelMetadata? = nil
@@ -350,7 +353,7 @@ class ExecutorchHostApiCodec: FlutterStandardMessageCodec {
 /// Host API - Called from Dart to native platforms
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
-protocol ExecutorchHostApi {
+public protocol ExecutorchHostApi {
   /// Load a model from the specified file path
   /// Returns a unique model ID for subsequent operations
   func loadModel(filePath: String, completion: @escaping (Result<ModelLoadResult, Error>) -> Void)
@@ -365,6 +368,9 @@ protocol ExecutorchHostApi {
   func getLoadedModels() throws -> [String?]
   /// Check if a model is currently loaded and ready
   func getModelState(modelId: String) throws -> ModelState
+  /// Enable or disable ExecuTorch debug logging
+  /// Only works in debug builds
+  func setDebugLogging(enabled: Bool) throws
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -473,6 +479,23 @@ class ExecutorchHostApiSetup {
     } else {
       getModelStateChannel.setMessageHandler(nil)
     }
+    /// Enable or disable ExecuTorch debug logging
+    /// Only works in debug builds
+    let setDebugLoggingChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.setDebugLogging", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      setDebugLoggingChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let enabledArg = args[0] as! Bool
+        do {
+          try api.setDebugLogging(enabled: enabledArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      setDebugLoggingChannel.setMessageHandler(nil)
+    }
   }
 }
 private class ExecutorchFlutterApiCodecReader: FlutterStandardReader {
@@ -519,7 +542,7 @@ class ExecutorchFlutterApiCodec: FlutterStandardMessageCodec {
 /// Flutter API - Called from native platforms to Dart (optional)
 ///
 /// Generated protocol from Pigeon that represents Flutter messages that can be called from Swift.
-protocol ExecutorchFlutterApiProtocol {
+public protocol ExecutorchFlutterApiProtocol {
   /// Notify Dart about model loading progress (optional)
   func onModelLoadProgress(modelId modelIdArg: String, progress progressArg: Double, completion: @escaping (Result<Void, FlutterError>) -> Void)
   /// Notify Dart about inference completion (optional)

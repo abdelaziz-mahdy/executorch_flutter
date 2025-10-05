@@ -5,18 +5,18 @@ packages:
     dependency: transitive
     description:
       name: _fe_analyzer_shared
-      sha256: "0b2f2bd91ba804e53a61d757b986f89f1f9eaed5b11e4b2f5a2468d86d6c9fc7"
+      sha256: da0d9209ca76bde579f2da330aeb9df62b6319c834fa7baae052021b0462401f
       url: "https://pub.dev"
     source: hosted
-    version: "67.0.0"
+    version: "85.0.0"
   analyzer:
     dependency: transitive
     description:
       name: analyzer
-      sha256: "37577842a27e4338429a1cbc32679d508836510b056f1eedf0c8d20e39c1383d"
+      sha256: "974859dc0ff5f37bc4313244b3218c791810d03ab3470a579580279ba971a48d"
       url: "https://pub.dev"
     source: hosted
-    version: "6.4.1"
+    version: "7.7.1"
   archive:
     dependency: transitive
     description:
@@ -77,18 +77,18 @@ packages:
     dependency: transitive
     description:
       name: camera_android
-      sha256: cd49ccb409201a893bf625dca2df8746b88679f302826ab4d12748788a3a24b3
+      sha256: "2d953dac338790a6a4d8e8084cf095aa1a3520f706dab2d69557651ea2c82f8d"
       url: "https://pub.dev"
     source: hosted
-    version: "0.10.10+7"
+    version: "0.10.10+8"
   camera_avfoundation:
     dependency: transitive
     description:
       name: camera_avfoundation
-      sha256: a5a90297520e3b9841331161a7511626681153849c690c138e04a2b6d0af3026
+      sha256: cfd435285a984ebbd87573493872944f3c758d5be9e85b305a485e6642ecfd5c
       url: "https://pub.dev"
     source: hosted
-    version: "0.9.21+3"
+    version: "0.9.22"
   camera_platform_interface:
     dependency: transitive
     description:
@@ -173,10 +173,10 @@ packages:
     dependency: transitive
     description:
       name: dart_style
-      sha256: "99e066ce75c89d6b29903d788a7bb9369cf754f7b24bf70bf4b6d6d6b26853b9"
+      sha256: "8a0e5fba27e8ee025d2ffb4ee820b4e6e2cf5e4246a6b1a477eb66866947e0bb"
       url: "https://pub.dev"
     source: hosted
-    version: "2.3.6"
+    version: "3.1.1"
   device_info_plus:
     dependency: "direct main"
     description:
@@ -313,6 +313,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.3"
+  graphs:
+    dependency: transitive
+    description:
+      name: graphs
+      sha256: "741bbf84165310a68ff28fe9e727332eef1407342fca52759cb21ad8177bb8d0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.2"
   http:
     dependency: "direct main"
     description:
@@ -594,10 +602,10 @@ packages:
     dependency: transitive
     description:
       name: pigeon
-      sha256: f336a0547b790b3dcfe4fc49f63575dea3555b609e38886f4f46c1fe3cfa5f20
+      sha256: "2073deca15d22f1a0f5862cc6edc9e8660b3be7fd94f03b49101db71a5316b0f"
       url: "https://pub.dev"
     source: hosted
-    version: "17.3.0"
+    version: "26.0.1"
   platform:
     dependency: transitive
     description:
@@ -650,10 +658,10 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_android
-      sha256: bd14436108211b0d4ee5038689a56d4ae3620fd72fd6036e113bf1345bc74d9e
+      sha256: "0b0f98d535319cb5cdd4f65783c2a54ee6d417a2f093dbb18be3e36e4c3d181f"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.13"
+    version: "2.4.14"
   shared_preferences_foundation:
     dependency: transitive
     description:
@@ -791,10 +799,10 @@ packages:
     dependency: transitive
     description:
       name: watcher
-      sha256: "5bf046f41320ac97a469d506261797f35254fa61c641741ef32dacda98b7d39c"
+      sha256: "592ab6e2892f67760543fb712ff0177f4ec76c031f02f5b4ff8d3fc5eb9fb61a"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.3"
+    version: "1.1.4"
   web:
     dependency: transitive
     description:

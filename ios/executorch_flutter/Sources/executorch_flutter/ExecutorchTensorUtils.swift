@@ -29,37 +29,43 @@ extension TensorData {
             throw ExecutorchError.validationError("Tensor shape cannot be empty")
         }
 
-        guard shape.allSatisfy({ $0 > 0 }) else {
+        // Unwrap optionals and validate
+        let unwrappedShape = shape.compactMap { $0 }
+        guard unwrappedShape.count == shape.count else {
+            throw ExecutorchError.validationError("Tensor shape contains nil values")
+        }
+
+        guard unwrappedShape.allSatisfy({ $0 > 0 }) else {
             throw ExecutorchError.validationError("All tensor dimensions must be positive")
         }
 
         // Calculate expected data size
-        let expectedElements = shape.reduce(1, *)
+        let expectedElements = unwrappedShape.reduce(1, *)
         let bytesPerElement = dataType.bytesPerElement()
-        let expectedBytes = expectedElements * bytesPerElement
+        let expectedBytes = Int(expectedElements) * bytesPerElement
 
-        guard data.count == expectedBytes else {
+        guard data.data.count == expectedBytes else {
             throw ExecutorchError.validationError(
-                "Tensor data size mismatch: expected \(expectedBytes) bytes, got \(data.count) bytes"
+                "Tensor data size mismatch: expected \(expectedBytes) bytes, got \(data.data.count) bytes"
             )
         }
 
         // Validate data type constraints
-        try dataType.validateData(data)
+        try dataType.validateData(data.data)
     }
 
     /**
      * Get total number of elements in the tensor
      */
-    var elementCount: Int {
-        return shape.reduce(1, *)
+    var elementCount: Int64 {
+        return shape.compactMap { $0 }.reduce(1, *)
     }
 
     /**
      * Get total size in bytes
      */
     var sizeInBytes: Int {
-        return elementCount * dataType.bytesPerElement()
+        return Int(elementCount) * dataType.bytesPerElement()
     }
 
     /**

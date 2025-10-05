@@ -14,21 +14,27 @@
  * - Performance monitoring and reporting
  */
 import Foundation
+#if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 /**
  * Manages ExecuTorch resource lifecycle in response to iOS app state changes
  */
 class ExecutorchLifecycleManager {
 
-    private static let TAG = "ExecutorchLifecycleManager"
+    fileprivate static let TAG = "ExecutorchLifecycleManager"
 
     // Singleton instance
     static let shared = ExecutorchLifecycleManager()
 
     // Lifecycle state
     private var isActive = false
+    #if os(iOS)
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
+    #endif
 
     // Model managers to coordinate with
     private var modelManagers: [WeakModelManagerRef] = []
@@ -107,6 +113,7 @@ class ExecutorchLifecycleManager {
     // MARK: - Application Lifecycle Handling
 
     private func setupApplicationLifecycleObservers() {
+        #if os(iOS)
         let notificationCenter = NotificationCenter.default
 
         // App will become active
@@ -158,9 +165,43 @@ class ExecutorchLifecycleManager {
             self?.handleAppWillTerminate()
         }
         notificationObservers.append(willTerminateObserver)
+        #elseif os(macOS)
+        let notificationCenter = NotificationCenter.default
+
+        // macOS: App will become active
+        let didBecomeActiveObserver = notificationCenter.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleAppDidBecomeActive()
+        }
+        notificationObservers.append(didBecomeActiveObserver)
+
+        // macOS: App will resign active
+        let willResignActiveObserver = notificationCenter.addObserver(
+            forName: NSApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleAppWillResignActive()
+        }
+        notificationObservers.append(willResignActiveObserver)
+
+        // macOS: App will terminate
+        let willTerminateObserver = notificationCenter.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleAppWillTerminate()
+        }
+        notificationObservers.append(willTerminateObserver)
+        #endif
     }
 
     private func setupMemoryPressureObservers() {
+        #if os(iOS)
         let notificationCenter = NotificationCenter.default
 
         // Memory warning
@@ -172,6 +213,11 @@ class ExecutorchLifecycleManager {
             self?.handleMemoryWarning()
         }
         notificationObservers.append(memoryWarningObserver)
+        #elseif os(macOS)
+        // macOS doesn't have the same memory warning API
+        // Could monitor process memory manually if needed
+        print("[\(Self.TAG)] Memory pressure monitoring not implemented for macOS")
+        #endif
     }
 
     // MARK: - Lifecycle Event Handlers
@@ -185,11 +231,13 @@ class ExecutorchLifecycleManager {
         print("[\(Self.TAG)] App did become active")
         isActive = true
 
-        // End background task if running
+        // End background task if running (iOS only)
+        #if os(iOS)
         if backgroundTaskIdentifier != .invalid {
             UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
             backgroundTaskIdentifier = .invalid
         }
+        #endif
     }
 
     private func handleAppWillResignActive() {
@@ -200,23 +248,18 @@ class ExecutorchLifecycleManager {
     private func handleAppDidEnterBackground() {
         print("[\(Self.TAG)] App did enter background")
 
-        // Start background task to allow cleanup
+        #if os(iOS)
+        // Start background task to allow cleanup (iOS only)
         backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(
             withName: "ExecutorchCleanup"
         ) { [weak self] in
             self?.handleBackgroundTaskExpiration()
         }
+        #endif
 
-        // TODO: Consider less aggressive background cleanup for demo apps
-        // For now, skip automatic model disposal to prevent user frustration
-        // Task {
-        //     await performBackgroundCleanup()
-        // }
-
-        // End background task immediately since we're not doing cleanup
-        if backgroundTaskIdentifier != .invalid {
-            UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
-            backgroundTaskIdentifier = .invalid
+        // Perform background cleanup
+        Task {
+            await performBackgroundCleanup()
         }
     }
 
@@ -229,10 +272,12 @@ class ExecutorchLifecycleManager {
 
     private func handleBackgroundTaskExpiration() {
         print("[\(Self.TAG)] Background task expired")
+        #if os(iOS)
         if backgroundTaskIdentifier != .invalid {
             UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
             backgroundTaskIdentifier = .invalid
         }
+        #endif
     }
 
     // MARK: - Memory Management
@@ -280,11 +325,13 @@ class ExecutorchLifecycleManager {
             await manager.performBackgroundCleanup()
         }
 
-        // End background task
+        // End background task (iOS only)
+        #if os(iOS)
         if backgroundTaskIdentifier != .invalid {
             UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
             backgroundTaskIdentifier = .invalid
         }
+        #endif
     }
 
     private func disposeAllModels() async {
@@ -340,11 +387,13 @@ class ExecutorchLifecycleManager {
         }
         notificationObservers.removeAll()
 
-        // End background task if active
+        // End background task if active (iOS only)
+        #if os(iOS)
         if backgroundTaskIdentifier != .invalid {
             UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
             backgroundTaskIdentifier = .invalid
         }
+        #endif
     }
 }
 

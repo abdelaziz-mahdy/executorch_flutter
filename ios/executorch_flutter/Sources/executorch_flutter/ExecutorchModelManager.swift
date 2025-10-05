@@ -15,8 +15,8 @@
  * - Memory mapping support for large models
  *
  * Integration Pattern:
- * - Uses ExecuTorchModule for model loading and inference
- * - ExecuTorchTensor/ExecuTorchValue API for input/output data handling
+ * - Uses Module for model loading and inference (ExecuTorch 0.7.0+ API)
+ * - Tensor/Value API for input/output data handling
  * - Proper iOS memory mapping and lifecycle management
  * - Background queue execution for non-blocking operations
  *
@@ -28,12 +28,19 @@
 import Foundation
 import ExecuTorch
 
+#if os(iOS)
+import Flutter
+#elseif os(macOS)
+import FlutterMacOS
+#endif
+
 /**
  * Actor-based model manager for thread-safe ExecuTorch operations
  */
 actor ExecutorchModelManager {
 
-    private static let TAG = "ExecutorchModelManager"
+    internal static let TAG = "ExecutorchModelManager"
+    private static let MAX_CONCURRENT_MODELS = 5
     private static let MODEL_ID_PREFIX = "executorch_model_"
 
     // Model storage and state management
@@ -47,7 +54,7 @@ actor ExecutorchModelManager {
      * Represents a loaded ExecuTorch model with metadata
      */
     private struct LoadedModel {
-        let module: ExecuTorchModule
+        let module: Module
         let metadata: ModelMetadata
         let filePath: String
         let loadTime: TimeInterval = Date().timeIntervalSince1970
@@ -79,6 +86,26 @@ actor ExecutorchModelManager {
             throw ExecutorchError.modelLoadFailed(filePath, nil)
         }
 
+        // Check file size
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: filePath)
+            if let fileSize = attributes[.size] as? Int64 {
+                let fileSizeMB = Double(fileSize) / (1024 * 1024)
+                print("[\(Self.TAG)] Model file size: \(String(format: "%.2f", fileSizeMB)) MB")
+
+                // Warn if file is very small (might be corrupted)
+                if fileSize < 1024 {
+                    print("[\(Self.TAG)] WARNING: Model file is very small (\(fileSize) bytes), might be corrupted")
+                }
+            }
+        } catch {
+            print("[\(Self.TAG)] Warning: Could not get file size: \(error)")
+        }
+
+        // Check model count limit
+        guard loadedModels.count < Self.MAX_CONCURRENT_MODELS else {
+            throw ExecutorchError.memoryError("Maximum number of concurrent models (\(Self.MAX_CONCURRENT_MODELS)) reached")
+        }
 
         // Generate unique model ID
         let modelId = generateModelId()
@@ -88,17 +115,31 @@ actor ExecutorchModelManager {
 
         do {
             // Load model using ExecuTorch Module API
-            print("[\(Self.TAG)] Creating ExecuTorchModule with file path")
-            let module = ExecuTorchModule(filePath: filePath)
+            // Note: Module just stores the path at creation. The actual .pte file will be loaded
+            // when forward() is called for the first time, so the file must exist until then.
+            print("[\(Self.TAG)] Creating Module with file path")
+            let module = Module(filePath: filePath)
 
-            // Load the forward method (most common case)
-            print("[\(Self.TAG)] Loading 'forward' method")
-            try module.load("forward")
+            // Verify file size right before we consider the module ready
+            do {
+                let attributes = try FileManager.default.attributesOfItem(atPath: filePath)
+                if let fileSize = attributes[.size] as? Int64 {
+                    let fileSizeMB = Double(fileSize) / (1024 * 1024)
+                    print("[\(Self.TAG)] File size: \(String(format: "%.2f", fileSizeMB)) MB")
 
-            // Verify the module is loaded
-            guard module.isLoaded("forward") else {
-                throw ExecutorchError.modelLoadFailed(filePath, nil)
+                    // Read first few bytes to verify it's a valid .pte file
+                    if let fileHandle = FileHandle(forReadingAtPath: filePath) {
+                        let headerData = fileHandle.readData(ofLength: 16)
+                        let headerHex = headerData.map { String(format: "%02x", $0) }.joined(separator: " ")
+                        print("[\(Self.TAG)] File header (first 16 bytes): \(headerHex)")
+                        fileHandle.closeFile()
+                    }
+                }
+            } catch {
+                print("[\(Self.TAG)] Warning: Could not verify file: \(error)")
             }
+
+            print("[\(Self.TAG)] Module created successfully (actual loading will happen on first forward() call)")
 
             // Extract model metadata
             let metadata = try extractModelMetadata(from: module, filePath: filePath)
@@ -142,11 +183,25 @@ actor ExecutorchModelManager {
 
         print("[\(Self.TAG)] Running inference on model: \(request.modelId)")
 
+        // Check model file still exists and size before inference
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: loadedModel.filePath)
+            if let fileSize = attributes[.size] as? Int64 {
+                let fileSizeMB = Double(fileSize) / (1024 * 1024)
+                print("[\(Self.TAG)] Model file size before inference: \(String(format: "%.2f", fileSizeMB)) MB")
+            }
+        } catch {
+            print("[\(Self.TAG)] Warning: Could not verify model file before inference: \(error)")
+        }
+
+        // Unwrap optional TensorData array
+        let inputs = request.inputs.compactMap { $0 }
+
         // Validate input tensors
-        try validateInputTensors(request.inputs, against: loadedModel.metadata)
+        try validateInputTensors(inputs, against: loadedModel.metadata)
 
         // Convert Flutter tensors to ExecuTorch Values
-        let inputValues = try convertTensorsToValues(request.inputs)
+        let inputValues = try convertTensorsToValues(inputs)
 
         let startTime = CFAbsoluteTimeGetCurrent()
 
@@ -192,7 +247,7 @@ actor ExecutorchModelManager {
         modelStates[modelId] = ModelState.disposed
 
         if loadedModel != nil {
-            // Note: ExecuTorchModule doesn't have explicit dispose method
+            // Note: Module doesn't have explicit dispose method
             // Rely on ARC for cleanup
             print("[\(Self.TAG)] Disposed model: \(modelId)")
         } else {
@@ -235,8 +290,8 @@ actor ExecutorchModelManager {
         return "\(Self.MODEL_ID_PREFIX)\(UUID().uuidString.prefix(8))"
     }
 
-    private func extractModelMetadata(from module: ExecuTorchModule, filePath: String) throws -> ModelMetadata {
-        // Note: ExecuTorchModule doesn't provide introspection APIs
+    private func extractModelMetadata(from module: Module, filePath: String) throws -> ModelMetadata {
+        // Note: Module doesn't provide introspection APIs
         // We'll create basic metadata from file information
         let fileURL = URL(fileURLWithPath: filePath)
         let modelName = fileURL.deletingPathExtension().lastPathComponent
@@ -280,7 +335,7 @@ actor ExecutorchModelManager {
             version: "1.0.0",
             inputSpecs: inputSpecs,
             outputSpecs: outputSpecs,
-            estimatedMemoryMB: estimatedMemoryMB,
+            estimatedMemoryMB: Int64(estimatedMemoryMB),
             properties: properties
         )
     }
@@ -294,7 +349,9 @@ actor ExecutorchModelManager {
 
         // Additional validation can be added here
         for (index, input) in inputs.enumerated() {
-            let spec = metadata.inputSpecs[index]
+            guard let spec = metadata.inputSpecs[index] else {
+                throw ExecutorchError.validationError("Input spec at index \(index) is nil")
+            }
 
             guard input.dataType == spec.dataType else {
                 throw ExecutorchError.validationError(
@@ -304,98 +361,139 @@ actor ExecutorchModelManager {
         }
     }
 
-    private func convertTensorsToValues(_ tensors: [TensorData]) throws -> [ExecuTorchValue] {
+    private func convertTensorsToValues(_ tensors: [TensorData]) throws -> [Value] {
         return try tensors.map { tensorData in
-            let tensor: ExecuTorchTensor
+            let value: Value
 
             switch tensorData.dataType {
             case .float32:
                 // Convert bytes back to float array
-                let floatCount = tensorData.data.count / 4
+                let data = tensorData.data.data
+                let floatCount = data.count / 4
                 var floats = [Float](repeating: 0, count: floatCount)
                 _ = floats.withUnsafeMutableBytes { floatBytes in
-                    tensorData.data.copyBytes(to: floatBytes)
+                    data.copyBytes(to: floatBytes)
                 }
 
-                tensor = ExecuTorchTensor(
+                let tensor = Tensor<Float>(
                     bytesNoCopy: UnsafeMutableRawPointer(mutating: floats),
-                    shape: tensorData.shape.map { NSNumber(value: $0) },
-                    dataType: .float
+                    shape: tensorData.shape.compactMap { $0 }.map { Int($0) }
                 )
+                value = Value(tensor)
 
             case .int32:
                 // Convert bytes back to int32 array
-                let intCount = tensorData.data.count / 4
+                let data = tensorData.data.data
+                let intCount = data.count / 4
                 var ints = [Int32](repeating: 0, count: intCount)
                 _ = ints.withUnsafeMutableBytes { intBytes in
-                    tensorData.data.copyBytes(to: intBytes)
+                    data.copyBytes(to: intBytes)
                 }
 
-                tensor = ExecuTorchTensor(
+                let tensor = Tensor<Int32>(
                     bytesNoCopy: UnsafeMutableRawPointer(mutating: ints),
-                    shape: tensorData.shape.map { NSNumber(value: $0) },
-                    dataType: .int
+                    shape: tensorData.shape.compactMap { $0 }.map { Int($0) }
                 )
+                value = Value(tensor)
 
-            case .int8, .uint8:
-                // Use bytes directly
-                let mutableData = Data(tensorData.data)
-                tensor = try mutableData.withUnsafeMutableBytes { bytes in
-                    ExecuTorchTensor(
+            case .int8:
+                // Use bytes directly for int8
+                var data = tensorData.data.data
+                let tensor = try data.withUnsafeMutableBytes { bytes -> Tensor<Int8> in
+                    Tensor<Int8>(
                         bytesNoCopy: bytes.baseAddress!,
-                        shape: tensorData.shape.map { NSNumber(value: $0) },
-                        dataType: .byte
+                        shape: tensorData.shape.compactMap { $0 }.map { Int($0) }
                     )
                 }
+                value = Value(tensor)
+
+            case .uint8:
+                // Use bytes directly for uint8
+                var data = tensorData.data.data
+                let tensor = try data.withUnsafeMutableBytes { bytes -> Tensor<UInt8> in
+                    Tensor<UInt8>(
+                        bytesNoCopy: bytes.baseAddress!,
+                        shape: tensorData.shape.compactMap { $0 }.map { Int($0) }
+                    )
+                }
+                value = Value(tensor)
             }
 
-            return ExecuTorchValue(tensor: tensor)
+            return value
         }
     }
 
-    private func convertValuesToTensors(_ values: [ExecuTorchValue]) throws -> [TensorData] {
+    private func convertValuesToTensors(_ values: [Value]) throws -> [TensorData] {
         return try values.enumerated().map { (index, value) in
-            guard let tensor = value.tensor else {
-                throw ExecutorchError.inferenceFailed("Output \(index) is not a tensor", nil)
-            }
+            // Try to extract tensor as different types using ExecuTorch 1.0.0 API
+            // First try Float (most common for ML models)
+            do {
+                let floatTensor = try Tensor<Float>(value)
+                let shape = floatTensor.shape.map { Int64($0) }
+                let scalars = floatTensor.scalars()
+                let data = Data(bytes: scalars, count: scalars.count * MemoryLayout<Float>.stride)
 
-            let shape = tensor.shape.map { $0.intValue }
+                return TensorData(
+                    shape: shape,
+                    dataType: TensorType.float32,
+                    data: FlutterStandardTypedData(bytes: data),
+                    name: "output_\(index)"
+                )
+            } catch {}
 
-            // Convert tensor data to bytes based on data type
-            let (dataType, data): (TensorType, Data) = try tensor.bytes { pointer, count, tensorDataType in
-                switch tensorDataType {
-                case .float:
-                    let floatPointer = pointer.assumingMemoryBound(to: Float.self)
-                    let floatArray = Array(UnsafeBufferPointer(start: floatPointer, count: count / 4))
-                    return (TensorType.float32, Data(bytes: floatArray, count: count))
+            // Try Int32
+            do {
+                let int32Tensor = try Tensor<Int32>(value)
+                let shape = int32Tensor.shape.map { Int64($0) }
+                let scalars = int32Tensor.scalars()
+                let data = Data(bytes: scalars, count: scalars.count * MemoryLayout<Int32>.stride)
 
-                case .int:
-                    let intPointer = pointer.assumingMemoryBound(to: Int32.self)
-                    let intArray = Array(UnsafeBufferPointer(start: intPointer, count: count / 4))
-                    return (TensorType.int32, Data(bytes: intArray, count: count))
+                return TensorData(
+                    shape: shape,
+                    dataType: TensorType.int32,
+                    data: FlutterStandardTypedData(bytes: data),
+                    name: "output_\(index)"
+                )
+            } catch {}
 
-                case .byte:
-                    let data = Data(bytes: pointer, count: count)
-                    return (TensorType.uint8, data)
+            // Try UInt8
+            do {
+                let uint8Tensor = try Tensor<UInt8>(value)
+                let shape = uint8Tensor.shape.map { Int64($0) }
+                let scalars = uint8Tensor.scalars()
+                let data = Data(bytes: scalars, count: scalars.count)
 
-                @unknown default:
-                    throw ExecutorchError.inferenceFailed("Unsupported tensor data type", nil)
-                }
-            }
+                return TensorData(
+                    shape: shape,
+                    dataType: TensorType.uint8,
+                    data: FlutterStandardTypedData(bytes: data),
+                    name: "output_\(index)"
+                )
+            } catch {}
 
-            return TensorData(
-                shape: shape,
-                dataType: dataType,
-                data: data,
-                name: "output_\(index)"
-            )
+            // Try Int8
+            do {
+                let int8Tensor = try Tensor<Int8>(value)
+                let shape = int8Tensor.shape.map { Int64($0) }
+                let scalars = int8Tensor.scalars()
+                let data = Data(bytes: scalars, count: scalars.count)
+
+                return TensorData(
+                    shape: shape,
+                    dataType: TensorType.int8,
+                    data: FlutterStandardTypedData(bytes: data),
+                    name: "output_\(index)"
+                )
+            } catch {}
+
+            throw ExecutorchError.inferenceFailed("Output \(index) has unsupported tensor type", nil)
         }
     }
 
     private func createInferenceMetadata(from loadedModel: LoadedModel) -> [String: Any] {
         return [
-            "model_id": loadedModel.hashValue,
-            "backend": "executorch_ios",
+            "model_id": loadedModel.filePath.hashValue,
+            "backend": "executorch_macos",
             "timestamp": Date().timeIntervalSince1970,
             "model_file": loadedModel.filePath
         ]

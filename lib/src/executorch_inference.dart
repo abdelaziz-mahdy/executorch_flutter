@@ -55,6 +55,27 @@ class ExecutorchManager {
     }
   }
 
+  /// Enable or disable ExecuTorch debug logging
+  ///
+  /// When enabled, detailed ExecuTorch internal logs will be printed to the console.
+  /// This is useful for debugging model loading and inference issues.
+  ///
+  /// Note: Debug logging only works in debug builds of the native libraries.
+  /// In release builds, this method has no effect.
+  ///
+  /// [enabled] - true to enable logging, false to disable
+  Future<void> setDebugLogging(bool enabled) async {
+    _ensureInitialized();
+    try {
+      await _hostApi.setDebugLogging(enabled);
+    } catch (e) {
+      throw ExecuTorchPlatformException(
+        'Failed to set debug logging: $e',
+        e.toString(),
+      );
+    }
+  }
+
   /// Load an ExecuTorch model from a file path
   ///
   /// [filePath] must point to a valid ExecuTorch .pte model file.

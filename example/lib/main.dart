@@ -10,8 +10,10 @@
 /// - Modern Material 3 design
 library;
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 
 // Import model playground
 import 'screens/model_playground.dart';
@@ -22,10 +24,24 @@ import 'services/performance_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Set up camera delegate for desktop platforms (macOS, Windows, Linux)
+  if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+    final ImagePickerPlatform instance = ImagePickerPlatform.instance;
+    if (instance is CameraDelegatingImagePickerPlatform) {
+      // For now, camera is not supported on desktop - use gallery only
+      // Users should use ImageSource.gallery instead of ImageSource.camera
+      debugPrint('⚠️  Camera not supported on desktop platforms. Use gallery instead.');
+    }
+  }
+
   // Initialize ExecuTorch manager
   try {
     await ExecutorchManager.instance.initialize();
     debugPrint('✅ ExecuTorch Manager initialized successfully');
+
+    // Enable debug logging to see detailed ExecuTorch logs
+    await ExecutorchManager.instance.setDebugLogging(true);
+    debugPrint('✅ ExecuTorch debug logging enabled');
   } catch (e) {
     debugPrint('❌ Failed to initialize ExecuTorch: $e');
   }

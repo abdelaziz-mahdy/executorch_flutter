@@ -18,8 +18,8 @@ Supports ARM64 devices and simulators with optimized performance for mobile ML w
   s.source_files     = 'Classes/**/*'
   s.dependency 'Flutter'
 
-  # iOS deployment target aligned with ExecuTorch requirements
-  s.platform = :ios, '13.0'
+  # iOS deployment target aligned with ExecuTorch 0.7.0 requirements
+  s.platform = :ios, '17.0'
   s.swift_version = '5.9'
 
   # ExecuTorch dependency is handled via Package.swift when Swift Package Manager is enabled

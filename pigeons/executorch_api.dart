@@ -13,7 +13,9 @@ import 'package:pigeon/pigeon.dart';
     package: 'com.zcreations.executorch_flutter.generated',
   ),
   swiftOut: 'ios/Classes/Generated/ExecutorchApi.swift',
-  swiftOptions: SwiftOptions(),
+  swiftOptions: SwiftOptions(
+    includeErrorClass: false,
+  ),
   dartPackageName: 'executorch_flutter',
 ))
 
@@ -169,6 +171,10 @@ abstract class ExecutorchHostApi {
 
   /// Check if a model is currently loaded and ready
   ModelState getModelState(String modelId);
+
+  /// Enable or disable ExecuTorch debug logging
+  /// Only works in debug builds
+  void setDebugLogging(bool enabled);
 }
 
 /// Flutter API - Called from native platforms to Dart (optional)

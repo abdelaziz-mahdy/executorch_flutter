@@ -24,8 +24,39 @@
  * - ExecuTorch.framework linked and embedded
  * - Swift 5.9+ for async/await support
  */
+#if os(iOS)
 import Flutter
 import UIKit
+#elseif os(macOS)
+import FlutterMacOS
+import AppKit
+#endif
+
+import ExecuTorch
+
+/**
+ * Custom log sink for ExecuTorch debug logging
+ */
+class ExecutorchLogSink: LogSink {
+    func log(level: LogLevel, timestamp: TimeInterval, filename: String, line: UInt, message: String) {
+        let levelStr: String
+        switch level {
+        case .debug:
+            levelStr = "DEBUG"
+        case .info:
+            levelStr = "INFO"
+        case .error:
+            levelStr = "ERROR"
+        case .fatal:
+            levelStr = "FATAL"
+        @unknown default:
+            levelStr = "UNKNOWN"
+        }
+
+        let fileName = (filename as NSString).lastPathComponent
+        print("[\(levelStr)] ExecuTorch [\(fileName):\(line)] \(message)")
+    }
+}
 
 /**
  * Main plugin class that implements the Flutter plugin interface and Pigeon-generated APIs
@@ -42,15 +73,18 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
     private let modelQueue = DispatchQueue(label: "com.zcreations.executorch_flutter.models",
                                          qos: .default)
 
+    // ExecuTorch logging
+    private var logSink: ExecutorchLogSink?
+
     // MARK: - Flutter Plugin Registration
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let plugin = ExecutorchFlutterPlugin()
 
         // Set up Pigeon-generated method channel
-        ExecutorchHostApiSetup.setUp(binaryMessenger: registrar.messenger(), api: plugin)
+        ExecutorchHostApiSetup.setUp(binaryMessenger: registrar.messenger, api: plugin)
 
-        print("[\(TAG)] ExecutorchFlutterPlugin registered")
+        print("[\(Self.TAG)] ExecutorchFlutterPlugin registered")
     }
 
     public override init() {
@@ -65,7 +99,7 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         // Register model manager with lifecycle manager
         self.lifecycleManager.registerModelManager(modelManager)
 
-        print("[\(TAG)] ExecutorchFlutterPlugin initialized")
+        print("[\(Self.TAG)] ExecutorchFlutterPlugin initialized")
     }
 
     deinit {
@@ -76,7 +110,7 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         Task {
             await modelManager.disposeAllModels()
         }
-        print("[\(TAG)] ExecutorchFlutterPlugin deinitialized")
+        print("[\(Self.TAG)] ExecutorchFlutterPlugin deinitialized")
     }
 
     // MARK: - Pigeon ExecutorchHostApi Implementation
@@ -160,46 +194,110 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
     }
 
     public func getModelMetadata(modelId: String) throws -> ModelMetadata? {
-        do {
-            print("[\(Self.TAG)] Getting metadata for model: \(modelId)")
-            return try modelManager.getModelMetadata(modelId: modelId)
-        } catch {
-            print("[\(Self.TAG)] Failed to get metadata for model: \(modelId), error: \(error)")
-            return nil
+        print("[\(Self.TAG)] Getting metadata for model: \(modelId)")
+        var result: ModelMetadata? = nil
+        var thrownError: Error? = nil
+
+        let semaphore = DispatchSemaphore(value: 0)
+        Task {
+            do {
+                result = try await modelManager.getModelMetadata(modelId: modelId)
+            } catch {
+                thrownError = error
+            }
+            semaphore.signal()
         }
+        semaphore.wait()
+
+        if let error = thrownError {
+            throw error
+        }
+        return result
     }
 
     public func disposeModel(modelId: String) throws {
-        do {
-            print("[\(Self.TAG)] Disposing model: \(modelId)")
-            try modelManager.disposeModel(modelId: modelId)
-            print("[\(Self.TAG)] Model disposed successfully: \(modelId)")
-        } catch {
-            print("[\(Self.TAG)] Failed to dispose model: \(modelId), error: \(error)")
+        print("[\(Self.TAG)] Disposing model: \(modelId)")
+        var thrownError: Error? = nil
+
+        let semaphore = DispatchSemaphore(value: 0)
+        Task {
+            do {
+                try await modelManager.disposeModel(modelId: modelId)
+            } catch {
+                thrownError = error
+            }
+            semaphore.signal()
+        }
+        semaphore.wait()
+
+        if let error = thrownError {
             throw error
         }
+        print("[\(Self.TAG)] Model disposed successfully: \(modelId)")
     }
 
     public func getLoadedModels() throws -> [String?] {
-        do {
-            let models = try modelManager.getLoadedModelIds()
-            print("[\(Self.TAG)] Currently loaded models: \(models.count)")
-            return models.map { $0 as String? }
-        } catch {
-            print("[\(Self.TAG)] Failed to get loaded models, error: \(error)")
-            return []
+        var result: [String] = []
+        var thrownError: Error? = nil
+
+        let semaphore = DispatchSemaphore(value: 0)
+        Task {
+            do {
+                result = try await modelManager.getLoadedModelIds()
+            } catch {
+                thrownError = error
+            }
+            semaphore.signal()
         }
+        semaphore.wait()
+
+        if let error = thrownError {
+            throw error
+        }
+        print("[\(Self.TAG)] Currently loaded models: \(result.count)")
+        return result.map { $0 as String? }
     }
 
     public func getModelState(modelId: String) throws -> ModelState {
-        do {
-            let state = try modelManager.getModelState(modelId: modelId)
-            print("[\(Self.TAG)] Model \(modelId) state: \(state)")
-            return state
-        } catch {
-            print("[\(Self.TAG)] Failed to get state for model: \(modelId), error: \(error)")
-            return ModelState.error
+        var result: ModelState = .error
+        var thrownError: Error? = nil
+
+        let semaphore = DispatchSemaphore(value: 0)
+        Task {
+            do {
+                result = try await modelManager.getModelState(modelId: modelId)
+            } catch {
+                thrownError = error
+            }
+            semaphore.signal()
         }
+        semaphore.wait()
+
+        if let error = thrownError {
+            throw error
+        }
+        print("[\(Self.TAG)] Model \(modelId) state: \(result)")
+        return result
+    }
+
+    public func setDebugLogging(enabled: Bool) throws {
+        #if DEBUG
+        if enabled {
+            if logSink == nil {
+                logSink = ExecutorchLogSink()
+                Log.shared.add(sink: logSink!)
+                print("[\(Self.TAG)] ✅ ExecuTorch debug logging ENABLED")
+            }
+        } else {
+            if let sink = logSink {
+                Log.shared.remove(sink: sink)
+                logSink = nil
+                print("[\(Self.TAG)] ❌ ExecuTorch debug logging DISABLED")
+            }
+        }
+        #else
+        print("[\(Self.TAG)] ⚠️  Debug logging only available in DEBUG builds")
+        #endif
     }
 
     // MARK: - Private Helper Methods
