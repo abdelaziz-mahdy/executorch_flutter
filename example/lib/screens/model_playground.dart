@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../processors/processors.dart';
 import '../services/performance_service.dart';
+import '../utils/test_images.dart';
 
 /// Supported model types in the playground
 enum ModelType {
@@ -46,33 +47,15 @@ class ModelConfig {
 /// Available models
 const List<ModelConfig> availableModels = [
   ModelConfig(
-    name: 'MobileNet V3',
+    name: 'MobileNet V3 Small',
     type: ModelType.imageClassification,
     assetPath: 'assets/models/mobilenet_v3_small_xnnpack.pte',
     inputSize: 224,
   ),
   ModelConfig(
-    name: 'YOLO12 Nano',
-    type: ModelType.objectDetection,
-    assetPath: 'assets/models/yolo12n_xnnpack.pte',
-    inputSize: 640,
-  ),
-  ModelConfig(
     name: 'YOLO11 Nano',
     type: ModelType.objectDetection,
     assetPath: 'assets/models/yolo11n_xnnpack.pte',
-    inputSize: 640,
-  ),
-  ModelConfig(
-    name: 'YOLOv8 Nano',
-    type: ModelType.objectDetection,
-    assetPath: 'assets/models/yolov8n_xnnpack.pte',
-    inputSize: 640,
-  ),
-  ModelConfig(
-    name: 'YOLOv5 Nano',
-    type: ModelType.objectDetection,
-    assetPath: 'assets/models/yolov5n_xnnpack.pte',
     inputSize: 640,
   ),
 ];
@@ -92,6 +75,7 @@ class _ModelPlaygroundState extends State<ModelPlayground>
   ExecuTorchModel? _loadedModel;
   List<String>? _classLabels;
   List<String>? _cocoLabels;
+  ModelType? _selectedModelType; // Filter for model type
 
   // Processing state
   bool _isLoading = false;
@@ -173,6 +157,25 @@ class _ModelPlaygroundState extends State<ModelPlayground>
       // Load model
       final model = await ExecutorchManager.instance.loadModel(modelPath);
 
+      // Log model metadata for debugging
+      debugPrint('📋 Model metadata:');
+      debugPrint('   Model: ${model.metadata.modelName} v${model.metadata.version}');
+      debugPrint('   Estimated memory: ${model.metadata.estimatedMemoryMB} MB');
+      debugPrint('   Input specs (${model.metadata.inputSpecs.length}):');
+      for (var i = 0; i < model.metadata.inputSpecs.length; i++) {
+        final spec = model.metadata.inputSpecs[i];
+        if (spec != null) {
+          debugPrint('     [$i] ${spec.name}: shape=${spec.shape} type=${spec.dataType}');
+        }
+      }
+      debugPrint('   Output specs (${model.metadata.outputSpecs.length}):');
+      for (var i = 0; i < model.metadata.outputSpecs.length; i++) {
+        final spec = model.metadata.outputSpecs[i];
+        if (spec != null) {
+          debugPrint('     [$i] ${spec.name}: shape=${spec.shape} type=${spec.dataType}');
+        }
+      }
+
       setState(() {
         _selectedModelConfig = config;
         _loadedModel = model;
@@ -195,6 +198,54 @@ class _ModelPlaygroundState extends State<ModelPlayground>
     final file = File('${directory.path}/$fileName');
     await file.writeAsBytes(byteData.buffer.asUint8List());
     return file.path;
+  }
+
+  Future<void> _pickTestImage() async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Test Image'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: TestImages.all.length,
+            itemBuilder: (context, index) {
+              final imagePath = TestImages.all[index];
+              return ListTile(
+                leading: const Icon(Icons.image),
+                title: Text(TestImages.getName(imagePath)),
+                subtitle: Text(TestImages.getDescription(imagePath)),
+                onTap: () => Navigator.pop(context, imagePath),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (selected != null) {
+      try {
+        final file = await TestImages.getFileFromAsset(selected);
+        setState(() {
+          _selectedImage = file;
+          _classificationResult = null;
+          _objectDetectionResult = null;
+          _errorMessage = null;
+        });
+        await _processImage(file);
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Failed to load test image: $e';
+        });
+      }
+    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -279,6 +330,8 @@ class _ModelPlaygroundState extends State<ModelPlayground>
   }
 
   Future<void> _runObjectDetection(Uint8List imageBytes) async {
+    debugPrint('🔍 Running object detection with input size: ${_selectedModelConfig!.inputSize}x${_selectedModelConfig!.inputSize}');
+
     final processor = YoloProcessor(
       preprocessConfig: YoloPreprocessConfig(
         targetWidth: _selectedModelConfig!.inputSize,
@@ -408,13 +461,60 @@ class _ModelPlaygroundState extends State<ModelPlayground>
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
-          const SizedBox(height: 32),
-          ...availableModels.map(
-            (model) => Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _buildModelCard(model),
+          const SizedBox(height: 24),
+
+          // Model type filter chips
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                // All models chip
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: const Text('All Models'),
+                    selected: _selectedModelType == null,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedModelType = null;
+                      });
+                    },
+                    avatar: _selectedModelType == null
+                        ? const Icon(Icons.check_circle, size: 18)
+                        : const Icon(Icons.apps, size: 18),
+                  ),
+                ),
+                // Model type chips
+                ...ModelType.values.map((type) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(type.displayName),
+                    selected: _selectedModelType == type,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedModelType = selected ? type : null;
+                      });
+                    },
+                    avatar: Icon(type.icon, size: 18),
+                  ),
+                )),
+              ],
             ),
           ),
+          const SizedBox(height: 24),
+
+          // Filtered model list
+          ...availableModels
+              .where((model) =>
+                  _selectedModelType == null ||
+                  model.type == _selectedModelType)
+              .map(
+                (model) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildModelCard(model),
+                ),
+              ),
         ],
       ),
     );
@@ -615,6 +715,20 @@ class _ModelPlaygroundState extends State<ModelPlayground>
                   ),
                 ),
               ),
+
+            // Test images button (available on all platforms)
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _isProcessing ? null : _pickTestImage,
+              icon: const Icon(Icons.science),
+              label: const Text('Use Test Images'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ],
         ),
       ),

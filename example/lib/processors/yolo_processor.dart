@@ -144,6 +144,9 @@ class YoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
       }
     }
 
+    print('📊 YOLO Tensor shape: [1, 3, ${config.targetHeight}, ${config.targetWidth}]');
+    print('📊 YOLO Tensor data size: ${floats.length} floats');
+
     return TensorData(
       shape: [1, 3, config.targetHeight, config.targetWidth].cast<int?>(),
       dataType: TensorType.float32,

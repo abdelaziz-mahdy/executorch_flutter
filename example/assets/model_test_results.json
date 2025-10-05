@@ -1,0 +1,520 @@
+{
+  "validation_date": "2025-10-05T20:34:26.116263",
+  "test_images": [
+    "Car",
+    "Cat",
+    "Dog",
+    "Person",
+    "Street"
+  ],
+  "classification_models": [
+    {
+      "model_name": "mobilenet_v3_small_xnnpack",
+      "model_file": "mobilenet_v3_small_xnnpack.pte",
+      "model_type": "image_classification",
+      "input_size": 224,
+      "status": "success",
+      "test_results": {
+        "Car": {
+          "status": "success",
+          "inference_time_ms": 10.93,
+          "top5_predictions": [
+            {
+              "rank": 1,
+              "class": "window shade",
+              "class_index": 905,
+              "confidence": 0.127154,
+              "confidence_percent": "12.72%"
+            },
+            {
+              "rank": 2,
+              "class": "theater curtain",
+              "class_index": 854,
+              "confidence": 0.110449,
+              "confidence_percent": "11.04%"
+            },
+            {
+              "rank": 3,
+              "class": "velvet",
+              "class_index": 885,
+              "confidence": 0.073145,
+              "confidence_percent": "7.31%"
+            },
+            {
+              "rank": 4,
+              "class": "lampshade",
+              "class_index": 619,
+              "confidence": 0.055727,
+              "confidence_percent": "5.57%"
+            },
+            {
+              "rank": 5,
+              "class": "digital clock",
+              "class_index": 530,
+              "confidence": 0.046283,
+              "confidence_percent": "4.63%"
+            }
+          ]
+        },
+        "Cat": {
+          "status": "success",
+          "inference_time_ms": 7.17,
+          "top5_predictions": [
+            {
+              "rank": 1,
+              "class": "window screen",
+              "class_index": 904,
+              "confidence": 0.080798,
+              "confidence_percent": "8.08%"
+            },
+            {
+              "rank": 2,
+              "class": "loudspeaker",
+              "class_index": 632,
+              "confidence": 0.039001,
+              "confidence_percent": "3.90%"
+            },
+            {
+              "rank": 3,
+              "class": "necklace",
+              "class_index": 679,
+              "confidence": 0.029696,
+              "confidence_percent": "2.97%"
+            },
+            {
+              "rank": 4,
+              "class": "fire screen",
+              "class_index": 556,
+              "confidence": 0.027221,
+              "confidence_percent": "2.72%"
+            },
+            {
+              "rank": 5,
+              "class": "wall clock",
+              "class_index": 892,
+              "confidence": 0.023693,
+              "confidence_percent": "2.37%"
+            }
+          ]
+        },
+        "Dog": {
+          "status": "success",
+          "inference_time_ms": 6.92,
+          "top5_predictions": [
+            {
+              "rank": 1,
+              "class": "window screen",
+              "class_index": 904,
+              "confidence": 0.29369,
+              "confidence_percent": "29.37%"
+            },
+            {
+              "rank": 2,
+              "class": "window shade",
+              "class_index": 905,
+              "confidence": 0.045427,
+              "confidence_percent": "4.54%"
+            },
+            {
+              "rank": 3,
+              "class": "necklace",
+              "class_index": 679,
+              "confidence": 0.029471,
+              "confidence_percent": "2.95%"
+            },
+            {
+              "rank": 4,
+              "class": "loudspeaker",
+              "class_index": 632,
+              "confidence": 0.029143,
+              "confidence_percent": "2.91%"
+            },
+            {
+              "rank": 5,
+              "class": "velvet",
+              "class_index": 885,
+              "confidence": 0.02856,
+              "confidence_percent": "2.86%"
+            }
+          ]
+        },
+        "Person": {
+          "status": "success",
+          "inference_time_ms": 6.82,
+          "top5_predictions": [
+            {
+              "rank": 1,
+              "class": "window screen",
+              "class_index": 904,
+              "confidence": 0.284465,
+              "confidence_percent": "28.45%"
+            },
+            {
+              "rank": 2,
+              "class": "shower curtain",
+              "class_index": 794,
+              "confidence": 0.053858,
+              "confidence_percent": "5.39%"
+            },
+            {
+              "rank": 3,
+              "class": "fire screen",
+              "class_index": 556,
+              "confidence": 0.053082,
+              "confidence_percent": "5.31%"
+            },
+            {
+              "rank": 4,
+              "class": "window shade",
+              "class_index": 905,
+              "confidence": 0.026099,
+              "confidence_percent": "2.61%"
+            },
+            {
+              "rank": 5,
+              "class": "wall clock",
+              "class_index": 892,
+              "confidence": 0.023156,
+              "confidence_percent": "2.32%"
+            }
+          ]
+        },
+        "Street": {
+          "status": "success",
+          "inference_time_ms": 8.16,
+          "top5_predictions": [
+            {
+              "rank": 1,
+              "class": "shower curtain",
+              "class_index": 794,
+              "confidence": 0.323252,
+              "confidence_percent": "32.33%"
+            },
+            {
+              "rank": 2,
+              "class": "window screen",
+              "class_index": 904,
+              "confidence": 0.215256,
+              "confidence_percent": "21.53%"
+            },
+            {
+              "rank": 3,
+              "class": "velvet",
+              "class_index": 885,
+              "confidence": 0.064323,
+              "confidence_percent": "6.43%"
+            },
+            {
+              "rank": 4,
+              "class": "window shade",
+              "class_index": 905,
+              "confidence": 0.04634,
+              "confidence_percent": "4.63%"
+            },
+            {
+              "rank": 5,
+              "class": "fire screen",
+              "class_index": 556,
+              "confidence": 0.035175,
+              "confidence_percent": "3.52%"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "detection_models": [
+    {
+      "model_name": "yolo11n_xnnpack",
+      "model_file": "yolo11n_xnnpack.pte",
+      "model_type": "object_detection",
+      "input_size": 640,
+      "status": "success",
+      "test_results": {
+        "Car": {
+          "status": "success",
+          "inference_time_ms": 118.42,
+          "num_detections": 4,
+          "detections": [
+            {
+              "class": "Class 6345",
+              "class_index": 6345,
+              "confidence": 636.788574,
+              "confidence_percent": "63678.86%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 4475",
+              "class_index": 4475,
+              "confidence": 636.104126,
+              "confidence_percent": "63610.41%",
+              "bounding_box": {
+                "x": 0,
+                "y": 480,
+                "width": 640,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 8067",
+              "class_index": 8067,
+              "confidence": 633.232788,
+              "confidence_percent": "63323.28%",
+              "bounding_box": {
+                "x": 0,
+                "y": 480,
+                "width": 640,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 8236",
+              "class_index": 8236,
+              "confidence": 489.151703,
+              "confidence_percent": "48915.17%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            }
+          ]
+        },
+        "Cat": {
+          "status": "success",
+          "inference_time_ms": 109.82,
+          "num_detections": 4,
+          "detections": [
+            {
+              "class": "Class 6374",
+              "class_index": 6374,
+              "confidence": 636.729858,
+              "confidence_percent": "63672.99%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 5755",
+              "class_index": 5755,
+              "confidence": 636.500916,
+              "confidence_percent": "63650.09%",
+              "bounding_box": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 480
+              }
+            },
+            {
+              "class": "Class 8084",
+              "class_index": 8084,
+              "confidence": 635.067139,
+              "confidence_percent": "63506.71%",
+              "bounding_box": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 480
+              }
+            },
+            {
+              "class": "Class 8144",
+              "class_index": 8144,
+              "confidence": 630.899353,
+              "confidence_percent": "63089.94%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            }
+          ]
+        },
+        "Dog": {
+          "status": "success",
+          "inference_time_ms": 109.17,
+          "num_detections": 4,
+          "detections": [
+            {
+              "class": "Class 6332",
+              "class_index": 6332,
+              "confidence": 636.813049,
+              "confidence_percent": "63681.30%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 3195",
+              "class_index": 3195,
+              "confidence": 636.209045,
+              "confidence_percent": "63620.90%",
+              "bounding_box": {
+                "x": 0,
+                "y": 480,
+                "width": 640,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 8248",
+              "class_index": 8248,
+              "confidence": 628.416992,
+              "confidence_percent": "62841.70%",
+              "bounding_box": {
+                "x": 0,
+                "y": 480,
+                "width": 640,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 8208",
+              "class_index": 8208,
+              "confidence": 579.744263,
+              "confidence_percent": "57974.43%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            }
+          ]
+        },
+        "Person": {
+          "status": "success",
+          "inference_time_ms": 109.7,
+          "num_detections": 4,
+          "detections": [
+            {
+              "class": "Class 6388",
+              "class_index": 6388,
+              "confidence": 636.674377,
+              "confidence_percent": "63667.44%",
+              "bounding_box": {
+                "x": 640,
+                "y": 446,
+                "width": 0,
+                "height": 33
+              }
+            },
+            {
+              "class": "Class 8145",
+              "class_index": 8145,
+              "confidence": 636.432556,
+              "confidence_percent": "63643.26%",
+              "bounding_box": {
+                "x": 0,
+                "y": 480,
+                "width": 640,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 5355",
+              "class_index": 5355,
+              "confidence": 636.309204,
+              "confidence_percent": "63630.92%",
+              "bounding_box": {
+                "x": 0,
+                "y": 480,
+                "width": 640,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 8164",
+              "class_index": 8164,
+              "confidence": 634.271973,
+              "confidence_percent": "63427.20%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            }
+          ]
+        },
+        "Street": {
+          "status": "success",
+          "inference_time_ms": 113.55,
+          "num_detections": 4,
+          "detections": [
+            {
+              "class": "Class 315",
+              "class_index": 315,
+              "confidence": 637.014893,
+              "confidence_percent": "63701.49%",
+              "bounding_box": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 480
+              }
+            },
+            {
+              "class": "Class 6345",
+              "class_index": 6345,
+              "confidence": 636.90741,
+              "confidence_percent": "63690.74%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 8149",
+              "class_index": 8149,
+              "confidence": 635.202026,
+              "confidence_percent": "63520.20%",
+              "bounding_box": {
+                "x": 640,
+                "y": 480,
+                "width": 0,
+                "height": 0
+              }
+            },
+            {
+              "class": "Class 8147",
+              "class_index": 8147,
+              "confidence": 634.235779,
+              "confidence_percent": "63423.58%",
+              "bounding_box": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 480
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total_models_tested": 2,
+    "successful_models": 2,
+    "failed_models": 0,
+    "total_test_images": 5,
+    "classification_models_count": 1,
+    "detection_models_count": 1
+  }
+}
