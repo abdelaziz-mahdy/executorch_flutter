@@ -106,113 +106,71 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         // Unregister from lifecycle manager
         lifecycleManager.unregisterModelManager(modelManager)
 
-        // Clean up all models
-        Task {
-            await modelManager.disposeAllModels()
-        }
+        // Note: Models are cleaned up when the model manager is deallocated
         print("[\(Self.TAG)] ExecutorchFlutterPlugin deinitialized")
     }
 
     // MARK: - Pigeon ExecutorchHostApi Implementation
 
     public func loadModel(filePath: String, completion: @escaping (Result<ModelLoadResult, Error>) -> Void) {
-        modelQueue.async { [weak self] in
-            guard let self = self else {
-                completion(.failure(ExecutorchError.internalError("Plugin instance deallocated")))
-                return
-            }
+        print("[\(Self.TAG)] Loading model from: \(filePath)")
 
-            print("[\(Self.TAG)] Loading model from: \(filePath)")
-
-            Task {
-                do {
-                    let result = try await self.modelManager.loadModel(filePath: filePath)
-                    print("[\(Self.TAG)] Model loaded successfully: \(result.modelId)")
-                    completion(.success(result))
-                } catch {
-                    print("[\(Self.TAG)] Failed to load model: \(filePath), error: \(error)")
-                    let errorResult = ModelLoadResult(
-                        modelId: "",
-                        state: ModelState.error,
-                        metadata: nil,
-                        errorMessage: "Failed to load model: \(error.localizedDescription)"
-                    )
-                    completion(.success(errorResult))
-                }
+        Task {
+            do {
+                let result = try await self.modelManager.loadModel(filePath: filePath)
+                print("[\(Self.TAG)] Model loaded successfully: \(result.modelId)")
+                completion(.success(result))
+            } catch {
+                print("[\(Self.TAG)] Failed to load model: \(filePath), error: \(error)")
+                let errorResult = ModelLoadResult(
+                    modelId: "",
+                    state: ModelState.error,
+                    errorMessage: "Failed to load model: \(error.localizedDescription)"
+                )
+                completion(.success(errorResult))
             }
         }
     }
 
     public func runInference(request: InferenceRequest, completion: @escaping (Result<InferenceResult, Error>) -> Void) {
-        modelQueue.async { [weak self] in
-            guard let self = self else {
-                completion(.failure(ExecutorchError.internalError("Plugin instance deallocated")))
-                return
-            }
+        print("[\(Self.TAG)] Running inference for model: \(request.modelId)")
+        let startTime = CFAbsoluteTimeGetCurrent()
 
-            print("[\(Self.TAG)] Running inference for model: \(request.modelId)")
-            let startTime = CFAbsoluteTimeGetCurrent()
-
-            Task {
-                do {
-                    let result = try await self.modelManager.runInference(request: request)
-
-                    let endTime = CFAbsoluteTimeGetCurrent()
-                    let executionTime = (endTime - startTime) * 1000 // Convert to milliseconds
-
-                    print("[\(Self.TAG)] Inference completed in \(executionTime)ms for model: \(request.modelId)")
-
-                    // Override execution time with measured value if not set
-                    let finalResult: InferenceResult
-                    if result.executionTimeMs == 0.0 {
-                        finalResult = InferenceResult(
-                            status: result.status,
-                            executionTimeMs: executionTime,
-                            requestId: result.requestId,
-                            outputs: result.outputs,
-                            errorMessage: result.errorMessage,
-                            metadata: result.metadata
-                        )
-                    } else {
-                        finalResult = result
-                    }
-                    completion(.success(finalResult))
-                } catch {
-                    print("[\(Self.TAG)] Inference failed for model: \(request.modelId), error: \(error)")
-                    let errorResult = InferenceResult(
-                        status: InferenceStatus.error,
-                        executionTimeMs: 0.0,
-                        requestId: request.requestId,
-                        outputs: nil,
-                        errorMessage: "Inference failed: \(error.localizedDescription)",
-                        metadata: nil
-                    )
-                    completion(.success(errorResult))
-                }
-            }
-        }
-    }
-
-    public func getModelMetadata(modelId: String) throws -> ModelMetadata? {
-        print("[\(Self.TAG)] Getting metadata for model: \(modelId)")
-        var result: ModelMetadata? = nil
-        var thrownError: Error? = nil
-
-        let semaphore = DispatchSemaphore(value: 0)
         Task {
             do {
-                result = try await modelManager.getModelMetadata(modelId: modelId)
-            } catch {
-                thrownError = error
-            }
-            semaphore.signal()
-        }
-        semaphore.wait()
+                let result = try await self.modelManager.runInference(request: request)
 
-        if let error = thrownError {
-            throw error
+                let endTime = CFAbsoluteTimeGetCurrent()
+                let executionTime = (endTime - startTime) * 1000 // Convert to milliseconds
+
+                print("[\(Self.TAG)] Inference completed in \(executionTime)ms for model: \(request.modelId)")
+
+                // Override execution time with measured value if not set
+                let finalResult: InferenceResult
+                if result.executionTimeMs == 0.0 {
+                    finalResult = InferenceResult(
+                        status: result.status,
+                        executionTimeMs: executionTime,
+                        requestId: result.requestId,
+                        outputs: result.outputs,
+                        errorMessage: result.errorMessage
+                    )
+                } else {
+                    finalResult = result
+                }
+                completion(.success(finalResult))
+            } catch {
+                print("[\(Self.TAG)] Inference failed for model: \(request.modelId), error: \(error)")
+                let errorResult = InferenceResult(
+                    status: InferenceStatus.error,
+                    executionTimeMs: 0.0,
+                    requestId: request.requestId,
+                    outputs: nil,
+                    errorMessage: "Inference failed: \(error.localizedDescription)"
+                )
+                completion(.success(errorResult))
+            }
         }
-        return result
     }
 
     public func disposeModel(modelId: String) throws {
@@ -237,13 +195,13 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
     }
 
     public func getLoadedModels() throws -> [String?] {
-        var result: [String] = []
+        var result: [String?] = []
         var thrownError: Error? = nil
 
         let semaphore = DispatchSemaphore(value: 0)
         Task {
             do {
-                result = try await modelManager.getLoadedModelIds()
+                result = try await modelManager.getLoadedModels()
             } catch {
                 thrownError = error
             }
@@ -255,28 +213,6 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
             throw error
         }
         print("[\(Self.TAG)] Currently loaded models: \(result.count)")
-        return result.map { $0 as String? }
-    }
-
-    public func getModelState(modelId: String) throws -> ModelState {
-        var result: ModelState = .error
-        var thrownError: Error? = nil
-
-        let semaphore = DispatchSemaphore(value: 0)
-        Task {
-            do {
-                result = try await modelManager.getModelState(modelId: modelId)
-            } catch {
-                thrownError = error
-            }
-            semaphore.signal()
-        }
-        semaphore.wait()
-
-        if let error = thrownError {
-            throw error
-        }
-        print("[\(Self.TAG)] Model \(modelId) state: \(result)")
         return result
     }
 

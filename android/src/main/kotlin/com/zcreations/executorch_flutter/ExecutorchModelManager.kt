@@ -55,11 +55,10 @@ class ExecutorchModelManager(
     private val modelCounter = java.util.concurrent.atomic.AtomicInteger(0)
 
     /**
-     * Represents a loaded ExecuTorch model with metadata
+     * Represents a loaded ExecuTorch model
      */
     private data class LoadedModel(
         val module: Module,
-        val metadata: ModelMetadata,
         val filePath: String,
         val loadTime: Long = System.currentTimeMillis()
     )
@@ -92,13 +91,9 @@ class ExecutorchModelManager(
                 Log.d(TAG, "Loading ExecuTorch module with Module.load()")
                 val module = Module.load(filePath)
 
-                // Extract model metadata
-                val metadata = extractModelMetadata(module, filePath)
-
                 // Store loaded model
                 val loadedModel = LoadedModel(
                     module = module,
-                    metadata = metadata,
                     filePath = filePath
                 )
 
@@ -110,7 +105,6 @@ class ExecutorchModelManager(
                 ModelLoadResult(
                     modelId = modelId,
                     state = ModelState.READY,
-                    metadata = metadata,
                     errorMessage = null
                 )
 
@@ -146,9 +140,8 @@ class ExecutorchModelManager(
 
             Log.d(TAG, "Running inference on model: $modelId")
 
-            // Filter out null inputs and validate
+            // Filter out null inputs
             val validInputs = request.inputs.filterNotNull()
-            validateInputTensors(validInputs, loadedModel.metadata)
 
             // Convert Flutter tensors to ExecuTorch EValues
             val inputEValues = convertTensorsToEValues(validInputs)
@@ -190,135 +183,40 @@ class ExecutorchModelManager(
     }
 
     /**
-     * Get metadata for a loaded model
-     */
-    fun getModelMetadata(modelId: String): ModelMetadata? {
-        return loadedModels[modelId]?.metadata
-    }
-
-    /**
-     * Dispose a loaded model and free resources
+     * Dispose a loaded model and free its resources
      */
     suspend fun disposeModel(modelId: String) = withContext(Dispatchers.IO) {
-        try {
-            val loadedModel = loadedModels.remove(modelId)
-            modelStates[modelId] = ModelState.DISPOSED
+        val loadedModel = loadedModels.remove(modelId)
+        modelStates.remove(modelId)
 
-            if (loadedModel != null) {
-                // Note: ExecuTorch Module doesn't have explicit dispose method
-                // Rely on garbage collection for cleanup
-                Log.d(TAG, "Disposed model: $modelId")
-            } else {
-                Log.w(TAG, "Attempted to dispose unknown model: $modelId")
-            }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to dispose model: $modelId", e)
-            throw e
+        if (loadedModel != null) {
+            // Note: ExecuTorch Module cleanup handled by garbage collection
+            Log.d(TAG, "Disposed model: $modelId")
+        } else {
+            Log.w(TAG, "Attempted to dispose unknown model: $modelId")
         }
-    }
-
-    /**
-     * Dispose all loaded models
-     */
-    suspend fun disposeAllModels() = withContext(Dispatchers.IO) {
-        val modelIds = loadedModels.keys.toList()
-        for (modelId in modelIds) {
-            try {
-                disposeModel(modelId)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to dispose model during cleanup: $modelId", e)
-            }
-        }
-    }
-
-    /**
-     * Get the current state of a model
-     */
-    fun getModelState(modelId: String): ModelState {
-        return modelStates[modelId] ?: ModelState.ERROR
     }
 
     /**
      * Get list of loaded model IDs
      */
-    fun getLoadedModelIds(): List<String> {
+    fun getLoadedModels(): List<String?> {
         return loadedModels.keys.toList()
+    }
+
+    /**
+     * Enable or disable debug logging
+     */
+    fun setDebugLogging(enabled: Boolean) {
+        // ExecuTorch doesn't expose a global logging API
+        // Logging is controlled at compile time or via environment variables
+        Log.d(TAG, "Debug logging setting: $enabled (note: may require rebuild)")
     }
 
     // Private helper methods
 
     private fun generateModelId(): String {
         return MODEL_ID_PREFIX + UUID.randomUUID().toString().replace("-", "").substring(0, 8)
-    }
-
-    private fun extractModelMetadata(module: Module, filePath: String): ModelMetadata {
-        // Note: ExecuTorch Module doesn't provide introspection APIs
-        // We'll create basic metadata from file information
-        val file = File(filePath)
-        val modelName = file.nameWithoutExtension
-
-        // Create placeholder tensor specs - in a real implementation,
-        // these would come from model introspection or external metadata
-        val inputSpecs = listOf(
-            TensorSpec(
-                name = "input",
-                shape = listOf(1L, 3L, 224L, 224L), // Common image input shape
-                dataType = TensorType.FLOAT32,
-                optional = false,
-                validRange = null
-            )
-        )
-
-        val outputSpecs = listOf(
-            TensorSpec(
-                name = "output",
-                shape = listOf(1L, 1000L), // Common classification output
-                dataType = TensorType.FLOAT32,
-                optional = false,
-                validRange = null
-            )
-        )
-
-        // Estimate memory usage based on file size
-        val estimatedMemoryMB = (file.length() / (1024 * 1024)).toLong().coerceAtLeast(1L)
-
-        val properties = mapOf(
-            "file_path" to filePath,
-            "file_size_bytes" to file.length(),
-            "load_time" to System.currentTimeMillis(),
-            "backend" to "executorch_android"
-        )
-
-        return ModelMetadata(
-            modelName = modelName,
-            version = "1.0.0",
-            inputSpecs = inputSpecs,
-            outputSpecs = outputSpecs,
-            estimatedMemoryMB = estimatedMemoryMB,
-            properties = properties as Map<String?, Any?>?
-        )
-    }
-
-
-    private fun validateInputTensors(inputs: List<TensorData>, metadata: ModelMetadata) {
-        if (inputs.size != metadata.inputSpecs.size) {
-            throw ValidationException(
-                "Input count mismatch: expected ${metadata.inputSpecs.size}, got ${inputs.size}"
-            )
-        }
-
-        // Additional validation can be added here
-        for (i in inputs.indices) {
-            val input = inputs[i]
-            val spec = metadata.inputSpecs[i]
-
-            if (spec != null && input.dataType != spec.dataType) {
-                throw ValidationException(
-                    "Input $i data type mismatch: expected ${spec.dataType}, got ${input.dataType}"
-                )
-            }
-        }
     }
 
     private fun convertTensorsToEValues(tensors: List<TensorData>): List<EValue> {

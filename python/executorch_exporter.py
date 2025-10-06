@@ -247,6 +247,8 @@ class ExecuTorchExporter:
                     compile_config = None
                     if backend == "coreml":
                         compile_config = EdgeCompileConfig(_skip_dim_order=True)
+                    elif backend == "xnnpack":
+                        compile_config = EdgeCompileConfig(_skip_dim_order=True)
 
                     et_program = to_edge_transform_and_lower(
                         export(optimized_model, sample_inputs),

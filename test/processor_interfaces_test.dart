@@ -89,7 +89,7 @@ class TestPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
   bool validateInput(Uint8List input) => input.isNotEmpty;
 
   @override
-  Future<List<TensorData>> preprocess(Uint8List input, {ModelMetadata? metadata}) async {
+  Future<List<TensorData>> preprocess(Uint8List input) async {
     return [];
   }
 }
@@ -102,7 +102,7 @@ class TestPostprocessor extends ExecuTorchPostprocessor<String> {
   bool validateOutputs(List<TensorData> outputs) => outputs.isNotEmpty;
 
   @override
-  Future<String> postprocess(List<TensorData> outputs, {ModelMetadata? metadata}) async {
+  Future<String> postprocess(List<TensorData> outputs) async {
     return 'test result';
   }
 }

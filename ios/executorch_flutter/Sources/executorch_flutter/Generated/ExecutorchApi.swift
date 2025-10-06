@@ -70,82 +70,6 @@ public enum InferenceStatus: Int {
   case cancelled = 3
 }
 
-/// Tensor specification for input/output requirements
-///
-/// Generated class from Pigeon that represents data sent in messages.
-public struct TensorSpec {
-  var name: String
-  var shape: [Int64?]
-  var dataType: TensorType
-  var optional: Bool
-  var validRange: [Int64?]? = nil
-
-  static func fromList(_ list: [Any?]) -> TensorSpec? {
-    let name = list[0] as! String
-    let shape = list[1] as! [Int64?]
-    let dataType = TensorType(rawValue: list[2] as! Int)!
-    let optional = list[3] as! Bool
-    let validRange: [Int64?]? = nilOrValue(list[4])
-
-    return TensorSpec(
-      name: name,
-      shape: shape,
-      dataType: dataType,
-      optional: optional,
-      validRange: validRange
-    )
-  }
-  func toList() -> [Any?] {
-    return [
-      name,
-      shape,
-      dataType.rawValue,
-      optional,
-      validRange,
-    ]
-  }
-}
-
-/// Model metadata and capabilities
-///
-/// Generated class from Pigeon that represents data sent in messages.
-public struct ModelMetadata {
-  var modelName: String
-  var version: String
-  var inputSpecs: [TensorSpec?]
-  var outputSpecs: [TensorSpec?]
-  var estimatedMemoryMB: Int64
-  var properties: [String?: Any?]? = nil
-
-  static func fromList(_ list: [Any?]) -> ModelMetadata? {
-    let modelName = list[0] as! String
-    let version = list[1] as! String
-    let inputSpecs = list[2] as! [TensorSpec?]
-    let outputSpecs = list[3] as! [TensorSpec?]
-    let estimatedMemoryMB = list[4] is Int64 ? list[4] as! Int64 : Int64(list[4] as! Int32)
-    let properties: [String?: Any?]? = nilOrValue(list[5])
-
-    return ModelMetadata(
-      modelName: modelName,
-      version: version,
-      inputSpecs: inputSpecs,
-      outputSpecs: outputSpecs,
-      estimatedMemoryMB: estimatedMemoryMB,
-      properties: properties
-    )
-  }
-  func toList() -> [Any?] {
-    return [
-      modelName,
-      version,
-      inputSpecs,
-      outputSpecs,
-      estimatedMemoryMB,
-      properties,
-    ]
-  }
-}
-
 /// Tensor data for input/output
 ///
 /// Generated class from Pigeon that represents data sent in messages.
@@ -260,22 +184,16 @@ public struct InferenceResult {
 public struct ModelLoadResult {
   var modelId: String
   var state: ModelState
-  var metadata: ModelMetadata? = nil
   var errorMessage: String? = nil
 
   static func fromList(_ list: [Any?]) -> ModelLoadResult? {
     let modelId = list[0] as! String
     let state = ModelState(rawValue: list[1] as! Int)!
-    var metadata: ModelMetadata? = nil
-    if let metadataList: [Any?] = nilOrValue(list[2]) {
-      metadata = ModelMetadata.fromList(metadataList)
-    }
-    let errorMessage: String? = nilOrValue(list[3])
+    let errorMessage: String? = nilOrValue(list[2])
 
     return ModelLoadResult(
       modelId: modelId,
       state: state,
-      metadata: metadata,
       errorMessage: errorMessage
     )
   }
@@ -283,7 +201,6 @@ public struct ModelLoadResult {
     return [
       modelId,
       state.rawValue,
-      metadata?.toList(),
       errorMessage,
     ]
   }
@@ -299,11 +216,7 @@ private class ExecutorchHostApiCodecReader: FlutterStandardReader {
     case 130:
       return ModelLoadResult.fromList(self.readValue() as! [Any?])
     case 131:
-      return ModelMetadata.fromList(self.readValue() as! [Any?])
-    case 132:
       return TensorData.fromList(self.readValue() as! [Any?])
-    case 133:
-      return TensorSpec.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
     }
@@ -321,14 +234,8 @@ private class ExecutorchHostApiCodecWriter: FlutterStandardWriter {
     } else if let value = value as? ModelLoadResult {
       super.writeByte(130)
       super.writeValue(value.toList())
-    } else if let value = value as? ModelMetadata {
-      super.writeByte(131)
-      super.writeValue(value.toList())
     } else if let value = value as? TensorData {
-      super.writeByte(132)
-      super.writeValue(value.toList())
-    } else if let value = value as? TensorSpec {
-      super.writeByte(133)
+      super.writeByte(131)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -351,6 +258,7 @@ class ExecutorchHostApiCodec: FlutterStandardMessageCodec {
 }
 
 /// Host API - Called from Dart to native platforms
+/// Simplified to core operations: load, inference, dispose
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 public protocol ExecutorchHostApi {
@@ -360,14 +268,11 @@ public protocol ExecutorchHostApi {
   /// Run inference on a loaded model
   /// Returns inference results or error information
   func runInference(request: InferenceRequest, completion: @escaping (Result<InferenceResult, Error>) -> Void)
-  /// Get metadata for a loaded model
-  func getModelMetadata(modelId: String) throws -> ModelMetadata?
   /// Dispose a loaded model and free its resources
+  /// User has full control over memory management
   func disposeModel(modelId: String) throws
   /// Get list of currently loaded model IDs
   func getLoadedModels() throws -> [String?]
-  /// Check if a model is currently loaded and ready
-  func getModelState(modelId: String) throws -> ModelState
   /// Enable or disable ExecuTorch debug logging
   /// Only works in debug builds
   func setDebugLogging(enabled: Bool) throws
@@ -417,23 +322,8 @@ class ExecutorchHostApiSetup {
     } else {
       runInferenceChannel.setMessageHandler(nil)
     }
-    /// Get metadata for a loaded model
-    let getModelMetadataChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getModelMetadata", binaryMessenger: binaryMessenger, codec: codec)
-    if let api = api {
-      getModelMetadataChannel.setMessageHandler { message, reply in
-        let args = message as! [Any?]
-        let modelIdArg = args[0] as! String
-        do {
-          let result = try api.getModelMetadata(modelId: modelIdArg)
-          reply(wrapResult(result))
-        } catch {
-          reply(wrapError(error))
-        }
-      }
-    } else {
-      getModelMetadataChannel.setMessageHandler(nil)
-    }
     /// Dispose a loaded model and free its resources
+    /// User has full control over memory management
     let disposeModelChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.disposeModel", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       disposeModelChannel.setMessageHandler { message, reply in
@@ -462,22 +352,6 @@ class ExecutorchHostApiSetup {
       }
     } else {
       getLoadedModelsChannel.setMessageHandler(nil)
-    }
-    /// Check if a model is currently loaded and ready
-    let getModelStateChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getModelState", binaryMessenger: binaryMessenger, codec: codec)
-    if let api = api {
-      getModelStateChannel.setMessageHandler { message, reply in
-        let args = message as! [Any?]
-        let modelIdArg = args[0] as! String
-        do {
-          let result = try api.getModelState(modelId: modelIdArg)
-          reply(wrapResult(result.rawValue))
-        } catch {
-          reply(wrapError(error))
-        }
-      }
-    } else {
-      getModelStateChannel.setMessageHandler(nil)
     }
     /// Enable or disable ExecuTorch debug logging
     /// Only works in debug builds

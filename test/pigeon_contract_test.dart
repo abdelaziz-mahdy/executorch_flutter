@@ -89,35 +89,7 @@ void main() {
       }
     });
 
-    test('T011: Contract test ExecutorchHostApi.getModelMetadata', () async {
-      // Arrange
-      const String modelId = 'test-model-123';
-
-      try {
-        // Act
-        final metadata = await hostApi.getModelMetadata(modelId);
-
-        // Assert - Only if implementation exists
-        if (metadata != null) {
-          expect(metadata, isA<ModelMetadata>());
-          expect(metadata.modelName, isA<String>());
-          expect(metadata.version, isA<String>());
-          expect(metadata.inputSpecs, isA<List>());
-          expect(metadata.outputSpecs, isA<List>());
-          expect(metadata.estimatedMemoryMB, isA<int>());
-        }
-
-      } catch (e) {
-        // Expected to fail during TDD phase
-        expect(e, anyOf([
-          isA<MissingPluginException>(),
-          isA<PlatformException>(),
-        ]));
-        print('Expected TDD failure for getModelMetadata: $e');
-      }
-    });
-
-    test('T012: Contract test ExecutorchHostApi.disposeModel', () async {
+    test('T011: Contract test ExecutorchHostApi.disposeModel', () async {
       // Arrange
       const String modelId = 'test-model-123';
 
@@ -153,27 +125,6 @@ void main() {
           isA<PlatformException>(),
         ]));
         print('Expected TDD failure for getLoadedModels: $e');
-      }
-    });
-
-    test('T012: Contract test ExecutorchHostApi.getModelState', () async {
-      // Arrange
-      const String modelId = 'test-model-123';
-
-      try {
-        // Act
-        final state = await hostApi.getModelState(modelId);
-
-        // Assert - Only if implementation exists
-        expect(state, isIn(ModelState.values));
-
-      } catch (e) {
-        // Expected to fail during TDD phase
-        expect(e, anyOf([
-          isA<MissingPluginException>(),
-          isA<PlatformException>(),
-        ]));
-        print('Expected TDD failure for getModelState: $e');
       }
     });
   });

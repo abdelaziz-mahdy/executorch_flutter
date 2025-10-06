@@ -339,7 +339,12 @@ class ExecutorchLifecycleManager {
 
         let activeManagers = modelManagers.compactMap { $0.manager }
         for manager in activeManagers {
-            await manager.disposeAllModels()
+            // Get all loaded models and dispose them
+            if let modelIds = try? await manager.getLoadedModels() {
+                for modelId in modelIds.compactMap({ $0 }) {
+                    try? await manager.disposeModel(modelId: modelId)
+                }
+            }
         }
 
         modelManagers.removeAll()
@@ -409,8 +414,9 @@ extension ExecutorchModelManager {
 
         // In a real implementation, this would dispose LRU models
         // For now, we'll dispose half of the loaded models
-        let loadedIds = try? getLoadedModelIds()
-        let modelsToDispose = loadedIds?.prefix(loadedIds!.count / 2) ?? []
+        let loadedIds = try? await getLoadedModels()
+        let loadedArray = loadedIds?.compactMap { $0 } ?? []
+        let modelsToDispose = loadedArray.prefix(loadedArray.count / 2)
 
         for modelId in modelsToDispose {
             do {

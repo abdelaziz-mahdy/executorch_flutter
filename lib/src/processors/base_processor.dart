@@ -170,12 +170,9 @@ abstract class ExecuTorchPreprocessor<T> {
   /// It should handle normalization, resizing, tokenization, or other
   /// domain-specific transformations.
   ///
-  /// The [metadata] parameter provides optional model information that can
-  /// influence preprocessing (e.g., expected input shapes).
-  ///
   /// Throws [PreprocessingException] if processing fails.
   /// Throws [InvalidInputException] if input validation fails.
-  Future<List<TensorData>> preprocess(T input, {ModelMetadata? metadata});
+  Future<List<TensorData>> preprocess(T input);
 }
 
 /// Abstract base class for output postprocessing
@@ -202,12 +199,9 @@ abstract class ExecuTorchPostprocessor<R> {
   /// results. It should handle softmax application, label mapping, coordinate
   /// transformation, or other domain-specific operations.
   ///
-  /// The [metadata] parameter provides optional model information that can
-  /// influence postprocessing (e.g., class label mappings).
-  ///
   /// Throws [PostprocessingException] if processing fails.
   /// Throws [InvalidOutputException] if output validation fails.
-  Future<R> postprocess(List<TensorData> outputs, {ModelMetadata? metadata});
+  Future<R> postprocess(List<TensorData> outputs);
 }
 
 /// Abstract base class combining preprocessing and postprocessing
@@ -250,7 +244,7 @@ abstract class ExecuTorchProcessor<T, R> {
       }
 
       // Preprocess input
-      final inputs = await preprocessor.preprocess(input, metadata: model.metadata);
+      final inputs = await preprocessor.preprocess(input);
 
       if (inputs.isEmpty) {
         throw PreprocessingException(
@@ -276,10 +270,7 @@ abstract class ExecuTorchProcessor<T, R> {
       }
 
       // Postprocess outputs
-      final result = await postprocessor.postprocess(
-        validOutputs,
-        metadata: model.metadata
-      );
+      final result = await postprocessor.postprocess(validOutputs);
 
       return result;
     } catch (e) {

@@ -161,7 +161,7 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
   }
 
   @override
-  Future<List<TensorData>> preprocess(Uint8List input, {ModelMetadata? metadata}) async {
+  Future<List<TensorData>> preprocess(Uint8List input) async {
     try {
       // Decode image - exactly like working code
       final decodedImage = img.decodeImage(input);
@@ -410,7 +410,7 @@ class ImageNetPostprocessor extends ExecuTorchPostprocessor<ClassificationResult
   }
 
   @override
-  Future<ClassificationResult> postprocess(List<TensorData> outputs, {ModelMetadata? metadata}) async {
+  Future<ClassificationResult> postprocess(List<TensorData> outputs) async {
     try {
       if (outputs.isEmpty) {
         throw PostprocessingException('No output tensors provided');

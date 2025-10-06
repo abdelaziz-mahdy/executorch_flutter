@@ -193,28 +193,6 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         }
     }
 
-    public func getModelMetadata(modelId: String) throws -> ModelMetadata? {
-        print("[\(Self.TAG)] Getting metadata for model: \(modelId)")
-        var result: ModelMetadata? = nil
-        var thrownError: Error? = nil
-
-        let semaphore = DispatchSemaphore(value: 0)
-        Task {
-            do {
-                result = try await modelManager.getModelMetadata(modelId: modelId)
-            } catch {
-                thrownError = error
-            }
-            semaphore.signal()
-        }
-        semaphore.wait()
-
-        if let error = thrownError {
-            throw error
-        }
-        return result
-    }
-
     public func disposeModel(modelId: String) throws {
         print("[\(Self.TAG)] Disposing model: \(modelId)")
         var thrownError: Error? = nil
@@ -237,13 +215,13 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
     }
 
     public func getLoadedModels() throws -> [String?] {
-        var result: [String] = []
+        var result: [String?] = []
         var thrownError: Error? = nil
 
         let semaphore = DispatchSemaphore(value: 0)
         Task {
             do {
-                result = try await modelManager.getLoadedModelIds()
+                result = try await modelManager.getLoadedModels()
             } catch {
                 thrownError = error
             }
@@ -255,28 +233,6 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
             throw error
         }
         print("[\(Self.TAG)] Currently loaded models: \(result.count)")
-        return result.map { $0 as String? }
-    }
-
-    public func getModelState(modelId: String) throws -> ModelState {
-        var result: ModelState = .error
-        var thrownError: Error? = nil
-
-        let semaphore = DispatchSemaphore(value: 0)
-        Task {
-            do {
-                result = try await modelManager.getModelState(modelId: modelId)
-            } catch {
-                thrownError = error
-            }
-            semaphore.signal()
-        }
-        semaphore.wait()
-
-        if let error = thrownError {
-            throw error
-        }
-        print("[\(Self.TAG)] Model \(modelId) state: \(result)")
         return result
     }
 

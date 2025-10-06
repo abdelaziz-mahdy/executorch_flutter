@@ -32,6 +32,11 @@ class ImageNetPreprocessor:
         """
         Preprocess image for ImageNet models.
 
+        Uses torchvision's standard preprocessing pipeline:
+        1. Resize shortest edge to 256 (maintaining aspect ratio)
+        2. Center crop to 224x224
+        3. Normalize with ImageNet mean/std
+
         Args:
             image_path: Path to input image
             target_size: Target size (default 224 for MobileNet)
@@ -39,28 +44,19 @@ class ImageNetPreprocessor:
         Returns:
             Preprocessed tensor [1, 3, H, W]
         """
+        from torchvision import transforms
+
         img = Image.open(image_path).convert('RGB')
 
-        # Center crop to square
-        width, height = img.size
-        min_dim = min(width, height)
-        left = (width - min_dim) // 2
-        top = (height - min_dim) // 2
-        img = img.crop((left, top, left + min_dim, top + min_dim))
+        # Use torchvision's standard preprocessing (same as training)
+        preprocess = transforms.Compose([
+            transforms.Resize(256),  # Resize shorter edge to 256, maintaining aspect ratio
+            transforms.CenterCrop(target_size),  # Then center crop to target_size x target_size
+            transforms.ToTensor(),  # Convert to [0, 1] and CHW format
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
 
-        # Resize
-        img = img.resize((target_size, target_size), Image.Resampling.BILINEAR)
-
-        # Convert to array and normalize
-        img_array = np.array(img).astype(np.float32) / 255.0
-
-        # Apply ImageNet normalization
-        mean = np.array([0.485, 0.456, 0.406]).reshape(1, 1, 3)
-        std = np.array([0.229, 0.224, 0.225]).reshape(1, 1, 3)
-        img_array = (img_array - mean) / std
-
-        # Convert to NCHW format
-        img_tensor = torch.from_numpy(img_array).permute(2, 0, 1).unsqueeze(0)
+        img_tensor = preprocess(img).unsqueeze(0)
         return img_tensor.float()
 
 

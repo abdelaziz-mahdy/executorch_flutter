@@ -3,9 +3,99 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 import 'package:meta/meta.dart';
-
 import 'package:executorch_flutter/executorch_flutter.dart';
-import 'object_detection_processor.dart';
+
+/// Bounding box coordinates
+@immutable
+class BoundingBox {
+  const BoundingBox({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  /// Right edge coordinate
+  double get right => x + width;
+
+  /// Bottom edge coordinate
+  double get bottom => y + height;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BoundingBox &&
+          x == other.x &&
+          y == other.y &&
+          width == other.width &&
+          height == other.height;
+
+  @override
+  int get hashCode => x.hashCode ^ y.hashCode ^ width.hashCode ^ height.hashCode;
+}
+
+/// Detected object with bounding box
+@immutable
+class DetectedObject {
+  const DetectedObject({
+    required this.className,
+    required this.confidence,
+    required this.boundingBox,
+    this.classIndex,
+  });
+
+  final String className;
+  final double confidence;
+  final BoundingBox boundingBox;
+  final int? classIndex;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DetectedObject &&
+          className == other.className &&
+          confidence == other.confidence &&
+          boundingBox == other.boundingBox &&
+          classIndex == other.classIndex;
+
+  @override
+  int get hashCode =>
+      className.hashCode ^
+      confidence.hashCode ^
+      boundingBox.hashCode ^
+      classIndex.hashCode;
+}
+
+/// Object detection result
+@immutable
+class ObjectDetectionResult {
+  const ObjectDetectionResult({
+    required this.detectedObjects,
+    required this.inferenceTimeMs,
+    this.preprocessingTimeMs,
+    this.postprocessingTimeMs,
+  });
+
+  final List<DetectedObject> detectedObjects;
+  final double inferenceTimeMs;
+  final double? preprocessingTimeMs;
+  final double? postprocessingTimeMs;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ObjectDetectionResult &&
+          detectedObjects == other.detectedObjects &&
+          inferenceTimeMs == other.inferenceTimeMs;
+
+  @override
+  int get hashCode => detectedObjects.hashCode ^ inferenceTimeMs.hashCode;
+}
 
 /// YOLO-specific preprocessing configuration
 @immutable
@@ -59,7 +149,7 @@ class YoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
   }
 
   @override
-  Future<List<TensorData>> preprocess(Uint8List input, {ModelMetadata? metadata}) async {
+  Future<List<TensorData>> preprocess(Uint8List input) async {
     try {
       // Decode image
       final decodedImage = img.decodeImage(input);
@@ -185,7 +275,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
   bool validateOutputs(List<TensorData> outputs) => outputs.isNotEmpty;
 
   @override
-  Future<ObjectDetectionResult> postprocess(List<TensorData> outputs, {ModelMetadata? metadata}) async {
+  Future<ObjectDetectionResult> postprocess(List<TensorData> outputs) async {
     try {
       final stopwatch = Stopwatch()..start();
 
@@ -209,7 +299,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
 
       return ObjectDetectionResult(
         detectedObjects: limited,
-        processingTimeMs: stopwatch.elapsedMilliseconds.toDouble(),
+        inferenceTimeMs: stopwatch.elapsedMilliseconds.toDouble(),
       );
     } catch (e) {
       if (e is ProcessorException) rethrow;

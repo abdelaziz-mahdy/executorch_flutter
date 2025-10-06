@@ -1,5 +1,5 @@
 {
-  "validation_date": "2025-10-05T20:34:26.116263",
+  "validation_date": "2025-10-05T20:52:39.553255",
   "test_images": [
     "Car",
     "Cat",
@@ -17,206 +17,206 @@
       "test_results": {
         "Car": {
           "status": "success",
-          "inference_time_ms": 10.93,
+          "inference_time_ms": 9.97,
           "top5_predictions": [
             {
               "rank": 1,
-              "class": "window shade",
-              "class_index": 905,
-              "confidence": 0.127154,
-              "confidence_percent": "12.72%"
+              "class": "sports car",
+              "class_index": 817,
+              "confidence": 0.725371,
+              "confidence_percent": "72.54%"
             },
             {
               "rank": 2,
-              "class": "theater curtain",
-              "class_index": 854,
-              "confidence": 0.110449,
-              "confidence_percent": "11.04%"
+              "class": "grille",
+              "class_index": 581,
+              "confidence": 0.188116,
+              "confidence_percent": "18.81%"
             },
             {
               "rank": 3,
-              "class": "velvet",
-              "class_index": 885,
-              "confidence": 0.073145,
-              "confidence_percent": "7.31%"
+              "class": "racer",
+              "class_index": 751,
+              "confidence": 0.055606,
+              "confidence_percent": "5.56%"
             },
             {
               "rank": 4,
-              "class": "lampshade",
-              "class_index": 619,
-              "confidence": 0.055727,
-              "confidence_percent": "5.57%"
+              "class": "convertible",
+              "class_index": 511,
+              "confidence": 0.020422,
+              "confidence_percent": "2.04%"
             },
             {
               "rank": 5,
-              "class": "digital clock",
-              "class_index": 530,
-              "confidence": 0.046283,
-              "confidence_percent": "4.63%"
+              "class": "beach wagon",
+              "class_index": 436,
+              "confidence": 0.004615,
+              "confidence_percent": "0.46%"
             }
           ]
         },
         "Cat": {
           "status": "success",
-          "inference_time_ms": 7.17,
+          "inference_time_ms": 6.83,
           "top5_predictions": [
             {
               "rank": 1,
-              "class": "window screen",
-              "class_index": 904,
-              "confidence": 0.080798,
-              "confidence_percent": "8.08%"
+              "class": "tabby",
+              "class_index": 281,
+              "confidence": 0.297454,
+              "confidence_percent": "29.75%"
             },
             {
               "rank": 2,
-              "class": "loudspeaker",
-              "class_index": 632,
-              "confidence": 0.039001,
-              "confidence_percent": "3.90%"
+              "class": "carton",
+              "class_index": 478,
+              "confidence": 0.131193,
+              "confidence_percent": "13.12%"
             },
             {
               "rank": 3,
-              "class": "necklace",
-              "class_index": 679,
-              "confidence": 0.029696,
-              "confidence_percent": "2.97%"
+              "class": "tiger cat",
+              "class_index": 282,
+              "confidence": 0.107688,
+              "confidence_percent": "10.77%"
             },
             {
               "rank": 4,
-              "class": "fire screen",
-              "class_index": 556,
-              "confidence": 0.027221,
-              "confidence_percent": "2.72%"
+              "class": "Egyptian cat",
+              "class_index": 285,
+              "confidence": 0.101101,
+              "confidence_percent": "10.11%"
             },
             {
               "rank": 5,
-              "class": "wall clock",
-              "class_index": 892,
-              "confidence": 0.023693,
-              "confidence_percent": "2.37%"
+              "class": "Persian cat",
+              "class_index": 283,
+              "confidence": 0.055658,
+              "confidence_percent": "5.57%"
             }
           ]
         },
         "Dog": {
           "status": "success",
-          "inference_time_ms": 6.92,
+          "inference_time_ms": 6.52,
           "top5_predictions": [
             {
               "rank": 1,
-              "class": "window screen",
-              "class_index": 904,
-              "confidence": 0.29369,
-              "confidence_percent": "29.37%"
+              "class": "beagle",
+              "class_index": 162,
+              "confidence": 0.33284,
+              "confidence_percent": "33.28%"
             },
             {
               "rank": 2,
-              "class": "window shade",
-              "class_index": 905,
-              "confidence": 0.045427,
-              "confidence_percent": "4.54%"
+              "class": "golden retriever",
+              "class_index": 207,
+              "confidence": 0.212108,
+              "confidence_percent": "21.21%"
             },
             {
               "rank": 3,
-              "class": "necklace",
-              "class_index": 679,
-              "confidence": 0.029471,
-              "confidence_percent": "2.95%"
+              "class": "English foxhound",
+              "class_index": 167,
+              "confidence": 0.189752,
+              "confidence_percent": "18.98%"
             },
             {
               "rank": 4,
-              "class": "loudspeaker",
-              "class_index": 632,
-              "confidence": 0.029143,
-              "confidence_percent": "2.91%"
+              "class": "bloodhound",
+              "class_index": 163,
+              "confidence": 0.091677,
+              "confidence_percent": "9.17%"
             },
             {
               "rank": 5,
-              "class": "velvet",
-              "class_index": 885,
-              "confidence": 0.02856,
-              "confidence_percent": "2.86%"
+              "class": "Walker hound",
+              "class_index": 166,
+              "confidence": 0.057999,
+              "confidence_percent": "5.80%"
             }
           ]
         },
         "Person": {
           "status": "success",
-          "inference_time_ms": 6.82,
+          "inference_time_ms": 6.2,
           "top5_predictions": [
             {
               "rank": 1,
-              "class": "window screen",
-              "class_index": 904,
-              "confidence": 0.284465,
-              "confidence_percent": "28.45%"
+              "class": "lab coat",
+              "class_index": 617,
+              "confidence": 0.546363,
+              "confidence_percent": "54.64%"
             },
             {
               "rank": 2,
-              "class": "shower curtain",
-              "class_index": 794,
-              "confidence": 0.053858,
-              "confidence_percent": "5.39%"
+              "class": "Band Aid",
+              "class_index": 419,
+              "confidence": 0.15049,
+              "confidence_percent": "15.05%"
             },
             {
               "rank": 3,
-              "class": "fire screen",
-              "class_index": 556,
-              "confidence": 0.053082,
-              "confidence_percent": "5.31%"
+              "class": "bow tie",
+              "class_index": 457,
+              "confidence": 0.079641,
+              "confidence_percent": "7.96%"
             },
             {
               "rank": 4,
-              "class": "window shade",
-              "class_index": 905,
-              "confidence": 0.026099,
-              "confidence_percent": "2.61%"
+              "class": "Windsor tie",
+              "class_index": 906,
+              "confidence": 0.064836,
+              "confidence_percent": "6.48%"
             },
             {
               "rank": 5,
-              "class": "wall clock",
-              "class_index": 892,
-              "confidence": 0.023156,
-              "confidence_percent": "2.32%"
+              "class": "suit",
+              "class_index": 834,
+              "confidence": 0.012832,
+              "confidence_percent": "1.28%"
             }
           ]
         },
         "Street": {
           "status": "success",
-          "inference_time_ms": 8.16,
+          "inference_time_ms": 7.58,
           "top5_predictions": [
             {
               "rank": 1,
-              "class": "shower curtain",
-              "class_index": 794,
-              "confidence": 0.323252,
-              "confidence_percent": "32.33%"
+              "class": "cab",
+              "class_index": 468,
+              "confidence": 0.607644,
+              "confidence_percent": "60.76%"
             },
             {
               "rank": 2,
-              "class": "window screen",
-              "class_index": 904,
-              "confidence": 0.215256,
-              "confidence_percent": "21.53%"
+              "class": "traffic light",
+              "class_index": 920,
+              "confidence": 0.212202,
+              "confidence_percent": "21.22%"
             },
             {
               "rank": 3,
-              "class": "velvet",
-              "class_index": 885,
-              "confidence": 0.064323,
-              "confidence_percent": "6.43%"
+              "class": "streetcar",
+              "class_index": 829,
+              "confidence": 0.023324,
+              "confidence_percent": "2.33%"
             },
             {
               "rank": 4,
-              "class": "window shade",
-              "class_index": 905,
-              "confidence": 0.04634,
-              "confidence_percent": "4.63%"
+              "class": "pier",
+              "class_index": 718,
+              "confidence": 0.019207,
+              "confidence_percent": "1.92%"
             },
             {
               "rank": 5,
-              "class": "fire screen",
-              "class_index": 556,
-              "confidence": 0.035175,
-              "confidence_percent": "3.52%"
+              "class": "trolleybus",
+              "class_index": 874,
+              "confidence": 0.01881,
+              "confidence_percent": "1.88%"
             }
           ]
         }
@@ -233,7 +233,7 @@
       "test_results": {
         "Car": {
           "status": "success",
-          "inference_time_ms": 118.42,
+          "inference_time_ms": 117.02,
           "num_detections": 4,
           "detections": [
             {
@@ -288,7 +288,7 @@
         },
         "Cat": {
           "status": "success",
-          "inference_time_ms": 109.82,
+          "inference_time_ms": 109.16,
           "num_detections": 4,
           "detections": [
             {
@@ -343,7 +343,7 @@
         },
         "Dog": {
           "status": "success",
-          "inference_time_ms": 109.17,
+          "inference_time_ms": 109.48,
           "num_detections": 4,
           "detections": [
             {
@@ -398,7 +398,7 @@
         },
         "Person": {
           "status": "success",
-          "inference_time_ms": 109.7,
+          "inference_time_ms": 109.32,
           "num_detections": 4,
           "detections": [
             {
@@ -453,7 +453,7 @@
         },
         "Street": {
           "status": "success",
-          "inference_time_ms": 113.55,
+          "inference_time_ms": 113.42,
           "num_detections": 4,
           "detections": [
             {

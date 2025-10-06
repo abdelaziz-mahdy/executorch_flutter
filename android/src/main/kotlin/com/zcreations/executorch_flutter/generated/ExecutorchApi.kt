@@ -89,79 +89,6 @@ enum class InferenceStatus(val raw: Int) {
 }
 
 /**
- * Tensor specification for input/output requirements
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
-data class TensorSpec (
-  val name: String,
-  val shape: List<Long?>,
-  val dataType: TensorType,
-  val optional: Boolean,
-  val validRange: List<Long?>? = null
-
-) {
-  companion object {
-    @Suppress("UNCHECKED_CAST")
-    fun fromList(list: List<Any?>): TensorSpec {
-      val name = list[0] as String
-      val shape = list[1] as List<Long?>
-      val dataType = TensorType.ofRaw(list[2] as Int)!!
-      val optional = list[3] as Boolean
-      val validRange = list[4] as List<Long?>?
-      return TensorSpec(name, shape, dataType, optional, validRange)
-    }
-  }
-  fun toList(): List<Any?> {
-    return listOf<Any?>(
-      name,
-      shape,
-      dataType.raw,
-      optional,
-      validRange,
-    )
-  }
-}
-
-/**
- * Model metadata and capabilities
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
-data class ModelMetadata (
-  val modelName: String,
-  val version: String,
-  val inputSpecs: List<TensorSpec?>,
-  val outputSpecs: List<TensorSpec?>,
-  val estimatedMemoryMB: Long,
-  val properties: Map<String?, Any?>? = null
-
-) {
-  companion object {
-    @Suppress("UNCHECKED_CAST")
-    fun fromList(list: List<Any?>): ModelMetadata {
-      val modelName = list[0] as String
-      val version = list[1] as String
-      val inputSpecs = list[2] as List<TensorSpec?>
-      val outputSpecs = list[3] as List<TensorSpec?>
-      val estimatedMemoryMB = list[4].let { if (it is Int) it.toLong() else it as Long }
-      val properties = list[5] as Map<String?, Any?>?
-      return ModelMetadata(modelName, version, inputSpecs, outputSpecs, estimatedMemoryMB, properties)
-    }
-  }
-  fun toList(): List<Any?> {
-    return listOf<Any?>(
-      modelName,
-      version,
-      inputSpecs,
-      outputSpecs,
-      estimatedMemoryMB,
-      properties,
-    )
-  }
-}
-
-/**
  * Tensor data for input/output
  *
  * Generated class from Pigeon that represents data sent in messages.
@@ -274,7 +201,6 @@ data class InferenceResult (
 data class ModelLoadResult (
   val modelId: String,
   val state: ModelState,
-  val metadata: ModelMetadata? = null,
   val errorMessage: String? = null
 
 ) {
@@ -283,18 +209,14 @@ data class ModelLoadResult (
     fun fromList(list: List<Any?>): ModelLoadResult {
       val modelId = list[0] as String
       val state = ModelState.ofRaw(list[1] as Int)!!
-      val metadata: ModelMetadata? = (list[2] as List<Any?>?)?.let {
-        ModelMetadata.fromList(it)
-      }
-      val errorMessage = list[3] as String?
-      return ModelLoadResult(modelId, state, metadata, errorMessage)
+      val errorMessage = list[2] as String?
+      return ModelLoadResult(modelId, state, errorMessage)
     }
   }
   fun toList(): List<Any?> {
     return listOf<Any?>(
       modelId,
       state.raw,
-      metadata?.toList(),
       errorMessage,
     )
   }
@@ -321,17 +243,7 @@ private object ExecutorchHostApiCodec : StandardMessageCodec() {
       }
       131.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ModelMetadata.fromList(it)
-        }
-      }
-      132.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
           TensorData.fromList(it)
-        }
-      }
-      133.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          TensorSpec.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -351,16 +263,8 @@ private object ExecutorchHostApiCodec : StandardMessageCodec() {
         stream.write(130)
         writeValue(stream, value.toList())
       }
-      is ModelMetadata -> {
-        stream.write(131)
-        writeValue(stream, value.toList())
-      }
       is TensorData -> {
-        stream.write(132)
-        writeValue(stream, value.toList())
-      }
-      is TensorSpec -> {
-        stream.write(133)
+        stream.write(131)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -370,6 +274,7 @@ private object ExecutorchHostApiCodec : StandardMessageCodec() {
 
 /**
  * Host API - Called from Dart to native platforms
+ * Simplified to core operations: load, inference, dispose
  *
  * Generated interface from Pigeon that represents a handler of messages from Flutter.
  */
@@ -384,14 +289,13 @@ interface ExecutorchHostApi {
    * Returns inference results or error information
    */
   fun runInference(request: InferenceRequest, callback: (Result<InferenceResult>) -> Unit)
-  /** Get metadata for a loaded model */
-  fun getModelMetadata(modelId: String): ModelMetadata?
-  /** Dispose a loaded model and free its resources */
+  /**
+   * Dispose a loaded model and free its resources
+   * User has full control over memory management
+   */
   fun disposeModel(modelId: String)
   /** Get list of currently loaded model IDs */
   fun getLoadedModels(): List<String?>
-  /** Check if a model is currently loaded and ready */
-  fun getModelState(modelId: String): ModelState
   /**
    * Enable or disable ExecuTorch debug logging
    * Only works in debug builds
@@ -447,24 +351,6 @@ interface ExecutorchHostApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getModelMetadata", codec)
-        if (api != null) {
-          channel.setMessageHandler { message, reply ->
-            val args = message as List<Any?>
-            val modelIdArg = args[0] as String
-            var wrapped: List<Any?>
-            try {
-              wrapped = listOf<Any?>(api.getModelMetadata(modelIdArg))
-            } catch (exception: Throwable) {
-              wrapped = wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.disposeModel", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
@@ -490,24 +376,6 @@ interface ExecutorchHostApi {
             var wrapped: List<Any?>
             try {
               wrapped = listOf<Any?>(api.getLoadedModels())
-            } catch (exception: Throwable) {
-              wrapped = wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getModelState", codec)
-        if (api != null) {
-          channel.setMessageHandler { message, reply ->
-            val args = message as List<Any?>
-            val modelIdArg = args[0] as String
-            var wrapped: List<Any?>
-            try {
-              wrapped = listOf<Any?>(api.getModelState(modelIdArg).raw)
             } catch (exception: Throwable) {
               wrapped = wrapError(exception)
             }

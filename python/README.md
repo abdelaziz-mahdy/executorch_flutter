@@ -1,208 +1,226 @@
-# ExecuTorch Model Export Scripts
+# ExecuTorch Flutter - Python Tools
 
-This directory contains Python scripts for exporting PyTorch models to ExecuTorch format (.pte files) optimized for different backends and platforms.
-
-## Requirements
-
-- **Python**: 3.10, 3.11, or 3.12
-- **Virtual Environment**: Recommended (conda or venv)
-- **Platform**: macOS ARM64 (for CoreML), Linux x86_64, Windows
+Unified command-line tool for model export and validation.
 
 ## Quick Start
 
-### 1. Install Dependencies
+```bash
+# Export all models (default mode)
+python main.py
+
+# Export specific models
+python main.py export --mobilenet
+python main.py export --yolo yolo11n
+
+# Validate all models
+python main.py validate
+```
+
+## Installation
 
 ```bash
-cd python
-
-# Recommended: Create virtual environment
-python -m venv executorch_env
-source executorch_env/bin/activate  # On Windows: executorch_env\Scripts\activate
-
-# Install ExecuTorch and dependencies
-pip install -r requirements.txt
+pip install torch torchvision executorch ultralytics opencv-python torchao
 ```
 
-### 2. Generate Test Models for Flutter App
+## Commands
+
+### Export (Default)
+
+Export models to ExecuTorch format for the Flutter app.
 
 ```bash
-# Generate all test models (simple demo + classification)
-python generate_test_models.py
+# Export all models (MobileNet + YOLO11n + labels)
+python main.py
+python main.py export --all
 
-# OR use the generic exporter for custom models
-python executorch_exporter.py your_model.pth --model-name my_model --input-shapes 1,3,224,224
+# Export MobileNet only
+python main.py export --mobilenet
+
+# Export YOLO only
+python main.py export --yolo yolo11n
+python main.py export --yolo yolo11n yolov8n  # Multiple models
+
+# Export labels only
+python main.py export --labels
 ```
 
-### 3. Use in Flutter App
+**Supported YOLO models**: yolo11n, yolov8n, yolov5n (nano versions only)
 
-The exported `.pte` files are automatically saved to `../example/assets/models/`. Add them to your Flutter app's `pubspec.yaml`:
+**Output**: `../example/assets/models/`
 
-```yaml
-flutter:
-  assets:
-    - assets/models/
-```
+### Validate
 
-**Note**: The `.pte` files are not committed to git. You need to generate them locally.
-
-## Available Scripts
-
-### `generate_test_models.py` 🚀
-
-**Recommended**: One-click generation of test models for Flutter plugin validation.
+Validate exported models with test images and save results.
 
 ```bash
-python generate_test_models.py
+# Validate all models with all test images
+python main.py validate
+
+# Custom directories
+python main.py validate --models-dir ../example/assets/models \
+                        --images-dir ../example/assets/images \
+                        --output-file ../example/assets/results.json
 ```
 
-**Generates:**
-- Simple demo model (portable backend)
-- MobileNetV3 for iOS (CoreML, MPS backends)
-- MobileNetV3 for Android (XNNPACK backend)
+**Output**: `../example/assets/model_test_results.json`
 
-### `executorch_exporter.py` 🔧
+## File Structure
 
-**Generic exporter** for any PyTorch model with automatic backend detection.
+```
+python/
+├── main.py                      # Main CLI tool (use this!)
+├── executorch_exporter.py       # Generic ExecuTorch exporter framework (legacy)
+├── validate_all_models.py       # Model validation framework
+└── README.md                    # This file
+```
+
+**Note**: Both MobileNet and YOLO exports now use the official Ultralytics-style ExecuTorch export pattern directly in `main.py`.
+
+## Examples
+
+### Export Workflow
 
 ```bash
-# Export custom model
-python executorch_exporter.py your_model.pth \
-  --model-name my_model \
-  --input-shapes 1,3,224,224 \
-  --backends xnnpack coreml
+# 1. Export all models
+python main.py
 
-# Auto-select backends for platform
-python executorch_exporter.py model.pth \
-  --model-name mobile_model \
-  --input-shapes 1,3,224,224 \
-  --target-platform android
+# 2. Verify files exist
+ls -lh ../example/assets/models/
+
+# 3. Run Flutter app
+cd ../example
+flutter run
 ```
 
-**Features:**
-- Supports any PyTorch model (.pth, .pt, .torchscript)
-- Auto-detects available backends
-- Platform-specific optimizations
-- JSON export summaries
-- Progress tracking and error handling
-
-### `export_examples.py` 📚
-
-**Examples** showing how to use the generic exporter with different model types.
+### Validation Workflow
 
 ```bash
-python export_examples.py
+# 1. Export models first
+python main.py export --all
+
+# 2. Validate models
+python main.py validate
+
+# 3. Check results
+cat ../example/assets/model_test_results.json
 ```
 
-## Flutter Integration
+## Exported Models
 
-### Loading Models in Flutter
+### MobileNet V3 Small
+- **File**: `mobilenet_v3_small_xnnpack.pte` (~9.8 MB)
+- **Input**: [1, 3, 224, 224] (RGB, ImageNet normalized)
+- **Output**: [1, 1000] logits (requires softmax)
+- **Use**: Image classification (1000 ImageNet classes)
 
-```dart
-// Load exported model
-final model = await ExecutorchManager.instance.loadModel(
-  'assets/models/mobilenet_v3_small_ios_coreml.pte'
-);
+### YOLO Nano Models
+All YOLO models have the same specifications:
+- **Files**: `yolo11n_xnnpack.pte`, `yolov8n_xnnpack.pte`, `yolov5n_xnnpack.pte` (~10-12 MB each)
+- **Input**: [1, 3, 640, 640] (RGB, normalized to [0,1])
+- **Output**: [1, 84, 8400] (4 bbox coords + 80 COCO classes, raw format)
+- **Use**: Object detection (80 COCO classes)
+- **Note**: Requires post-processing (DFL, sigmoid, NMS) in Flutter app
 
-// Check model metadata
-print('Backend: ${model.metadata.properties['backend']}');
-print('Input shape: ${model.metadata.inputSpecs.first.shape}');
+## Validation Results
 
-// Run inference
-final result = await model.runInference(
-  inputs: [inputTensor],
-  timeoutMs: 5000,
-);
-```
+The validation script tests each model with 5 test images:
+- Cat
+- Dog
+- Car
+- Person
+- Street
 
-### Camera Frame Preprocessing
-
-```dart
-// Preprocess camera frame for MobileNetV3 inference
-TensorDataWrapper preprocessCameraFrame(CameraImage cameraImage) {
-  // Convert camera format (YUV420/NV21) to RGB
-  final rgbBytes = convertYUV420ToRGB(cameraImage);
-
-  // Resize to model input size (224x224)
-  final resizedBytes = resizeImage(rgbBytes, 224, 224);
-
-  // Apply ImageNet normalization
-  const mean = [0.485, 0.456, 0.406];
-  const std = [0.229, 0.224, 0.225];
-
-  final floats = Float32List(1 * 3 * 224 * 224);
-  for (int i = 0; i < floats.length; i++) {
-    final channel = i % 3;
-    final pixelValue = resizedBytes[i] / 255.0;
-    floats[i] = (pixelValue - mean[channel]) / std[channel];
-  }
-
-  return TensorDataWrapper(
-    shape: [1, 3, 224, 224],
-    dataType: TensorType.float32,
-    data: floats.buffer.asUint8List(),
-    name: 'input',
-  );
-}
-
-// Platform-specific model selection
-String getOptimalModelPath() {
-  if (Platform.isIOS) {
-    return 'assets/models/mobilenet_v3_small_ios_coreml.pte';
-  } else {
-    return 'assets/models/mobilenet_v3_small_android_cpu_xnnpack.pte';
-  }
-}
-```
-
-## Available Test Models
-
-After running `python generate_test_models.py`, you'll have these models in `../example/assets/models/`:
-
-| Model | Backend | Platform | Size | Use Case |
-|-------|---------|----------|------|----------|
-| `simple_demo_portable.pte` | Portable | Any | ~1.6KB | Basic testing |
-| `mobilenet_v3_small_ios_coreml.pte` | CoreML | iOS | ~5.3MB | iOS Neural Engine |
-| `mobilenet_v3_small_ios_mps.pte` | MPS | iOS | ~9.8MB | iOS Metal GPU |
-| `mobilenet_v3_small_android_cpu_xnnpack.pte` | XNNPACK | Android | ~9.8MB | Android CPU |
-
-## Backend Availability
-
-The exporter automatically detects available backends:
-
-### ✅ Always Available
-- **Portable**: Universal compatibility, basic performance
-- **XNNPACK**: CPU optimization for mobile devices
-
-### 🍎 macOS/iOS Only
-- **CoreML**: Apple Neural Engine optimization
-- **MPS**: Metal Performance Shaders GPU acceleration
-
-### 🤖 Platform Specific
-- **Vulkan**: Linux/Android/Windows GPU acceleration
-- **QNN**: Qualcomm Snapdragon optimization (requires SDK)
-- **ARM**: ARM Ethos-U NPU (embedded devices)
+**Results include**:
+- Top-5 predictions (classification)
+- All detected objects with bounding boxes (detection)
+- Confidence scores
+- Inference times
+- Model metadata
 
 ## Troubleshooting
 
-### Model Generation Fails
-1. Ensure Python 3.10-3.12 and virtual environment
-2. Check ExecuTorch installation: `pip list | grep executorch`
-3. Try generating individual models with the generic exporter
+### Missing dependencies
+```bash
+pip install torch torchvision executorch ultralytics opencv-python torchao
+```
 
-### Backend Not Available
-- Check platform compatibility in the table above
-- Some backends require additional SDKs or hardware support
-- Use `executorch_exporter.py --help` to see available backends
+### YOLO export fails
+Use the official export script directly:
+```bash
+python export_yolo_official.py --model_name yolo11n.pt --backend xnnpack
+```
 
-### Flutter Integration
-1. Ensure models are in `assets/models/` directory
-2. Add to `pubspec.yaml` under `flutter: assets:`
-3. Use exact model filenames in Flutter code
-4. Models are not committed to git - generate locally
+### Models don't load in Flutter
+1. Verify .pte files exist in `../example/assets/models/`
+2. Check file sizes (should be ~10MB each)
+3. Re-export with `python main.py export --all`
 
-## References
+## Advanced Usage
 
-- [ExecuTorch Documentation](https://docs.pytorch.org/executorch/)
-- [Official ExecuTorch Examples](https://github.com/meta-pytorch/executorch-examples)
-- [Backend Optimization Guide](https://docs.pytorch.org/executorch/stable/backends.html)
-- [Flutter Plugin API Documentation](../README.md)
+### Custom Output Directory
+```bash
+python main.py export --all --output-dir /path/to/output
+```
+
+### Export Multiple YOLOs
+```bash
+python main.py export --yolo yolo11n yolo11s yolov8n
+```
+
+### Validation with Custom Paths
+```bash
+python main.py validate \
+  --models-dir /custom/models \
+  --images-dir /custom/images \
+  --output-file /custom/results.json
+```
+
+## Model Export Details
+
+### Export Method (Ultralytics-style)
+Both MobileNet and YOLO models use the official Ultralytics ExecuTorch export pattern:
+
+```python
+et_program = to_edge_transform_and_lower(
+    torch.export.export(model, sample_inputs),
+    partitioner=[XnnpackPartitioner()]
+).to_executorch()
+```
+
+### MobileNet V3 Small
+- **Input**: [1, 3, 224, 224] (RGB, ImageNet normalized)
+- **Output**: [1, 1000] logits (requires softmax)
+- **Preprocessing**: Resize(256) → CenterCrop(224) → Normalize
+- **File**: `mobilenet_v3_small_xnnpack.pte` (~9.8 MB)
+
+### YOLO11 Nano
+- **Input**: [1, 3, 640, 640] (RGB, normalized to [0,1])
+- **Output**: [1, 84, 8400] (4 bbox + 80 classes, raw format)
+- **Preprocessing**: Letterbox resize to 640x640
+- **File**: `yolo11n_xnnpack.pte` (~10.2 MB)
+- **Note**: Output requires post-processing (DFL, sigmoid, NMS) in Flutter app
+
+## CI/CD Integration
+
+```bash
+# In your CI pipeline
+cd python
+python main.py export --all
+python main.py validate
+
+# Check exit code
+if [ $? -eq 0 ]; then
+  echo "✅ All models valid"
+else
+  echo "❌ Validation failed"
+  exit 1
+fi
+```
+
+## Support
+
+For issues or questions:
+- Check Flutter app logs: `flutter logs`
+- Re-export models: `python main.py export --all`
+- Run validation: `python main.py validate`
+- Review results: `cat ../example/assets/model_test_results.json`

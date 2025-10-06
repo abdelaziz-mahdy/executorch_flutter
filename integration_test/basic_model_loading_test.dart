@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:executorch_flutter/src/generated/executorch_api.dart';
@@ -33,11 +31,6 @@ void main() {
         expect(result, isNotNull);
         expect(result.modelId, isNotEmpty);
         expect(result.state, equals(ModelState.ready));
-        expect(result.metadata, isNotNull);
-        expect(result.metadata!.modelName, isNotEmpty);
-        expect(result.metadata!.inputSpecs, isNotEmpty);
-        expect(result.metadata!.outputSpecs, isNotEmpty);
-        expect(result.metadata!.estimatedMemoryMB, greaterThan(0));
         expect(result.errorMessage, isNull);
         
         // Cleanup
@@ -100,93 +93,9 @@ void main() {
       }
     });
 
-    testWidgets('should load model and provide valid metadata', (WidgetTester tester) async {
-      // Arrange
-      const String testModelPath = 'test_assets/resnet18.pte';
-      
-      try {
-        // Act
-        final result = await hostApi.loadModel(testModelPath);
-        
-        // Assert metadata structure
-        expect(result.metadata, isNotNull);
-        final metadata = result.metadata!;
-        
-        expect(metadata.modelName, isNotEmpty);
-        expect(metadata.version, isNotEmpty);
-        expect(metadata.inputSpecs.length, greaterThan(0));
-        expect(metadata.outputSpecs.length, greaterThan(0));
-        
-        // Validate input specs
-        for (final inputSpec in metadata.inputSpecs) {
-          expect(inputSpec.name, isNotEmpty);
-          expect(inputSpec.shape, isNotEmpty);
-          expect(inputSpec.dataType, isIn(TensorType.values));
-          // Shape should have positive dimensions (except -1 for dynamic)
-          for (final dim in inputSpec.shape) {
-            expect(dim, anyOf(equals(-1), greaterThan(0)));
-          }
-        }
-        
-        // Validate output specs
-        for (final outputSpec in metadata.outputSpecs) {
-          expect(outputSpec.name, isNotEmpty);
-          expect(outputSpec.shape, isNotEmpty);
-          expect(outputSpec.dataType, isIn(TensorType.values));
-        }
-        
-        expect(metadata.estimatedMemoryMB, greaterThan(0));
-        
-        // Cleanup
-        hostApi.disposeModel(result.modelId);
-        
-      } catch (e) {
-        // Expected to fail during TDD phase
-        expect(e, isA<Exception>());
-        print('Expected TDD failure for metadata validation: $e');
-      }
-    });
-
-    testWidgets('should track model state correctly during loading', (WidgetTester tester) async {
-      // Arrange
-      const String testModelPath = 'test_assets/efficientnet_b0.pte';
-      
-      try {
-        // Act & Assert
-        final result = await hostApi.loadModel(testModelPath);
-        
-        if (result.state == ModelState.ready) {
-          // Model should be in loaded models list
-          final loadedModels = hostApi.getLoadedModels();
-          expect(loadedModels, contains(result.modelId));
-          
-          // Model state should be ready
-          final state = hostApi.getModelState(result.modelId);
-          expect(state, equals(ModelState.ready));
-          
-          // Model metadata should be accessible
-          final metadata = hostApi.getModelMetadata(result.modelId);
-          expect(metadata, isNotNull);
-          expect(metadata!.modelName, isNotEmpty);
-          
-          // Cleanup
-          hostApi.disposeModel(result.modelId);
-          
-          // After disposal, model should not be in loaded list
-          final loadedModelsAfterDisposal = hostApi.getLoadedModels();
-          expect(loadedModelsAfterDisposal, isNot(contains(result.modelId)));
-          
-          // Model state should be disposed
-          final stateAfterDisposal = hostApi.getModelState(result.modelId);
-          expect(stateAfterDisposal, equals(ModelState.disposed));
-        }
-        
-      } catch (e) {
-        // Expected to fail during TDD phase
-        expect(e, isA<Exception>());
-        print('Expected TDD failure for state tracking: $e');
-      }
-    });
+    // Note: Model metadata functionality has been removed from the API.
+    // ExecuTorch doesn't support runtime introspection, so metadata
+    // should be provided externally by the model documentation.
 
     testWidgets('should handle concurrent model loading', (WidgetTester tester) async {
       // Arrange

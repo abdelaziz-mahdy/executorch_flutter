@@ -34,7 +34,6 @@ import ExecuTorch
 actor ExecutorchModelManager {
 
     private static let TAG = "ExecutorchModelManager"
-    private static let MAX_CONCURRENT_MODELS = 5
     private static let MODEL_ID_PREFIX = "executorch_model_"
 
     // Model storage and state management
@@ -49,7 +48,6 @@ actor ExecutorchModelManager {
      */
     private struct LoadedModel {
         let module: ExecuTorchModule
-        let metadata: ModelMetadata
         let filePath: String
         let loadTime: TimeInterval = Date().timeIntervalSince1970
     }
@@ -80,11 +78,6 @@ actor ExecutorchModelManager {
             throw ExecutorchError.modelLoadFailed(filePath, nil)
         }
 
-        // Check model count limit
-        guard loadedModels.count < Self.MAX_CONCURRENT_MODELS else {
-            throw ExecutorchError.memoryError("Maximum number of concurrent models (\(Self.MAX_CONCURRENT_MODELS)) reached")
-        }
-
         // Generate unique model ID
         let modelId = generateModelId()
 
@@ -105,13 +98,9 @@ actor ExecutorchModelManager {
                 throw ExecutorchError.modelLoadFailed(filePath, nil)
             }
 
-            // Extract model metadata
-            let metadata = try extractModelMetadata(from: module, filePath: filePath)
-
             // Store loaded model
             let loadedModel = LoadedModel(
                 module: module,
-                metadata: metadata,
                 filePath: filePath
             )
 
@@ -123,7 +112,6 @@ actor ExecutorchModelManager {
             return ModelLoadResult(
                 modelId: modelId,
                 state: ModelState.ready,
-                metadata: metadata,
                 errorMessage: nil
             )
 
@@ -146,9 +134,6 @@ actor ExecutorchModelManager {
         }
 
         print("[\(Self.TAG)] Running inference on model: \(request.modelId)")
-
-        // Validate input tensors
-        try validateInputTensors(request.inputs, against: loadedModel.metadata)
 
         // Convert Flutter tensors to ExecuTorch Values
         let inputValues = try convertTensorsToValues(request.inputs)
@@ -173,7 +158,7 @@ actor ExecutorchModelManager {
                 requestId: request.requestId,
                 outputs: outputTensors,
                 errorMessage: nil,
-                metadata: createInferenceMetadata(from: loadedModel)
+                metadata: nil
             )
 
         } catch {
@@ -183,22 +168,14 @@ actor ExecutorchModelManager {
     }
 
     /**
-     * Get metadata for a loaded model
-     */
-    func getModelMetadata(modelId: String) throws -> ModelMetadata? {
-        return loadedModels[modelId]?.metadata
-    }
-
-    /**
-     * Dispose a loaded model and free resources
+     * Dispose a loaded model and free its resources
      */
     func disposeModel(modelId: String) async throws {
         let loadedModel = loadedModels.removeValue(forKey: modelId)
-        modelStates[modelId] = ModelState.disposed
+        modelStates.removeValue(forKey: modelId)
 
         if loadedModel != nil {
-            // Note: ExecuTorchModule doesn't have explicit dispose method
-            // Rely on ARC for cleanup
+            // Note: ExecuTorchModule cleanup handled by ARC
             print("[\(Self.TAG)] Disposed model: \(modelId)")
         } else {
             print("[\(Self.TAG)] Attempted to dispose unknown model: \(modelId)")
@@ -206,31 +183,19 @@ actor ExecutorchModelManager {
     }
 
     /**
-     * Dispose all loaded models
-     */
-    func disposeAllModels() async {
-        let modelIds = Array(loadedModels.keys)
-        for modelId in modelIds {
-            do {
-                try await disposeModel(modelId: modelId)
-            } catch {
-                print("[\(Self.TAG)] Failed to dispose model during cleanup: \(modelId), error: \(error)")
-            }
-        }
-    }
-
-    /**
-     * Get the current state of a model
-     */
-    func getModelState(modelId: String) throws -> ModelState {
-        return modelStates[modelId] ?? ModelState.error
-    }
-
-    /**
      * Get list of loaded model IDs
      */
-    func getLoadedModelIds() throws -> [String] {
+    func getLoadedModels() throws -> [String?] {
         return Array(loadedModels.keys)
+    }
+
+    /**
+     * Enable or disable debug logging
+     */
+    func setDebugLogging(enabled: Bool) throws {
+        // ExecuTorch doesn't expose a global logging API
+        // Logging is controlled at compile time or via environment variables
+        print("[\(Self.TAG)] Debug logging setting: \(enabled) (note: may require rebuild)")
     }
 
     // MARK: - Private Helper Methods
@@ -238,75 +203,6 @@ actor ExecutorchModelManager {
     private func generateModelId() -> String {
         modelCounter += 1
         return "\(Self.MODEL_ID_PREFIX)\(UUID().uuidString.prefix(8))"
-    }
-
-    private func extractModelMetadata(from module: ExecuTorchModule, filePath: String) throws -> ModelMetadata {
-        // Note: ExecuTorchModule doesn't provide introspection APIs
-        // We'll create basic metadata from file information
-        let fileURL = URL(fileURLWithPath: filePath)
-        let modelName = fileURL.deletingPathExtension().lastPathComponent
-
-        // Create placeholder tensor specs - in a real implementation,
-        // these would come from model introspection or external metadata
-        let inputSpecs = [
-            TensorSpec(
-                name: "input",
-                shape: [1, 3, 224, 224], // Common image input shape
-                dataType: TensorType.float32,
-                optional: false,
-                validRange: nil
-            )
-        ]
-
-        let outputSpecs = [
-            TensorSpec(
-                name: "output",
-                shape: [1, 1000], // Common classification output
-                dataType: TensorType.float32,
-                optional: false,
-                validRange: nil
-            )
-        ]
-
-        // Estimate memory usage based on file size
-        let fileAttributes = try FileManager.default.attributesOfItem(atPath: filePath)
-        let fileSize = fileAttributes[.size] as? Int64 ?? 0
-        let estimatedMemoryMB = Int(max(fileSize / (1024 * 1024), 1))
-
-        let properties: [String: Any] = [
-            "file_path": filePath,
-            "file_size_bytes": fileSize,
-            "load_time": Date().timeIntervalSince1970,
-            "backend": "executorch_ios"
-        ]
-
-        return ModelMetadata(
-            modelName: modelName,
-            version: "1.0.0",
-            inputSpecs: inputSpecs,
-            outputSpecs: outputSpecs,
-            estimatedMemoryMB: estimatedMemoryMB,
-            properties: properties
-        )
-    }
-
-    private func validateInputTensors(_ inputs: [TensorData], against metadata: ModelMetadata) throws {
-        guard inputs.count == metadata.inputSpecs.count else {
-            throw ExecutorchError.validationError(
-                "Input count mismatch: expected \(metadata.inputSpecs.count), got \(inputs.count)"
-            )
-        }
-
-        // Additional validation can be added here
-        for (index, input) in inputs.enumerated() {
-            let spec = metadata.inputSpecs[index]
-
-            guard input.dataType == spec.dataType else {
-                throw ExecutorchError.validationError(
-                    "Input \(index) data type mismatch: expected \(spec.dataType), got \(input.dataType)"
-                )
-            }
-        }
     }
 
     private func convertTensorsToValues(_ tensors: [TensorData]) throws -> [ExecuTorchValue] {
@@ -397,12 +293,4 @@ actor ExecutorchModelManager {
         }
     }
 
-    private func createInferenceMetadata(from loadedModel: LoadedModel) -> [String: Any] {
-        return [
-            "model_id": loadedModel.hashValue,
-            "backend": "executorch_ios",
-            "timestamp": Date().timeIntervalSince1970,
-            "model_file": loadedModel.filePath
-        ]
-    }
 }

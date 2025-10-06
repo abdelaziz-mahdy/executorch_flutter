@@ -49,95 +49,6 @@ enum InferenceStatus {
   cancelled,
 }
 
-/// Tensor specification for input/output requirements
-class TensorSpec {
-  TensorSpec({
-    required this.name,
-    required this.shape,
-    required this.dataType,
-    required this.optional,
-    this.validRange,
-  });
-
-  String name;
-
-  List<int?> shape;
-
-  TensorType dataType;
-
-  bool optional;
-
-  List<int?>? validRange;
-
-  Object encode() {
-    return <Object?>[
-      name,
-      shape,
-      dataType.index,
-      optional,
-      validRange,
-    ];
-  }
-
-  static TensorSpec decode(Object result) {
-    result as List<Object?>;
-    return TensorSpec(
-      name: result[0]! as String,
-      shape: (result[1] as List<Object?>?)!.cast<int?>(),
-      dataType: TensorType.values[result[2]! as int],
-      optional: result[3]! as bool,
-      validRange: (result[4] as List<Object?>?)?.cast<int?>(),
-    );
-  }
-}
-
-/// Model metadata and capabilities
-class ModelMetadata {
-  ModelMetadata({
-    required this.modelName,
-    required this.version,
-    required this.inputSpecs,
-    required this.outputSpecs,
-    required this.estimatedMemoryMB,
-    this.properties,
-  });
-
-  String modelName;
-
-  String version;
-
-  List<TensorSpec?> inputSpecs;
-
-  List<TensorSpec?> outputSpecs;
-
-  int estimatedMemoryMB;
-
-  Map<String?, Object?>? properties;
-
-  Object encode() {
-    return <Object?>[
-      modelName,
-      version,
-      inputSpecs,
-      outputSpecs,
-      estimatedMemoryMB,
-      properties,
-    ];
-  }
-
-  static ModelMetadata decode(Object result) {
-    result as List<Object?>;
-    return ModelMetadata(
-      modelName: result[0]! as String,
-      version: result[1]! as String,
-      inputSpecs: (result[2] as List<Object?>?)!.cast<TensorSpec?>(),
-      outputSpecs: (result[3] as List<Object?>?)!.cast<TensorSpec?>(),
-      estimatedMemoryMB: result[4]! as int,
-      properties: (result[5] as Map<Object?, Object?>?)?.cast<String?, Object?>(),
-    );
-  }
-}
-
 /// Tensor data for input/output
 class TensorData {
   TensorData({
@@ -269,7 +180,6 @@ class ModelLoadResult {
   ModelLoadResult({
     required this.modelId,
     required this.state,
-    this.metadata,
     this.errorMessage,
   });
 
@@ -277,15 +187,12 @@ class ModelLoadResult {
 
   ModelState state;
 
-  ModelMetadata? metadata;
-
   String? errorMessage;
 
   Object encode() {
     return <Object?>[
       modelId,
       state.index,
-      metadata?.encode(),
       errorMessage,
     ];
   }
@@ -295,10 +202,7 @@ class ModelLoadResult {
     return ModelLoadResult(
       modelId: result[0]! as String,
       state: ModelState.values[result[1]! as int],
-      metadata: result[2] != null
-          ? ModelMetadata.decode(result[2]! as List<Object?>)
-          : null,
-      errorMessage: result[3] as String?,
+      errorMessage: result[2] as String?,
     );
   }
 }
@@ -316,14 +220,8 @@ class _ExecutorchHostApiCodec extends StandardMessageCodec {
     } else if (value is ModelLoadResult) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    } else if (value is ModelMetadata) {
-      buffer.putUint8(131);
-      writeValue(buffer, value.encode());
     } else if (value is TensorData) {
-      buffer.putUint8(132);
-      writeValue(buffer, value.encode());
-    } else if (value is TensorSpec) {
-      buffer.putUint8(133);
+      buffer.putUint8(131);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -340,11 +238,7 @@ class _ExecutorchHostApiCodec extends StandardMessageCodec {
       case 130: 
         return ModelLoadResult.decode(readValue(buffer)!);
       case 131: 
-        return ModelMetadata.decode(readValue(buffer)!);
-      case 132: 
         return TensorData.decode(readValue(buffer)!);
-      case 133: 
-        return TensorSpec.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -352,6 +246,7 @@ class _ExecutorchHostApiCodec extends StandardMessageCodec {
 }
 
 /// Host API - Called from Dart to native platforms
+/// Simplified to core operations: load, inference, dispose
 class ExecutorchHostApi {
   /// Constructor for [ExecutorchHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
@@ -420,30 +315,8 @@ class ExecutorchHostApi {
     }
   }
 
-  /// Get metadata for a loaded model
-  Future<ModelMetadata?> getModelMetadata(String modelId) async {
-    const String __pigeon_channelName = 'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getModelMetadata';
-    final BasicMessageChannel<Object?> __pigeon_channel = BasicMessageChannel<Object?>(
-      __pigeon_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: __pigeon_binaryMessenger,
-    );
-    final List<Object?>? __pigeon_replyList =
-        await __pigeon_channel.send(<Object?>[modelId]) as List<Object?>?;
-    if (__pigeon_replyList == null) {
-      throw _createConnectionError(__pigeon_channelName);
-    } else if (__pigeon_replyList.length > 1) {
-      throw PlatformException(
-        code: __pigeon_replyList[0]! as String,
-        message: __pigeon_replyList[1] as String?,
-        details: __pigeon_replyList[2],
-      );
-    } else {
-      return (__pigeon_replyList[0] as ModelMetadata?);
-    }
-  }
-
   /// Dispose a loaded model and free its resources
+  /// User has full control over memory management
   Future<void> disposeModel(String modelId) async {
     const String __pigeon_channelName = 'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.disposeModel';
     final BasicMessageChannel<Object?> __pigeon_channel = BasicMessageChannel<Object?>(
@@ -491,34 +364,6 @@ class ExecutorchHostApi {
       );
     } else {
       return (__pigeon_replyList[0] as List<Object?>?)!.cast<String?>();
-    }
-  }
-
-  /// Check if a model is currently loaded and ready
-  Future<ModelState> getModelState(String modelId) async {
-    const String __pigeon_channelName = 'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getModelState';
-    final BasicMessageChannel<Object?> __pigeon_channel = BasicMessageChannel<Object?>(
-      __pigeon_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: __pigeon_binaryMessenger,
-    );
-    final List<Object?>? __pigeon_replyList =
-        await __pigeon_channel.send(<Object?>[modelId]) as List<Object?>?;
-    if (__pigeon_replyList == null) {
-      throw _createConnectionError(__pigeon_channelName);
-    } else if (__pigeon_replyList.length > 1) {
-      throw PlatformException(
-        code: __pigeon_replyList[0]! as String,
-        message: __pigeon_replyList[1] as String?,
-        details: __pigeon_replyList[2],
-      );
-    } else if (__pigeon_replyList[0] == null) {
-      throw PlatformException(
-        code: 'null-error',
-        message: 'Host platform returned null value for non-null return value.',
-      );
-    } else {
-      return ModelState.values[__pigeon_replyList[0]! as int];
     }
   }
 

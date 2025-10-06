@@ -152,16 +152,6 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
         }
     }
 
-    override fun getModelMetadata(modelId: String): ModelMetadata? {
-        return try {
-            Log.d(TAG, "Getting metadata for model: $modelId")
-            modelManager.getModelMetadata(modelId)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get metadata for model: $modelId", e)
-            null
-        }
-    }
-
     override fun disposeModel(modelId: String) {
         runBlocking {
             try {
@@ -176,24 +166,17 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
 
     override fun getLoadedModels(): List<String?> {
         return try {
-            val models = modelManager.getLoadedModelIds()
+            val models = modelManager.getLoadedModels()
             Log.d(TAG, "Currently loaded models: ${models.size}")
-            models.map { it as String? }
+            models
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get loaded models", e)
             emptyList()
         }
     }
 
-    override fun getModelState(modelId: String): ModelState {
-        return try {
-            val state = modelManager.getModelState(modelId)
-            Log.d(TAG, "Model $modelId state: $state")
-            state
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get state for model: $modelId", e)
-            ModelState.ERROR
-        }
+    override fun setDebugLogging(enabled: Boolean) {
+        modelManager.setDebugLogging(enabled)
     }
 }
 

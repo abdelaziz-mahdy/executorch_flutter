@@ -44,41 +44,8 @@ enum InferenceStatus {
   cancelled,
 }
 
-/// Tensor specification for input/output requirements
-class TensorSpec {
-  TensorSpec({
-    required this.name,
-    required this.shape,
-    required this.dataType,
-    required this.optional,
-    this.validRange,
-  });
-
-  String name;
-  List<int?> shape; // Pigeon requires nullable generics
-  TensorType dataType;
-  bool optional;
-  List<int?>? validRange; // [min, max] if specified
-}
-
-/// Model metadata and capabilities
-class ModelMetadata {
-  ModelMetadata({
-    required this.modelName,
-    required this.version,
-    required this.inputSpecs,
-    required this.outputSpecs,
-    required this.estimatedMemoryMB,
-    this.properties,
-  });
-
-  String modelName;
-  String version;
-  List<TensorSpec?> inputSpecs; // Pigeon requires nullable generics
-  List<TensorSpec?> outputSpecs; // Pigeon requires nullable generics
-  int estimatedMemoryMB;
-  Map<String?, Object?>? properties; // Pigeon requires nullable generics
-}
+// Metadata removed - ExecuTorch doesn't provide runtime introspection
+// Models should document their input/output specs externally
 
 /// Tensor data for input/output
 class TensorData {
@@ -136,18 +103,17 @@ class ModelLoadResult {
   ModelLoadResult({
     required this.modelId,
     required this.state,
-    this.metadata,
     this.errorMessage,
   });
 
   String modelId;
   ModelState state;
-  ModelMetadata? metadata;
   String? errorMessage;
 }
 
 
 /// Host API - Called from Dart to native platforms
+/// Simplified to core operations: load, inference, dispose
 @HostApi()
 abstract class ExecutorchHostApi {
   /// Load a model from the specified file path
@@ -160,17 +126,12 @@ abstract class ExecutorchHostApi {
   @async
   InferenceResult runInference(InferenceRequest request);
 
-  /// Get metadata for a loaded model
-  ModelMetadata? getModelMetadata(String modelId);
-
   /// Dispose a loaded model and free its resources
+  /// User has full control over memory management
   void disposeModel(String modelId);
 
   /// Get list of currently loaded model IDs
   List<String?> getLoadedModels();
-
-  /// Check if a model is currently loaded and ready
-  ModelState getModelState(String modelId);
 
   /// Enable or disable ExecuTorch debug logging
   /// Only works in debug builds

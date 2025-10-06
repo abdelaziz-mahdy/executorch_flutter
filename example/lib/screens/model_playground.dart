@@ -58,6 +58,18 @@ const List<ModelConfig> availableModels = [
     assetPath: 'assets/models/yolo11n_xnnpack.pte',
     inputSize: 640,
   ),
+  ModelConfig(
+    name: 'YOLOv8 Nano',
+    type: ModelType.objectDetection,
+    assetPath: 'assets/models/yolov8n_xnnpack.pte',
+    inputSize: 640,
+  ),
+  ModelConfig(
+    name: 'YOLOv5 Nano',
+    type: ModelType.objectDetection,
+    assetPath: 'assets/models/yolov5n_xnnpack.pte',
+    inputSize: 640,
+  ),
 ];
 
 /// Modern single-page model playground
@@ -109,7 +121,12 @@ class _ModelPlaygroundState extends State<ModelPlayground>
   @override
   void dispose() {
     _animationController.dispose();
-    _loadedModel?.dispose();
+    // Dispose the loaded model to free resources
+    if (_loadedModel != null) {
+      _loadedModel!.dispose().catchError((e) {
+        debugPrint('Error disposing model: $e');
+      });
+    }
     super.dispose();
   }
 
@@ -157,24 +174,7 @@ class _ModelPlaygroundState extends State<ModelPlayground>
       // Load model
       final model = await ExecutorchManager.instance.loadModel(modelPath);
 
-      // Log model metadata for debugging
-      debugPrint('📋 Model metadata:');
-      debugPrint('   Model: ${model.metadata.modelName} v${model.metadata.version}');
-      debugPrint('   Estimated memory: ${model.metadata.estimatedMemoryMB} MB');
-      debugPrint('   Input specs (${model.metadata.inputSpecs.length}):');
-      for (var i = 0; i < model.metadata.inputSpecs.length; i++) {
-        final spec = model.metadata.inputSpecs[i];
-        if (spec != null) {
-          debugPrint('     [$i] ${spec.name}: shape=${spec.shape} type=${spec.dataType}');
-        }
-      }
-      debugPrint('   Output specs (${model.metadata.outputSpecs.length}):');
-      for (var i = 0; i < model.metadata.outputSpecs.length; i++) {
-        final spec = model.metadata.outputSpecs[i];
-        if (spec != null) {
-          debugPrint('     [$i] ${spec.name}: shape=${spec.shape} type=${spec.dataType}');
-        }
-      }
+      debugPrint('✅ Model loaded successfully: ${config.name}');
 
       setState(() {
         _selectedModelConfig = config;
@@ -200,52 +200,39 @@ class _ModelPlaygroundState extends State<ModelPlayground>
     return file.path;
   }
 
-  Future<void> _pickTestImage() async {
-    final selected = await showDialog<String>(
+  Future<void> _showImageSourceBottomSheet() async {
+    await showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Test Image'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: TestImages.all.length,
-            itemBuilder: (context, index) {
-              final imagePath = TestImages.all[index];
-              return ListTile(
-                leading: const Icon(Icons.image),
-                title: Text(TestImages.getName(imagePath)),
-                subtitle: Text(TestImages.getDescription(imagePath)),
-                onTap: () => Navigator.pop(context, imagePath),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ImageSourceBottomSheet(
+        onTestImageSelected: (imagePath) async {
+          Navigator.pop(context);
+          try {
+            final file = await TestImages.getFileFromAsset(imagePath);
+            setState(() {
+              _selectedImage = file;
+              _classificationResult = null;
+              _objectDetectionResult = null;
+              _errorMessage = null;
+            });
+            await _processImage(file);
+          } catch (e) {
+            setState(() {
+              _errorMessage = 'Failed to load test image: $e';
+            });
+          }
+        },
+        onGalleryTap: () {
+          Navigator.pop(context);
+          _pickImage(ImageSource.gallery);
+        },
+        onCameraTap: () {
+          Navigator.pop(context);
+          _pickImage(ImageSource.camera);
+        },
       ),
     );
-
-    if (selected != null) {
-      try {
-        final file = await TestImages.getFileFromAsset(selected);
-        setState(() {
-          _selectedImage = file;
-          _classificationResult = null;
-          _objectDetectionResult = null;
-          _errorMessage = null;
-        });
-        await _processImage(file);
-      } catch (e) {
-        setState(() {
-          _errorMessage = 'Failed to load test image: $e';
-        });
-      }
-    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -663,66 +650,11 @@ class _ModelPlaygroundState extends State<ModelPlayground>
               ],
             ),
             const SizedBox(height: 16),
-            // Hide camera button on desktop platforms (not supported)
-            if (!kIsWeb && (Platform.isAndroid || Platform.isIOS))
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _isProcessing
-                          ? null
-                          : () => _pickImage(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Camera'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      onPressed: _isProcessing
-                          ? null
-                          : () => _pickImage(ImageSource.gallery),
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('Gallery'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            else
-              // Desktop: Gallery only
-              FilledButton.tonalIcon(
-                onPressed: _isProcessing
-                    ? null
-                    : () => _pickImage(ImageSource.gallery),
-                icon: const Icon(Icons.photo_library),
-                label: const Text('Select from Files'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-
-            // Test images button (available on all platforms)
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _isProcessing ? null : _pickTestImage,
-              icon: const Icon(Icons.science),
-              label: const Text('Use Test Images'),
-              style: OutlinedButton.styleFrom(
+            FilledButton.icon(
+              onPressed: _isProcessing ? null : _showImageSourceBottomSheet,
+              icon: const Icon(Icons.add_photo_alternate),
+              label: const Text('Choose Image'),
+              style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -757,7 +689,7 @@ class _ModelPlaygroundState extends State<ModelPlayground>
                 _selectedImage!,
                 height: 300,
                 width: double.infinity,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
               ),
               if (_objectDetectionResult != null)
                 Positioned.fill(
@@ -996,7 +928,7 @@ class _ModelPlaygroundState extends State<ModelPlayground>
     );
   }
 
-  Color _getColorForClass(int classIndex) {
+  Color _getColorForClass(int? classIndex) {
     final colors = [
       Colors.red,
       Colors.blue,
@@ -1009,7 +941,7 @@ class _ModelPlaygroundState extends State<ModelPlayground>
       Colors.cyan,
       Colors.lime,
     ];
-    return colors[classIndex % colors.length];
+    return colors[(classIndex ?? 0) % colors.length];
   }
 }
 
@@ -1084,7 +1016,7 @@ class BoundingBoxPainter extends CustomPainter {
     }
   }
 
-  Color _getColorForClass(int classIndex) {
+  Color _getColorForClass(int? classIndex) {
     final colors = [
       Colors.red,
       Colors.blue,
@@ -1097,12 +1029,270 @@ class BoundingBoxPainter extends CustomPainter {
       Colors.cyan,
       Colors.lime,
     ];
-    return colors[classIndex % colors.length];
+    return colors[(classIndex ?? 0) % colors.length];
   }
 
   @override
   bool shouldRepaint(BoundingBoxPainter oldDelegate) {
     return detections != oldDelegate.detections ||
         imageSize != oldDelegate.imageSize;
+  }
+}
+
+/// Image source selection bottom sheet
+class _ImageSourceBottomSheet extends StatelessWidget {
+  const _ImageSourceBottomSheet({
+    required this.onTestImageSelected,
+    required this.onGalleryTap,
+    required this.onCameraTap,
+  });
+
+  final Function(String imagePath) onTestImageSelected;
+  final VoidCallback onGalleryTap;
+  final VoidCallback onCameraTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 32,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.add_photo_alternate,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Choose Image',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Quick action buttons
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  // Gallery button
+                  Expanded(
+                    child: _QuickActionButton(
+                      icon: Icons.photo_library,
+                      label: 'Gallery',
+                      onTap: onGalleryTap,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Camera button (only on mobile)
+                  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS))
+                    Expanded(
+                      child: _QuickActionButton(
+                        icon: Icons.camera_alt,
+                        label: 'Camera',
+                        onTap: onCameraTap,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Divider
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+
+            // Test Images Section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.science,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Test Images',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Test images grid
+            SizedBox(
+              height: 280,
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.85,
+                ),
+                itemCount: TestImages.all.length,
+                itemBuilder: (context, index) {
+                  final imagePath = TestImages.all[index];
+                  final name = TestImages.getName(imagePath);
+
+                  return _TestImageCard(
+                    imagePath: imagePath,
+                    name: name,
+                    onTap: () => onTestImageSelected(imagePath),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Quick action button for gallery/camera
+class _QuickActionButton extends StatelessWidget {
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 32,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Test image card with thumbnail
+class _TestImageCard extends StatelessWidget {
+  const _TestImageCard({
+    required this.imagePath,
+    required this.name,
+    required this.onTap,
+  });
+
+  final String imagePath;
+  final String name;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Image thumbnail
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(11),
+                  ),
+                  child: Image.asset(
+                    imagePath,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              // Label
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(11),
+                  ),
+                ),
+                child: Text(
+                  name,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
