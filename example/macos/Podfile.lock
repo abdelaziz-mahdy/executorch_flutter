@@ -1,21 +1,66 @@
 PODS:
+  - DartCvMacOS (4.12.0.0):
+    - DartCvMacOS/calib3d (= 4.12.0.0)
+    - DartCvMacOS/contrib (= 4.12.0.0)
+    - DartCvMacOS/core (= 4.12.0.0)
+    - DartCvMacOS/features2d (= 4.12.0.0)
+    - DartCvMacOS/imgproc (= 4.12.0.0)
+    - DartCvMacOS/objdetect (= 4.12.0.0)
+    - DartCvMacOS/photo (= 4.12.0.0)
+    - DartCvMacOS/stitching (= 4.12.0.0)
+    - DartCvMacOS/video (= 4.12.0.0)
+  - DartCvMacOS/calib3d (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/contrib (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/core (4.12.0.0)
+  - DartCvMacOS/dnn (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/features2d (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/imgproc (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/objdetect (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/photo (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/stitching (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/video (4.12.0.0):
+    - DartCvMacOS/core
+  - DartCvMacOS/videoio (4.12.0.0):
+    - DartCvMacOS/core
   - device_info_plus (0.0.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
+  - opencv_dart (0.0.1):
+    - DartCvMacOS (= 4.12.0.0)
+    - DartCvMacOS/dnn (= 4.12.0.0)
+    - DartCvMacOS/videoio (= 4.12.0.0)
+    - FlutterMacOS
 
 DEPENDENCIES:
   - device_info_plus (from `Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
+  - opencv_dart (from `Flutter/ephemeral/.symlinks/plugins/opencv_dart/macos`)
+
+SPEC REPOS:
+  trunk:
+    - DartCvMacOS
 
 EXTERNAL SOURCES:
   device_info_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
+  opencv_dart:
+    :path: Flutter/ephemeral/.symlinks/plugins/opencv_dart/macos
 
 SPEC CHECKSUMS:
+  DartCvMacOS: febe6cec544670ad68c71da89b9c1b94bd342e48
   device_info_plus: a56e6e74dbbd2bb92f2da12c64ddd4f67a749041
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  opencv_dart: 9adf31b6905f6e9f7e471d3eb6cc1c65a144db84
 
 PODFILE CHECKSUM: 1e95c36afbfd1cb6423ceca4de7a8e1b256fb6ac
 

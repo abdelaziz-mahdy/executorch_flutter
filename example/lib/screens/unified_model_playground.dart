@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_definition.dart';
 import '../models/model_registry.dart';
+import '../services/processor_preferences.dart';
 
 /// Unified Model Playground - works with any model type through ModelDefinition
 class UnifiedModelPlayground extends StatefulWidget {
@@ -27,6 +28,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
 
   // UI state
   bool _isInputExpanded = true;
+  bool _useOpenCVProcessor = false;
 
   // Input/Result state (generic)
   Object? _input;
@@ -38,6 +40,14 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   void initState() {
     super.initState();
     _loadAvailableModels();
+    _loadProcessorPreference();
+  }
+
+  Future<void> _loadProcessorPreference() async {
+    final useOpenCV = await ProcessorPreferences.getUseOpenCV();
+    setState(() {
+      _useOpenCVProcessor = useOpenCV;
+    });
   }
 
   @override
@@ -77,8 +87,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       final modelPath = await _loadAssetModel(model.assetPath);
 
       // Load ExecuTorch model
-      final execuTorchModel =
-          await ExecutorchManager.instance.loadModel(modelPath);
+      final execuTorchModel = await ExecutorchManager.instance.loadModel(
+        modelPath,
+      );
 
       setState(() {
         _selectedModel = model;
@@ -129,19 +140,23 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
 
       final endTime = DateTime.now();
-      final processingTime =
-          endTime.difference(startTime).inMilliseconds.toDouble();
+      final processingTime = endTime
+          .difference(startTime)
+          .inMilliseconds
+          .toDouble();
 
       setState(() {
         _result = result;
         _processingTime = processingTime;
         _isProcessing = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
       setState(() {
         _errorMessage = 'Processing failed: $e';
         _isProcessing = false;
       });
+      debugPrint('Error during processing: $e');
+      debugPrint('Stack trace: $stackTrace');
     }
   }
 
@@ -151,6 +166,39 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       appBar: AppBar(
         title: const Text('Model Playground'),
         elevation: 0,
+        actions: [
+          // Processor toggle
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _useOpenCVProcessor ? 'OpenCV' : 'Dart',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              Switch(
+                value: _useOpenCVProcessor,
+                onChanged: (value) async {
+                  await ProcessorPreferences.setUseOpenCV(value);
+                  setState(() {
+                    _useOpenCVProcessor = value;
+                  });
+                  // Show feedback
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Switched to ${value ? "OpenCV" : "Dart"} processor',
+                        ),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ],
       ),
       body: _isLoadingModels
           ? const Center(child: CircularProgressIndicator())
@@ -205,9 +253,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         value: _selectedModel,
         decoration: InputDecoration(
           labelText: 'Select Model',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
         items: _availableModels?.map((model) {
           return DropdownMenuItem(
@@ -280,9 +326,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
             children: [
               Text(
                 'Input',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               IconButton(
@@ -356,8 +402,8 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         child: Text(
           'Select an input to see results',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -399,9 +445,8 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                       const SizedBox(width: 12),
                       Text(
                         'Results',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
                       if (_processingTime != null)
@@ -411,18 +456,20 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             '${_processingTime!.toStringAsFixed(0)}ms',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimaryContainer,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                ),
                           ),
                         ),
                     ],

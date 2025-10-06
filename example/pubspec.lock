@@ -177,6 +177,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.1"
+  dartcv4:
+    dependency: transitive
+    description:
+      name: dartcv4
+      sha256: bafdc00c76b376a52924db27bc4c6f6c33600e1ec2f51f71d878343e592cdc78
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.6"
   device_info_plus:
     dependency: "direct main"
     description:
@@ -478,6 +486,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  opencv_dart:
+    dependency: "direct main"
+    description:
+      name: opencv_dart
+      sha256: fed512728e358915d6916333cbaf1c46536cb9caaf6daf86c75d080e14b0d03f
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.3"
   package_config:
     dependency: transitive
     description:

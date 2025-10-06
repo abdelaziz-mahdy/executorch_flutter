@@ -72,8 +72,10 @@ class ImagePreprocessConfig {
 enum ImageCropMode {
   /// Resize to exact dimensions (may distort aspect ratio)
   stretch,
+
   /// Crop from center to maintain aspect ratio
   centerCrop,
+
   /// Fit image within dimensions, padding with zeros
   letterbox,
 }
@@ -86,6 +88,7 @@ class ClassificationResult {
     required this.confidence,
     required this.classIndex,
     required this.allProbabilities,
+    this.classLabels = const [],
   });
 
   /// The predicted class name/label
@@ -100,6 +103,9 @@ class ClassificationResult {
   /// All class probabilities (softmax outputs)
   final List<double> allProbabilities;
 
+  /// All class labels for mapping indices to names
+  final List<String> classLabels;
+
   /// Get top K classification results (including this one as the first result)
   List<({String className, double confidence, int classIndex})> get topK {
     // Return top 5 results from allProbabilities
@@ -111,12 +117,20 @@ class ClassificationResult {
     // Sort by probability descending
     indexed.sort((a, b) => b.probability.compareTo(a.probability));
 
-    // Take top 5 and return
-    return indexed.take(5).map((item) => (
-      className: 'Class ${item.index}',  // Default class name
-      confidence: item.probability,
-      classIndex: item.index,
-    )).toList();
+    // Take top 5 and return with actual class names
+    return indexed.take(5).map((item) {
+      String label;
+      if (classLabels.isNotEmpty && item.index < classLabels.length) {
+        label = classLabels[item.index];
+      } else {
+        label = 'Class ${item.index}';
+      }
+      return (
+        className: label,
+        confidence: item.probability,
+        classIndex: item.index,
+      );
+    }).toList();
   }
 
   @override
@@ -139,9 +153,7 @@ class ClassificationResult {
 
 /// Preprocessor for image data to tensor conversion
 class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
-  ImageNetPreprocessor({
-    required this.config,
-  });
+  ImageNetPreprocessor({required this.config});
 
   final ImagePreprocessConfig config;
 
@@ -170,7 +182,11 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
       }
 
       // Resize to model input size (224x224 for most image models) - exactly like working code
-      final resized = img.copyResize(decodedImage, width: config.targetWidth, height: config.targetHeight);
+      final resized = img.copyResize(
+        decodedImage,
+        width: config.targetWidth,
+        height: config.targetHeight,
+      );
 
       // Convert to RGB if needed - exactly like working code
       final rgbImage = resized.convert(numChannels: 3);
@@ -180,7 +196,9 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
       const std = [0.229, 0.224, 0.225];
 
       // Create float32 tensor in NCHW format - exactly like working code
-      final floats = Float32List(1 * 3 * config.targetHeight * config.targetWidth);
+      final floats = Float32List(
+        1 * 3 * config.targetHeight * config.targetWidth,
+      );
 
       // Fill tensor in NCHW format: [batch, channel, height, width] - exactly like working code
       int index = 0;
@@ -214,7 +232,12 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
 
       // Create tensor data - exactly like working code
       final tensorData = TensorData(
-        shape: [1, 3, config.targetHeight, config.targetWidth].cast<int?>(), // NCHW format
+        shape: [
+          1,
+          3,
+          config.targetHeight,
+          config.targetWidth,
+        ].cast<int?>(), // NCHW format
         dataType: TensorType.float32,
         data: floats.buffer.asUint8List(),
         name: 'input',
@@ -281,7 +304,11 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
         final newWidth = (image.width * scale).round();
         final newHeight = (image.height * scale).round();
 
-        final resized = img.copyResize(image, width: newWidth, height: newHeight);
+        final resized = img.copyResize(
+          image,
+          width: newWidth,
+          height: newHeight,
+        );
 
         // Create target image with padding
         final target = img.Image(
@@ -325,7 +352,8 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
             config.standardDeviation.isNotEmpty &&
             config.meanSubtraction.length > 0 &&
             config.standardDeviation.length > 0) {
-          value = (value - config.meanSubtraction[0]) / config.standardDeviation[0];
+          value =
+              (value - config.meanSubtraction[0]) / config.standardDeviation[0];
         }
 
         data.add(value);
@@ -348,7 +376,8 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
             config.standardDeviation.isNotEmpty &&
             config.meanSubtraction.length > 1 &&
             config.standardDeviation.length > 1) {
-          value = (value - config.meanSubtraction[1]) / config.standardDeviation[1];
+          value =
+              (value - config.meanSubtraction[1]) / config.standardDeviation[1];
         }
 
         data.add(value);
@@ -371,7 +400,8 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
             config.standardDeviation.isNotEmpty &&
             config.meanSubtraction.length > 2 &&
             config.standardDeviation.length > 2) {
-          value = (value - config.meanSubtraction[2]) / config.standardDeviation[2];
+          value =
+              (value - config.meanSubtraction[2]) / config.standardDeviation[2];
         }
 
         data.add(value);
@@ -383,10 +413,9 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
 }
 
 /// Postprocessor for classification results
-class ImageNetPostprocessor extends ExecuTorchPostprocessor<ClassificationResult> {
-  ImageNetPostprocessor({
-    required this.classLabels,
-  });
+class ImageNetPostprocessor
+    extends ExecuTorchPostprocessor<ClassificationResult> {
+  ImageNetPostprocessor({required this.classLabels});
 
   final List<String> classLabels;
 
@@ -431,7 +460,10 @@ class ImageNetPostprocessor extends ExecuTorchPostprocessor<ClassificationResult
         final probabilities = _applySoftmax(logits);
 
         // Find top-5 predictions - exactly like working code
-        final indexed = List.generate(probabilities.length, (i) => MapEntry(i, probabilities[i]));
+        final indexed = List.generate(
+          probabilities.length,
+          (i) => MapEntry(i, probabilities[i]),
+        );
         indexed.sort((a, b) => b.value.compareTo(a.value));
 
         final top5 = indexed.take(5).toList();
@@ -454,13 +486,19 @@ class ImageNetPostprocessor extends ExecuTorchPostprocessor<ClassificationResult
           confidence: maxProb,
           classIndex: maxIndex,
           allProbabilities: probabilities,
+          classLabels: classLabels,
         );
       }
 
-      throw PostprocessingException('Unsupported output data type: ${output.dataType}');
+      throw PostprocessingException(
+        'Unsupported output data type: ${output.dataType}',
+      );
     } catch (e) {
       if (e is ProcessorException) rethrow;
-      throw PostprocessingException('Classification postprocessing failed: $e', e);
+      throw PostprocessingException(
+        'Classification postprocessing failed: $e',
+        e,
+      );
     }
   }
 
@@ -469,7 +507,9 @@ class ImageNetPostprocessor extends ExecuTorchPostprocessor<ClassificationResult
     final maxLogit = logits.reduce((a, b) => a > b ? a : b);
 
     // Compute exp(logit - max) for each logit - exactly like working code
-    final expValues = logits.map((logit) => math.exp(logit - maxLogit)).toList();
+    final expValues = logits
+        .map((logit) => math.exp(logit - maxLogit))
+        .toList();
 
     // Compute sum of all exp values - exactly like working code
     final sumExp = expValues.reduce((a, b) => a + b);
@@ -480,12 +520,11 @@ class ImageNetPostprocessor extends ExecuTorchPostprocessor<ClassificationResult
 }
 
 /// Complete ImageNet classification processor
-class ImageNetProcessor extends ExecuTorchProcessor<Uint8List, ClassificationResult> {
-  ImageNetProcessor({
-    required this.preprocessConfig,
-    required this.classLabels,
-  }) : _preprocessor = ImageNetPreprocessor(config: preprocessConfig),
-       _postprocessor = ImageNetPostprocessor(classLabels: classLabels);
+class ImageNetProcessor
+    extends ExecuTorchProcessor<Uint8List, ClassificationResult> {
+  ImageNetProcessor({required this.preprocessConfig, required this.classLabels})
+    : _preprocessor = ImageNetPreprocessor(config: preprocessConfig),
+      _postprocessor = ImageNetPostprocessor(classLabels: classLabels);
 
   final ImagePreprocessConfig preprocessConfig;
   final List<String> classLabels;
@@ -496,5 +535,6 @@ class ImageNetProcessor extends ExecuTorchProcessor<Uint8List, ClassificationRes
   ExecuTorchPreprocessor<Uint8List> get preprocessor => _preprocessor;
 
   @override
-  ExecuTorchPostprocessor<ClassificationResult> get postprocessor => _postprocessor;
+  ExecuTorchPostprocessor<ClassificationResult> get postprocessor =>
+      _postprocessor;
 }

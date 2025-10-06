@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../processors/image_processor.dart';
+import '../processors/opencv_processors.dart';
 import '../renderers/screens/classification_renderer.dart';
 import '../widgets/image_input_widget.dart';
+import '../services/processor_preferences.dart';
 import 'model_definition.dart';
 
 /// MobileNet Image Classification Model Definition
@@ -50,14 +52,28 @@ class MobileNetModelDefinition
   @override
   Future<List<TensorData>> prepareInput(File input) async {
     final bytes = await input.readAsBytes();
-    final preprocessor = ImageNetPreprocessor(
-      config: ImagePreprocessConfig(
-        targetWidth: inputSize,
-        targetHeight: inputSize,
-        normalizeToFloat: true,
-      ),
-    );
-    return await preprocessor.preprocess(bytes);
+    final useOpenCV = await ProcessorPreferences.getUseOpenCV();
+
+    // Dynamically select preprocessor based on user preference
+    if (useOpenCV) {
+      final preprocessor = OpenCVImageNetPreprocessor(
+        config: ImagePreprocessConfig(
+          targetWidth: inputSize,
+          targetHeight: inputSize,
+          normalizeToFloat: true,
+        ),
+      );
+      return await preprocessor.preprocess(bytes);
+    } else {
+      final preprocessor = ImageNetPreprocessor(
+        config: ImagePreprocessConfig(
+          targetWidth: inputSize,
+          targetHeight: inputSize,
+          normalizeToFloat: true,
+        ),
+      );
+      return await preprocessor.preprocess(bytes);
+    }
   }
 
   @override

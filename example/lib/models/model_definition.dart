@@ -30,6 +30,7 @@ abstract class ModelDefinition<TInput, TResult> {
   });
 
   /// Prepare input for inference (convert to TensorData)
+  /// Each model implementation chooses which preprocessor to use
   Future<List<TensorData>> prepareInput(TInput input);
 
   /// Process the model inference result
