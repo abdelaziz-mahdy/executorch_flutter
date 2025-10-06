@@ -205,12 +205,13 @@ class YoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
   }
 
   TensorData _imageToTensor(img.Image image) {
-    // Create float32 tensor in NCHW format normalized to [0, 1]
+    // Create float32 tensor in NCHW format
+    // Modern YOLO models (v8, v11, etc.) expect [0, 1] normalized inputs
     final floats = Float32List(1 * 3 * config.targetHeight * config.targetWidth);
 
     int index = 0;
 
-    // Channel 0 (Red) - normalized to [0, 1]
+    // Channel 0 (Red) - normalize to [0, 1]
     for (int y = 0; y < config.targetHeight; y++) {
       for (int x = 0; x < config.targetWidth; x++) {
         final pixel = image.getPixel(x, y);
@@ -218,7 +219,7 @@ class YoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
       }
     }
 
-    // Channel 1 (Green) - normalized to [0, 1]
+    // Channel 1 (Green) - normalize to [0, 1]
     for (int y = 0; y < config.targetHeight; y++) {
       for (int x = 0; x < config.targetWidth; x++) {
         final pixel = image.getPixel(x, y);
@@ -226,7 +227,7 @@ class YoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
       }
     }
 
-    // Channel 2 (Blue) - normalized to [0, 1]
+    // Channel 2 (Blue) - normalize to [0, 1]
     for (int y = 0; y < config.targetHeight; y++) {
       for (int x = 0; x < config.targetWidth; x++) {
         final pixel = image.getPixel(x, y);
@@ -235,7 +236,7 @@ class YoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
     }
 
     print('📊 YOLO Tensor shape: [1, 3, ${config.targetHeight}, ${config.targetWidth}]');
-    print('📊 YOLO Tensor data size: ${floats.length} floats');
+    print('📊 YOLO Tensor data size: ${floats.length} floats, range [0, 1]');
 
     return TensorData(
       shape: [1, 3, config.targetHeight, config.targetWidth].cast<int?>(),
@@ -261,12 +262,16 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
     this.confidenceThreshold = 0.25,
     this.iouThreshold = 0.45,
     this.maxDetections = 300,
+    this.inputWidth = 640,
+    this.inputHeight = 640,
   });
 
   final List<String> classLabels;
   final double confidenceThreshold;
   final double iouThreshold;
   final int maxDetections;
+  final int inputWidth;
+  final int inputHeight;
 
   @override
   String get outputTypeName => 'YOLO Detection Result';
@@ -308,123 +313,185 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
   }
 
   List<DetectedObject> _parseYoloOutput(TensorData output) {
-    final detections = <DetectedObject>[];
-
     if (output.dataType != TensorType.float32) {
-      return detections;
+      return [];
     }
 
     final byteData = ByteData.sublistView(output.data);
-    final values = <double>[];
+    final floatCount = output.data.length ~/ 4;
+    final outputs = Float32List(floatCount);
 
-    for (int i = 0; i < output.data.length ~/ 4; i++) {
-      values.add(byteData.getFloat32(i * 4, Endian.host));
+    for (int i = 0; i < floatCount; i++) {
+      outputs[i] = byteData.getFloat32(i * 4, Endian.host);
     }
 
-    // YOLO output format options:
-    // YOLOv5:           [batch, 85, num_predictions] - 4 bbox + 1 objectness + 80 classes
-    // YOLOv8/v11/v12:   [batch, 84, num_predictions] - 4 bbox + 80 classes (objectness integrated)
     final shape = output.shape?.where((dim) => dim != null).map((dim) => dim!).toList() ?? [];
+    if (shape.length < 2) return [];
 
-    if (shape.length < 2) return detections;
+    // Detect format:
+    // Transposed: [batch, features, predictions] = [1, 84, 8400] - features is SMALL
+    // Normal: [batch, predictions, features] = [1, 8400, 84] - predictions is LARGE
+    final isTransposed = shape.length >= 3 && shape[1] < shape[2];
 
-    // Detect format based on tensor shape
-    final isTransposed = shape.length >= 3 && shape[1] > shape[2];
-
-    int numPredictions;
-    int numFields;
+    int outputColumn; // number of features (84 or 85)
+    int outputRow;    // number of predictions (8400, 25200, etc)
 
     if (isTransposed) {
-      // Format: [batch, features, predictions] - typical for YOLOv8/v11
-      numFields = shape[1];
-      numPredictions = shape[2];
+      outputColumn = shape[1]; // features
+      outputRow = shape[2];    // predictions
     } else {
-      // Format: [batch, predictions, features] - alternative format
-      numPredictions = shape[1];
-      numFields = shape.length > 2 ? shape[2] : (values.length ~/ numPredictions);
+      outputRow = shape.length >= 2 ? shape[1] : 0;  // predictions
+      outputColumn = shape.length >= 3 ? shape[2] : (outputs.length ~/ outputRow); // features
     }
 
-    // Detect YOLO version by feature count
-    // 85 = YOLOv5 (4 bbox + 1 objectness + 80 classes)
-    // 84 = YOLOv8/v11 (4 bbox + 80 classes, objectness integrated)
-    final isYolov5Format = numFields == 85;
-    final numClasses = isYolov5Format ? 80 : (numFields - 4);
+    print('🔍 Shape: $shape, isTransposed: $isTransposed, outputRow: $outputRow, outputColumn: $outputColumn');
 
-    for (int i = 0; i < numPredictions; i++) {
-      // Calculate index based on format
-      final baseIdx = isTransposed ? i : (i * numFields);
+    // Detect YOLO version: 85 = YOLOv5 (with objectness), 84 = YOLOv8+ (without)
+    final isYolov5 = outputColumn == 85 || outputColumn == (classLabels.length + 5);
+    final numClasses = isYolov5 ? (outputColumn - 5) : (outputColumn - 4);
 
-      if (baseIdx >= values.length) break;
+    return isTransposed
+        ? _parseYoloV8Transposed(outputs, outputRow, outputColumn, numClasses)
+        : (isYolov5
+            ? _parseYoloV5(outputs, outputRow, outputColumn, numClasses)
+            : _parseYoloV8(outputs, outputRow, outputColumn, numClasses));
+  }
 
-      double xCenter, yCenter, width, height, objectness;
+  /// Parse YOLOv5 format: [predictions, features] where features = 4 bbox + 1 objectness + N classes
+  List<DetectedObject> _parseYoloV5(Float32List outputs, int outputRow, int outputColumn, int numClasses) {
+    final detections = <DetectedObject>[];
+    print('📦 YOLOv5 parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
 
-      if (isTransposed) {
-        // Transposed format: [features, predictions]
-        if (i + numPredictions * 4 >= values.length) break;
+    for (int i = 0; i < outputRow; i++) {
+      final objectness = outputs[i * outputColumn + 4];
 
-        xCenter = values[i];
-        yCenter = values[numPredictions + i];
-        width = values[numPredictions * 2 + i];
-        height = values[numPredictions * 3 + i];
-        objectness = isYolov5Format ? values[numPredictions * 4 + i] : 1.0;
-      } else {
-        // Normal format: [predictions, features]
-        if (baseIdx + 4 + numClasses > values.length) break;
+      if (objectness > confidenceThreshold) {
+        final x = outputs[i * outputColumn];
+        final y = outputs[i * outputColumn + 1];
+        final w = outputs[i * outputColumn + 2];
+        final h = outputs[i * outputColumn + 3];
 
-        xCenter = values[baseIdx];
-        yCenter = values[baseIdx + 1];
-        width = values[baseIdx + 2];
-        height = values[baseIdx + 3];
-        objectness = isYolov5Format ? values[baseIdx + 4] : 1.0;
-      }
+        // Find best class
+        double maxClassConf = outputs[i * outputColumn + 5];
+        int classIdx = 0;
 
-      // Find best class and confidence
-      int bestClassIdx = 0;
-      double bestClassConf = 0.0;
-
-      final classStartOffset = isYolov5Format ? 5 : 4;
-
-      for (int j = 0; j < numClasses; j++) {
-        final classIdx = isTransposed
-            ? (numPredictions * (classStartOffset + j) + i)
-            : (baseIdx + classStartOffset + j);
-
-        if (classIdx >= values.length) break;
-
-        final classConf = values[classIdx];
-        if (classConf > bestClassConf) {
-          bestClassConf = classConf;
-          bestClassIdx = j;
+        for (int j = 0; j < numClasses; j++) {
+          final classConf = outputs[i * outputColumn + 5 + j];
+          if (classConf > maxClassConf) {
+            maxClassConf = classConf;
+            classIdx = j;
+          }
         }
-      }
 
-      // Calculate final confidence
-      // YOLOv5: objectness * class_confidence
-      // YOLOv8/v11: class_confidence already includes objectness
-      final confidence = isYolov5Format ? (objectness * bestClassConf) : bestClassConf;
+        final confidence = objectness * maxClassConf;
 
-      // Only add if confidence is above minimum threshold
-      if (confidence > 0.1) {
-        // Convert center-based to corner-based coordinates
-        final x = (xCenter - width / 2).clamp(0.0, 1.0);
-        final y = (yCenter - height / 2).clamp(0.0, 1.0);
-        final w = width.clamp(0.0, 1.0);
-        final h = height.clamp(0.0, 1.0);
-
-        final className = bestClassIdx < classLabels.length
-            ? classLabels[bestClassIdx]
-            : 'Class $bestClassIdx';
-
-        detections.add(DetectedObject(
-          className: className,
-          confidence: confidence,
-          classIndex: bestClassIdx,
-          boundingBox: BoundingBox(x: x, y: y, width: w, height: h),
-        ));
+        if (confidence > confidenceThreshold) {
+          if (detections.length < 3) {
+            print('📍 YOLOv5 raw coords: x=$x, y=$y, w=$w, h=$h, conf=$confidence');
+          }
+          detections.add(_createDetection(x, y, w, h, confidence, classIdx));
+        }
       }
     }
 
     return detections;
+  }
+
+  /// Parse YOLOv8+ format: [predictions, features] where features = 4 bbox + N classes (no objectness)
+  List<DetectedObject> _parseYoloV8(Float32List outputs, int outputRow, int outputColumn, int numClasses) {
+    final detections = <DetectedObject>[];
+    print('📦 YOLOv8 parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
+
+    for (int i = 0; i < outputRow; i++) {
+      final x = outputs[i * outputColumn];
+      final y = outputs[i * outputColumn + 1];
+      final w = outputs[i * outputColumn + 2];
+      final h = outputs[i * outputColumn + 3];
+
+      // Find best class
+      double maxClassConf = outputs[i * outputColumn + 4];
+      int classIdx = 0;
+
+      for (int j = 0; j < numClasses; j++) {
+        final classConf = outputs[i * outputColumn + 4 + j];
+        if (classConf > maxClassConf) {
+          maxClassConf = classConf;
+          classIdx = j;
+        }
+      }
+
+      if (maxClassConf > confidenceThreshold) {
+        if (detections.length < 3) {
+          print('📍 YOLOv8 raw coords: x=$x, y=$y, w=$w, h=$h, conf=$maxClassConf');
+        }
+        detections.add(_createDetection(x, y, w, h, maxClassConf, classIdx));
+      }
+    }
+
+    return detections;
+  }
+
+  /// Parse YOLOv8+ transposed format: [features, predictions]
+  List<DetectedObject> _parseYoloV8Transposed(Float32List outputs, int outputRow, int outputColumn, int numClasses) {
+    final detections = <DetectedObject>[];
+    print('📦 YOLOv8 Transposed parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
+
+    for (int i = 0; i < outputRow; i++) {
+      final x = outputs[i];
+      final y = outputs[outputRow + i];
+      final w = outputs[2 * outputRow + i];
+      final h = outputs[3 * outputRow + i];
+
+      // Find best class
+      double maxClassConf = outputs[4 * outputRow + i];
+      int classIdx = 0;
+
+      for (int j = 4; j < outputColumn; j++) {
+        final classConf = outputs[j * outputRow + i];
+        if (classConf > maxClassConf) {
+          maxClassConf = classConf;
+          classIdx = j - 4;
+        }
+      }
+
+      if (maxClassConf > confidenceThreshold) {
+        if (detections.length < 3) {
+          print('📍 YOLOv8T raw coords: x=$x, y=$y, w=$w, h=$h, conf=$maxClassConf');
+        }
+        detections.add(_createDetection(x, y, w, h, maxClassConf, classIdx));
+      }
+    }
+
+    return detections;
+  }
+
+  DetectedObject _createDetection(double xCenter, double yCenter, double w, double h, double confidence, int classIdx) {
+    // YOLO models output coordinates in pixel space relative to input size
+    // Convert center coords to corner coords and normalize to [0, 1]
+    // This matches the working Java implementation exactly
+    final left = (xCenter - w / 2) / inputWidth;
+    final top = (yCenter - h / 2) / inputHeight;
+    final width = w / inputWidth;
+    final height = h / inputHeight;
+
+    print('🔧 Raw: xC=$xCenter, yC=$yCenter, w=$w, h=$h | Input: ${inputWidth}x${inputHeight}');
+    print('🔧 Normalized: left=$left, top=$top, width=$width, height=$height');
+
+    final className = classIdx < classLabels.length
+        ? classLabels[classIdx]
+        : 'Class $classIdx';
+
+    return DetectedObject(
+      className: className,
+      confidence: confidence,
+      classIndex: classIdx,
+      boundingBox: BoundingBox(
+        x: left.clamp(0.0, 1.0),
+        y: top.clamp(0.0, 1.0),
+        width: width.clamp(0.0, 1.0),
+        height: height.clamp(0.0, 1.0),
+      ),
+    );
   }
 
   List<DetectedObject> _applyNMS(List<DetectedObject> detections) {
@@ -433,47 +500,49 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
     // Sort by confidence (highest first)
     detections.sort((a, b) => b.confidence.compareTo(a.confidence));
 
-    final keep = <DetectedObject>[];
-    final suppressed = <bool>[]..length = detections.length;
-    suppressed.fillRange(0, suppressed.length, false);
+    final selected = <DetectedObject>[];
+    final active = List<bool>.filled(detections.length, true);
+    int numActive = active.length;
 
     for (int i = 0; i < detections.length; i++) {
-      if (suppressed[i]) continue;
+      if (!active[i]) continue;
 
-      keep.add(detections[i]);
+      final boxA = detections[i];
+      selected.add(boxA);
+
+      if (selected.length >= maxDetections) break;
 
       for (int j = i + 1; j < detections.length; j++) {
-        if (suppressed[j]) continue;
+        if (!active[j]) continue;
 
-        // Only suppress if same class
-        if (detections[i].classIndex != detections[j].classIndex) continue;
-
-        final iou = _calculateIoU(detections[i].boundingBox, detections[j].boundingBox);
-        if (iou > iouThreshold) {
-          suppressed[j] = true;
+        final boxB = detections[j];
+        if (_calculateIoU(boxA.boundingBox, boxB.boundingBox) > iouThreshold) {
+          active[j] = false;
+          numActive--;
+          if (numActive <= 0) break;
         }
       }
     }
 
-    return keep;
+    return selected;
   }
 
-  double _calculateIoU(BoundingBox boxA, BoundingBox boxB) {
-    final intersectionLeft = math.max(boxA.x, boxB.x);
-    final intersectionTop = math.max(boxA.y, boxB.y);
-    final intersectionRight = math.min(boxA.right, boxB.right);
-    final intersectionBottom = math.min(boxA.bottom, boxB.bottom);
+  double _calculateIoU(BoundingBox a, BoundingBox b) {
+    final areaA = (a.right - a.x) * (a.bottom - a.y);
+    if (areaA <= 0.0) return 0.0;
 
-    if (intersectionLeft >= intersectionRight || intersectionTop >= intersectionBottom) {
-      return 0.0;
-    }
+    final areaB = (b.right - b.x) * (b.bottom - b.y);
+    if (areaB <= 0.0) return 0.0;
 
-    final intersectionArea = (intersectionRight - intersectionLeft) * (intersectionBottom - intersectionTop);
-    final boxAArea = boxA.width * boxA.height;
-    final boxBArea = boxB.width * boxB.height;
-    final unionArea = boxAArea + boxBArea - intersectionArea;
+    final intersectLeft = math.max(a.x, b.x);
+    final intersectTop = math.max(a.y, b.y);
+    final intersectRight = math.min(a.right, b.right);
+    final intersectBottom = math.min(a.bottom, b.bottom);
 
-    return unionArea > 0 ? intersectionArea / unionArea : 0.0;
+    final intersectArea = math.max(0.0, intersectRight - intersectLeft) *
+                          math.max(0.0, intersectBottom - intersectTop);
+
+    return intersectArea / (areaA + areaB - intersectArea);
   }
 }
 
@@ -508,6 +577,8 @@ class YoloProcessor extends ExecuTorchProcessor<Uint8List, ObjectDetectionResult
           confidenceThreshold: confidenceThreshold,
           iouThreshold: iouThreshold,
           maxDetections: maxDetections,
+          inputWidth: preprocessConfig.targetWidth,
+          inputHeight: preprocessConfig.targetHeight,
         );
 
   final YoloPreprocessConfig preprocessConfig;
