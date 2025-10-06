@@ -19,11 +19,8 @@ class OpenCVYoloPreprocessor {
     // Convert BGR to RGB async
     final rgbMat = await cv.cvtColorAsync(mat, cv.COLOR_BGR2RGB);
 
-    // Resize to target size using OpenCV async
-    final resized = await cv.resizeAsync(rgbMat, (
-      config.targetWidth,
-      config.targetHeight,
-    ), interpolation: cv.INTER_LINEAR);
+    // Letterbox resize (YOLO standard) - maintain aspect ratio with padding
+    final resized = await _letterboxResize(rgbMat);
 
     // Convert to float32 and normalize to [0, 1] - all done natively in OpenCV
     final float32Mat = resized.convertTo(
@@ -73,6 +70,44 @@ class OpenCVYoloPreprocessor {
         dataType: TensorType.float32,
       ),
     ];
+  }
+
+  /// Letterbox resize - maintains aspect ratio with gray padding (YOLO standard)
+  Future<cv.Mat> _letterboxResize(cv.Mat image) async {
+    // Calculate scale to fit image within target size while maintaining aspect ratio
+    final scaleW = config.targetWidth / image.cols;
+    final scaleH = config.targetHeight / image.rows;
+    final scale = scaleW < scaleH ? scaleW : scaleH;
+
+    // Calculate new dimensions
+    final newWidth = (image.cols * scale).round();
+    final newHeight = (image.rows * scale).round();
+
+    // Resize image maintaining aspect ratio
+    final resized = await cv.resizeAsync(
+      image,
+      (newWidth, newHeight),
+      interpolation: cv.INTER_LINEAR,
+    );
+
+    // Create target mat with gray padding (114, 114, 114)
+    final target = cv.Mat.create(
+      rows: config.targetHeight,
+      cols: config.targetWidth,
+      type: cv.MatType.CV_8UC3,
+    );
+    target.setTo(cv.Scalar(114, 114, 114, 0)); // Gray padding
+
+    // Calculate offsets to center the resized image
+    final offsetX = (config.targetWidth - newWidth) ~/ 2;
+    final offsetY = (config.targetHeight - newHeight) ~/ 2;
+
+    // Copy resized image to center of target
+    final roi = target.region(cv.Rect(offsetX, offsetY, newWidth, newHeight));
+    resized.copyTo(roi);
+
+    resized.dispose();
+    return target;
   }
 }
 

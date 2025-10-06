@@ -36,6 +36,12 @@ class ImageWithDetections extends StatefulWidget {
   /// Text style for labels.
   final TextStyle labelStyle;
 
+  /// Model input width (e.g., 640 for YOLO640, can be 320, 416, 512, 1280, etc.)
+  final double modelInputWidth;
+
+  /// Model input height (e.g., 640 for YOLO640, can be 320, 416, 512, 1280, etc.)
+  final double modelInputHeight;
+
   /// Constructs an ImageWithDetections widget.
   const ImageWithDetections({
     super.key,
@@ -46,6 +52,8 @@ class ImageWithDetections extends StatefulWidget {
     this.strokeWidth = 2,
     this.showLabels = true,
     this.showConfidence = true,
+    this.modelInputWidth = 640.0,
+    this.modelInputHeight = 640.0,
     this.labelStyle = const TextStyle(
       color: Colors.white,
       fontSize: 12,
@@ -132,6 +140,8 @@ class _ImageWithDetectionsState extends State<ImageWithDetections>
                       imageHeight: snapshot.data!.height.toDouble(),
                       renderWidth: imageSize!.width,
                       renderHeight: imageSize!.height,
+                      modelInputWidth: widget.modelInputWidth,
+                      modelInputHeight: widget.modelInputHeight,
                       boxColor: widget.boxColor,
                       strokeWidth: widget.strokeWidth,
                       showLabels: widget.showLabels,

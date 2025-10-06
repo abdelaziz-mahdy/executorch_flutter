@@ -5,9 +5,10 @@ import '../processors/yolo_processor.dart';
 ///
 /// This painter handles the scaling and rendering of detection boxes from
 /// normalized coordinates [0, 1] to the actual rendered image dimensions.
-/// The key insight is that we need to scale from:
-/// - Image space (original model input size, e.g., 640x640)
-/// - To render space (actual widget size on screen)
+///
+/// IMPORTANT: The coordinates from YOLO are normalized to the letterbox space (640x640),
+/// NOT the original image space. This painter accounts for letterbox padding to correctly
+/// map coordinates back to the original image space.
 class DetectionBoxPainter extends CustomPainter {
   /// The list of detected objects to be painted.
   final List<DetectedObject> detections;
@@ -39,6 +40,12 @@ class DetectionBoxPainter extends CustomPainter {
   /// Text style for labels.
   final TextStyle labelStyle;
 
+  /// Model input width (e.g., 640 for YOLO640, can be 320, 416, 512, 1280, etc.)
+  final double modelInputWidth;
+
+  /// Model input height (e.g., 640 for YOLO640, can be 320, 416, 512, 1280, etc.)
+  final double modelInputHeight;
+
   /// Constructs a DetectionBoxPainter instance.
   DetectionBoxPainter({
     required this.detections,
@@ -46,6 +53,8 @@ class DetectionBoxPainter extends CustomPainter {
     this.imageHeight,
     this.renderWidth,
     this.renderHeight,
+    this.modelInputWidth = 640.0,
+    this.modelInputHeight = 640.0,
     this.boxColor = Colors.green,
     this.strokeWidth = 2,
     this.showLabels = true,
@@ -58,28 +67,108 @@ class DetectionBoxPainter extends CustomPainter {
     ),
   });
 
-  /// Scales the x-coordinate from normalized [0, 1] to render space.
+  /// Transform coordinates from letterbox space to original image space
   ///
-  /// The detection coordinates are already normalized to [0, 1] by the processor,
-  /// so we just need to scale them to the rendered widget size.
+  /// Letterbox resize maintains aspect ratio by:
+  /// 1. Scaling image to fit within 640x640
+  /// 2. Adding gray padding to center it
+  ///
+  /// To reverse this:
+  /// 1. Denormalize from [0, 1] to 640x640 pixel space
+  /// 2. Subtract padding offsets
+  /// 3. Divide by scale factor
+  /// 4. Normalize to [0, 1] based on original image
+  double _letterboxToOriginalX(double normalizedX) {
+    if (imageWidth == null) return normalizedX;
+
+    // Calculate letterbox parameters
+    final scale =
+        modelInputWidth / imageWidth! < modelInputHeight / imageHeight!
+        ? modelInputWidth / imageWidth!
+        : modelInputHeight / imageHeight!;
+
+    final scaledWidth = (imageWidth! * scale);
+    final offsetX = (modelInputWidth - scaledWidth) / 2;
+
+    // Transform: letterbox [0, 1] -> letterbox pixels -> remove padding -> scale back -> original [0, 1]
+    final letterboxPixel = normalizedX * modelInputWidth;
+    final withoutPadding = letterboxPixel - offsetX;
+    final originalPixel = withoutPadding / scale;
+
+    return originalPixel / imageWidth!;
+  }
+
+  double _letterboxToOriginalY(double normalizedY) {
+    if (imageHeight == null) return normalizedY;
+
+    // Calculate letterbox parameters
+    final scale =
+        modelInputWidth / imageWidth! < modelInputHeight / imageHeight!
+        ? modelInputWidth / imageWidth!
+        : modelInputHeight / imageHeight!;
+
+    final scaledHeight = (imageHeight! * scale);
+    final offsetY = (modelInputHeight - scaledHeight) / 2;
+
+    // Transform: letterbox [0, 1] -> letterbox pixels -> remove padding -> scale back -> original [0, 1]
+    final letterboxPixel = normalizedY * modelInputHeight;
+    final withoutPadding = letterboxPixel - offsetY;
+    final originalPixel = withoutPadding / scale;
+
+    return originalPixel / imageHeight!;
+  }
+
+  double _letterboxToOriginalWidth(double normalizedWidth) {
+    if (imageWidth == null) return normalizedWidth;
+
+    // Calculate letterbox scale
+    final scale =
+        modelInputWidth / imageWidth! < modelInputHeight / imageHeight!
+        ? modelInputWidth / imageWidth!
+        : modelInputHeight / imageHeight!;
+
+    // Transform: letterbox [0, 1] -> letterbox pixels -> scale back -> original [0, 1]
+    final letterboxPixel = normalizedWidth * modelInputWidth;
+    final originalPixel = letterboxPixel / scale;
+
+    return originalPixel / imageWidth!;
+  }
+
+  double _letterboxToOriginalHeight(double normalizedHeight) {
+    if (imageHeight == null) return normalizedHeight;
+
+    // Calculate letterbox scale
+    final scale =
+        modelInputWidth / imageWidth! < modelInputHeight / imageHeight!
+        ? modelInputWidth / imageWidth!
+        : modelInputHeight / imageHeight!;
+
+    // Transform: letterbox [0, 1] -> letterbox pixels -> scale back -> original [0, 1]
+    final letterboxPixel = normalizedHeight * modelInputHeight;
+    final originalPixel = letterboxPixel / scale;
+
+    return originalPixel / imageHeight!;
+  }
+
+  /// Scales the x-coordinate from normalized [0, 1] (original image space) to render space.
   double scaledX(double normalizedX) {
     if (renderWidth == null) return normalizedX;
     return normalizedX * renderWidth!;
   }
 
-  /// Scales the y-coordinate from normalized [0, 1] to render space.
+  /// Scales the y-coordinate from normalized [0, 1] (original image space) to render space.
   double scaledY(double normalizedY) {
     if (renderHeight == null) return normalizedY;
     return normalizedY * renderHeight!;
   }
 
-  /// Scales width from normalized [0, 1] to render space.
+  /// Scales width from normalized [0, 1] (original image space) to render space.
   double scaledWidth(double normalizedWidth) {
     if (renderWidth == null) return normalizedWidth;
     return normalizedWidth * renderWidth!;
   }
 
-  /// Scales height from normalized [0, 1] to render space.
+  /// Scales height from normalized [0, 1] (original image space) to render space.
   double scaledHeight(double normalizedHeight) {
     if (renderHeight == null) return normalizedHeight;
     return normalizedHeight * renderHeight!;
@@ -93,11 +182,21 @@ class DetectionBoxPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     for (final detection in detections) {
-      // Scale normalized coordinates to render space
-      final left = scaledX(detection.boundingBox.x);
-      final top = scaledY(detection.boundingBox.y);
-      final width = scaledWidth(detection.boundingBox.width);
-      final height = scaledHeight(detection.boundingBox.height);
+      // Transform coordinates from letterbox space to original image space
+      final originalX = _letterboxToOriginalX(detection.boundingBox.x);
+      final originalY = _letterboxToOriginalY(detection.boundingBox.y);
+      final originalWidth = _letterboxToOriginalWidth(
+        detection.boundingBox.width,
+      );
+      final originalHeight = _letterboxToOriginalHeight(
+        detection.boundingBox.height,
+      );
+
+      // Scale from original image space [0, 1] to render space
+      final left = scaledX(originalX);
+      final top = scaledY(originalY);
+      final width = scaledWidth(originalWidth);
+      final height = scaledHeight(originalHeight);
 
       final rect = Rect.fromLTWH(left, top, width, height);
 
@@ -111,10 +210,7 @@ class DetectionBoxPainter extends CustomPainter {
             : detection.className;
 
         final textPainter = TextPainter(
-          text: TextSpan(
-            text: labelText,
-            style: labelStyle,
-          ),
+          text: TextSpan(text: labelText, style: labelStyle),
           textDirection: TextDirection.ltr,
         );
 
@@ -153,6 +249,8 @@ class DetectionBoxPainter extends CustomPainter {
         oldDelegate.imageWidth != imageWidth ||
         oldDelegate.imageHeight != imageHeight ||
         oldDelegate.renderWidth != renderWidth ||
-        oldDelegate.renderHeight != renderHeight;
+        oldDelegate.renderHeight != renderHeight ||
+        oldDelegate.modelInputWidth != modelInputWidth ||
+        oldDelegate.modelInputHeight != modelInputHeight;
   }
 }

@@ -99,6 +99,8 @@ class YoloModelDefinition extends ModelDefinition<File, ObjectDetectionResult> {
     return ObjectDetectionRenderer(
       input: input,
       result: result,
+      modelInputWidth: inputSize.toDouble(),
+      modelInputHeight: inputSize.toDouble(),
     );
   }
 
