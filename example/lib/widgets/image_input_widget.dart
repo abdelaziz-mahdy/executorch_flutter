@@ -5,29 +5,30 @@ import '../utils/test_images.dart';
 
 /// Generic reusable image input widget for any image-based model
 class ImageInputWidget extends StatelessWidget {
-  const ImageInputWidget({
-    super.key,
-    required this.onImageSelected,
-  });
+  const ImageInputWidget({super.key, required this.onImageSelected});
 
   final Function(File) onImageSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       children: [
-        _buildActionButton(
-          context: context,
-          icon: Icons.photo_library,
-          label: 'Select from Gallery',
-          onTap: () => _pickImage(ImageSource.gallery),
+        Expanded(
+          child: _buildActionButton(
+            context: context,
+            icon: Icons.photo_library,
+            label: 'Gallery',
+            onTap: () => _pickImage(ImageSource.gallery),
+          ),
         ),
-        const SizedBox(height: 12),
-        _buildActionButton(
-          context: context,
-          icon: Icons.image,
-          label: 'Use Test Image',
-          onTap: () => _showTestImagePicker(context),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildActionButton(
+            context: context,
+            icon: Icons.image,
+            label: 'Test Image',
+            onTap: () => _showTestImagePicker(context),
+          ),
         ),
       ],
     );
@@ -99,22 +100,26 @@ class ImageInputWidget extends StatelessWidget {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         decoration: BoxDecoration(
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 16),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyLarge,
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

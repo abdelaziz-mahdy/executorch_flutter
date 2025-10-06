@@ -352,7 +352,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     if (_selectedModel == null || !_isInputExpanded) return const SizedBox();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         boxShadow: [
@@ -369,25 +369,33 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         children: [
           Row(
             children: [
+              Icon(
+                Icons.input,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
               Text(
                 'Input',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
                 onPressed: () {
                   setState(() {
                     _isInputExpanded = false;
                   });
                 },
-                tooltip: 'Hide input panel',
+                tooltip: 'Hide',
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           _selectedModel!.buildInputWidget(
             context: context,
             onInputSelected: _processInput,
@@ -485,7 +493,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           if (_result != null) _buildDetailsSection(),
 
           // Bottom padding when input panel is visible
-          if (_isInputExpanded) const SizedBox(height: 250),
+          if (_isInputExpanded) const SizedBox(height: 150),
         ],
       ),
     );
