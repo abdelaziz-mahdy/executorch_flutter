@@ -33,7 +33,10 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   // Input/Result state (generic)
   Object? _input;
   Object? _result;
-  double? _processingTime;
+  double? _preprocessingTime;
+  double? _inferenceTime;
+  double? _postprocessingTime;
+  double? _totalTime;
   String? _errorMessage;
 
   @override
@@ -123,31 +126,47 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     });
 
     try {
-      final startTime = DateTime.now();
+      final totalStopwatch = Stopwatch()..start();
 
       // Step 1: Prepare input (convert to TensorData)
+      print('⏱️  Starting preprocessing...');
+      final preprocessStopwatch = Stopwatch()..start();
       final tensorInputs = await _selectedModel!.prepareInput(input);
+      preprocessStopwatch.stop();
+      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds.toDouble();
+      print('⏱️  Preprocessing completed: ${preprocessingTime.toStringAsFixed(0)}ms');
 
       // Step 2: Run inference
+      print('⏱️  Starting inference...');
+      final inferenceStopwatch = Stopwatch()..start();
       final inferenceResult = await _loadedExecuTorchModel!.runInference(
         inputs: tensorInputs,
       );
+      inferenceStopwatch.stop();
+      final inferenceTime = inferenceStopwatch.elapsedMilliseconds.toDouble();
+      print('⏱️  Inference completed: ${inferenceTime.toStringAsFixed(0)}ms');
 
       // Step 3: Process result using the model definition
+      print('⏱️  Starting postprocessing...');
+      final postprocessStopwatch = Stopwatch()..start();
       final result = await _selectedModel!.processResult(
         input: input,
         inferenceResult: inferenceResult,
       );
+      postprocessStopwatch.stop();
+      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds.toDouble();
+      print('⏱️  Postprocessing completed: ${postprocessingTime.toStringAsFixed(0)}ms');
 
-      final endTime = DateTime.now();
-      final processingTime = endTime
-          .difference(startTime)
-          .inMilliseconds
-          .toDouble();
+      totalStopwatch.stop();
+      final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();
+      print('⏱️  Total time: ${totalTime.toStringAsFixed(0)}ms');
 
       setState(() {
         _result = result;
-        _processingTime = processingTime;
+        _preprocessingTime = preprocessingTime;
+        _inferenceTime = inferenceTime;
+        _postprocessingTime = postprocessingTime;
+        _totalTime = totalTime;
         _isProcessing = false;
       });
     } catch (e, stackTrace) {
@@ -211,34 +230,60 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 Expanded(
                   child: _selectedModel == null
                       ? _buildEmptyState()
-                      : Stack(
-                          children: [
-                            // Result display area (full screen, scrollable)
-                            _buildResultSection(),
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isLargeScreen = constraints.maxWidth > 900;
 
-                            // Collapsible input panel at bottom
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: _buildInputSection(),
-                            ),
+                            if (isLargeScreen) {
+                              // Horizontal layout for large screens
+                              return Row(
+                                children: [
+                                  // Left: Result display (60% width)
+                                  Expanded(
+                                    flex: 6,
+                                    child: _buildResultSection(isLargeScreen: true),
+                                  ),
 
-                            // Toggle button
-                            if (!_isInputExpanded && _selectedModel != null)
-                              Positioned(
-                                right: 16,
-                                bottom: 16,
-                                child: FloatingActionButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _isInputExpanded = true;
-                                    });
-                                  },
-                                  child: const Icon(Icons.input),
-                                ),
-                              ),
-                          ],
+                                  // Right: Input + Details (40% width)
+                                  Expanded(
+                                    flex: 4,
+                                    child: _buildSidePanel(),
+                                  ),
+                                ],
+                              );
+                            } else {
+                              // Vertical layout for mobile/small screens
+                              return Stack(
+                                children: [
+                                  // Result display area (full screen, scrollable)
+                                  _buildResultSection(isLargeScreen: false),
+
+                                  // Collapsible input panel at bottom
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    child: _buildInputSection(),
+                                  ),
+
+                                  // Toggle button
+                                  if (!_isInputExpanded && _selectedModel != null)
+                                    Positioned(
+                                      right: 16,
+                                      bottom: 16,
+                                      child: FloatingActionButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _isInputExpanded = true;
+                                          });
+                                        },
+                                        child: const Icon(Icons.input),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            }
+                          },
                         ),
                 ),
               ],
@@ -352,7 +397,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     );
   }
 
-  Widget _buildResultSection() {
+  Widget _buildResultSection({bool isLargeScreen = false}) {
     if (_isProcessing) {
       return const Center(
         child: Column(
@@ -408,12 +453,27 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
     }
 
+    // For large screens, just show the image/result
+    if (isLargeScreen) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: _selectedModel!.buildResultRenderer(
+            context: context,
+            input: _input!,
+            result: _result,
+          ),
+        ),
+      );
+    }
+
+    // For small screens, show image + details below
     return SingleChildScrollView(
       child: Column(
         children: [
           // Result renderer (image with boxes, etc.)
           SizedBox(
-            height: 400, // Fixed height for renderer
+            height: 400,
             child: _selectedModel!.buildResultRenderer(
               context: context,
               input: _input!,
@@ -422,13 +482,142 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           ),
 
           // Result details section
-          if (_result != null)
+          if (_result != null) _buildDetailsSection(),
+
+          // Bottom padding when input panel is visible
+          if (_isInputExpanded) const SizedBox(height: 250),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Results',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (_totalTime != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_totalTime!.toStringAsFixed(0)}ms',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimaryContainer,
+                        ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Timing breakdown
+          if (_preprocessingTime != null &&
+              _inferenceTime != null &&
+              _postprocessingTime != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Performance',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                _buildTimingRow(
+                  context,
+                  'Preprocessing',
+                  _preprocessingTime!,
+                  _totalTime!,
+                  Colors.blue,
+                ),
+                const SizedBox(height: 8),
+                _buildTimingRow(
+                  context,
+                  'Inference',
+                  _inferenceTime!,
+                  _totalTime!,
+                  Colors.green,
+                ),
+                const SizedBox(height: 8),
+                _buildTimingRow(
+                  context,
+                  'Postprocessing',
+                  _postprocessingTime!,
+                  _totalTime!,
+                  Colors.orange,
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+              ],
+            ),
+
+          _selectedModel!.buildResultsDetailsSection(
+            context: context,
+            result: _result!,
+            processingTime: _totalTime,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidePanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        border: Border(
+          left: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Input section (always visible on large screens)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 border: Border(
-                  top: BorderSide(
+                  bottom: BorderSide(
                     color: Theme.of(context).colorScheme.outlineVariant,
                   ),
                 ),
@@ -436,59 +625,187 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Results',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      if (_processingTime != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${_processingTime!.toStringAsFixed(0)}ms',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimaryContainer,
-                                ),
-                          ),
-                        ),
-                    ],
+                  Text(
+                    'Input',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 16),
-                  _selectedModel!.buildResultsDetailsSection(
+                  const SizedBox(height: 12),
+                  _selectedModel!.buildInputWidget(
                     context: context,
-                    result: _result!,
-                    processingTime: _processingTime,
+                    onInputSelected: _processInput,
                   ),
                 ],
               ),
             ),
 
-          // Bottom padding when input panel is visible
-          if (_isInputExpanded)
-            const SizedBox(height: 250), // Space for input panel
-        ],
+            // Results details section
+            if (_result != null)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Results',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        if (_totalTime != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${_totalTime!.toStringAsFixed(0)}ms',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer,
+                                  ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Timing breakdown
+                    if (_preprocessingTime != null &&
+                        _inferenceTime != null &&
+                        _postprocessingTime != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Performance',
+                            style:
+                                Theme.of(context).textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildTimingRow(
+                            context,
+                            'Preprocessing',
+                            _preprocessingTime!,
+                            _totalTime!,
+                            Colors.blue,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildTimingRow(
+                            context,
+                            'Inference',
+                            _inferenceTime!,
+                            _totalTime!,
+                            Colors.green,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildTimingRow(
+                            context,
+                            'Postprocessing',
+                            _postprocessingTime!,
+                            _totalTime!,
+                            Colors.orange,
+                          ),
+                          const SizedBox(height: 16),
+                          const Divider(),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+
+                    _selectedModel!.buildResultsDetailsSection(
+                      context: context,
+                      result: _result!,
+                      processingTime: _totalTime,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildTimingRow(
+    BuildContext context,
+    String label,
+    double time,
+    double totalTime,
+    Color color,
+  ) {
+    final percentage = (time / totalTime * 100).toStringAsFixed(1);
+    final ratio = time / totalTime;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            Text(
+              '${time.toStringAsFixed(0)}ms',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '($percentage%)',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: ratio,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 6,
+          ),
+        ),
+      ],
     );
   }
 }
