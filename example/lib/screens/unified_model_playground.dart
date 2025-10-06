@@ -25,6 +25,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   bool _isLoadingModel = false;
   bool _isProcessing = false;
 
+  // UI state
+  bool _isInputExpanded = true;
+
   // Input/Result state (generic)
   Object? _input;
   Object? _result;
@@ -160,15 +163,33 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 Expanded(
                   child: _selectedModel == null
                       ? _buildEmptyState()
-                      : Column(
+                      : Stack(
                           children: [
-                            // Input section (always visible as bottom sheet area)
-                            _buildInputSection(),
+                            // Result display area (full screen, scrollable)
+                            _buildResultSection(),
 
-                            // Result display area
-                            Expanded(
-                              child: _buildResultSection(),
+                            // Collapsible input panel at bottom
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: _buildInputSection(),
                             ),
+
+                            // Toggle button
+                            if (!_isInputExpanded && _selectedModel != null)
+                              Positioned(
+                                right: 16,
+                                bottom: 16,
+                                child: FloatingActionButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _isInputExpanded = true;
+                                    });
+                                  },
+                                  child: const Icon(Icons.input),
+                                ),
+                              ),
                           ],
                         ),
                 ),
@@ -237,7 +258,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Widget _buildInputSection() {
-    if (_selectedModel == null) return const SizedBox();
+    if (_selectedModel == null || !_isInputExpanded) return const SizedBox();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -252,13 +273,28 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Input',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          Row(
+            children: [
+              Text(
+                'Input',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    _isInputExpanded = false;
+                  });
+                },
+                tooltip: 'Hide input panel',
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           _selectedModel!.buildInputWidget(
@@ -326,79 +362,86 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
     }
 
-    return Column(
-      children: [
-        // Result renderer (image with boxes, etc.)
-        Expanded(
-          child: _selectedModel!.buildResultRenderer(
-            context: context,
-            input: _input!,
-            result: _result,
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Result renderer (image with boxes, etc.)
+          SizedBox(
+            height: 400, // Fixed height for renderer
+            child: _selectedModel!.buildResultRenderer(
+              context: context,
+              input: _input!,
+              result: _result,
+            ),
           ),
-        ),
 
-        // Result details section
-        if (_result != null)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                top: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant,
+          // Result details section
+          if (_result != null)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
                 ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Results',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const Spacer(),
-                    if (_processingTime != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${_processingTime!.toStringAsFixed(0)}ms',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer,
-                                  ),
-                        ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _selectedModel!.buildResultsDetailsSection(
-                  context: context,
-                  result: _result!,
-                  processingTime: _processingTime,
-                ),
-              ],
+                      const SizedBox(width: 12),
+                      Text(
+                        'Results',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const Spacer(),
+                      if (_processingTime != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_processingTime!.toStringAsFixed(0)}ms',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                    ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _selectedModel!.buildResultsDetailsSection(
+                    context: context,
+                    result: _result!,
+                    processingTime: _processingTime,
+                  ),
+                ],
+              ),
             ),
-          ),
-      ],
+
+          // Bottom padding when input panel is visible
+          if (_isInputExpanded)
+            const SizedBox(height: 250), // Space for input panel
+        ],
+      ),
     );
   }
 }
