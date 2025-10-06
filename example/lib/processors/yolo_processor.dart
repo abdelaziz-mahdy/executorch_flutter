@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:meta/meta.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
@@ -235,8 +236,8 @@ class YoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
       }
     }
 
-    print('📊 YOLO Tensor shape: [1, 3, ${config.targetHeight}, ${config.targetWidth}]');
-    print('📊 YOLO Tensor data size: ${floats.length} floats, range [0, 1]');
+    debugPrint('📊 YOLO Tensor shape: [1, 3, ${config.targetHeight}, ${config.targetWidth}]');
+    debugPrint('📊 YOLO Tensor data size: ${floats.length} floats, range [0, 1]');
 
     return TensorData(
       shape: [1, 3, config.targetHeight, config.targetWidth].cast<int?>(),
@@ -344,7 +345,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
       outputColumn = shape.length >= 3 ? shape[2] : (outputs.length ~/ outputRow); // features
     }
 
-    print('🔍 Shape: $shape, isTransposed: $isTransposed, outputRow: $outputRow, outputColumn: $outputColumn');
+    debugPrint('🔍 Shape: $shape, isTransposed: $isTransposed, outputRow: $outputRow, outputColumn: $outputColumn');
 
     // Detect YOLO version: 85 = YOLOv5 (with objectness), 84 = YOLOv8+ (without)
     final isYolov5 = outputColumn == 85 || outputColumn == (classLabels.length + 5);
@@ -360,7 +361,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
   /// Parse YOLOv5 format: [predictions, features] where features = 4 bbox + 1 objectness + N classes
   List<DetectedObject> _parseYoloV5(Float32List outputs, int outputRow, int outputColumn, int numClasses) {
     final detections = <DetectedObject>[];
-    print('📦 YOLOv5 parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
+    debugPrint('📦 YOLOv5 parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
 
     for (int i = 0; i < outputRow; i++) {
       final objectness = outputs[i * outputColumn + 4];
@@ -387,7 +388,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
 
         if (confidence > confidenceThreshold) {
           if (detections.length < 3) {
-            print('📍 YOLOv5 raw coords: x=$x, y=$y, w=$w, h=$h, conf=$confidence');
+            debugPrint('📍 YOLOv5 raw coords: x=$x, y=$y, w=$w, h=$h, conf=$confidence');
           }
           detections.add(_createDetection(x, y, w, h, confidence, classIdx));
         }
@@ -400,7 +401,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
   /// Parse YOLOv8+ format: [predictions, features] where features = 4 bbox + N classes (no objectness)
   List<DetectedObject> _parseYoloV8(Float32List outputs, int outputRow, int outputColumn, int numClasses) {
     final detections = <DetectedObject>[];
-    print('📦 YOLOv8 parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
+    debugPrint('📦 YOLOv8 parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
 
     for (int i = 0; i < outputRow; i++) {
       final x = outputs[i * outputColumn];
@@ -422,7 +423,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
 
       if (maxClassConf > confidenceThreshold) {
         if (detections.length < 3) {
-          print('📍 YOLOv8 raw coords: x=$x, y=$y, w=$w, h=$h, conf=$maxClassConf');
+          debugPrint('📍 YOLOv8 raw coords: x=$x, y=$y, w=$w, h=$h, conf=$maxClassConf');
         }
         detections.add(_createDetection(x, y, w, h, maxClassConf, classIdx));
       }
@@ -434,7 +435,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
   /// Parse YOLOv8+ transposed format: [features, predictions]
   List<DetectedObject> _parseYoloV8Transposed(Float32List outputs, int outputRow, int outputColumn, int numClasses) {
     final detections = <DetectedObject>[];
-    print('📦 YOLOv8 Transposed parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
+    debugPrint('📦 YOLOv8 Transposed parsing: outputRow=$outputRow, outputColumn=$outputColumn, numClasses=$numClasses');
 
     for (int i = 0; i < outputRow; i++) {
       final x = outputs[i];
@@ -456,7 +457,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
 
       if (maxClassConf > confidenceThreshold) {
         if (detections.length < 3) {
-          print('📍 YOLOv8T raw coords: x=$x, y=$y, w=$w, h=$h, conf=$maxClassConf');
+          debugPrint('📍 YOLOv8T raw coords: x=$x, y=$y, w=$w, h=$h, conf=$maxClassConf');
         }
         detections.add(_createDetection(x, y, w, h, maxClassConf, classIdx));
       }
@@ -474,8 +475,8 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
     final width = w / inputWidth;
     final height = h / inputHeight;
 
-    print('🔧 Raw: xC=$xCenter, yC=$yCenter, w=$w, h=$h | Input: ${inputWidth}x${inputHeight}');
-    print('🔧 Normalized: left=$left, top=$top, width=$width, height=$height');
+    debugPrint('🔧 Raw: xC=$xCenter, yC=$yCenter, w=$w, h=$h | Input: ${inputWidth}x${inputHeight}');
+    debugPrint('🔧 Normalized: left=$left, top=$top, width=$width, height=$height');
 
     final className = classIdx < classLabels.length
         ? classLabels[classIdx]

@@ -129,25 +129,25 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       final totalStopwatch = Stopwatch()..start();
 
       // Step 1: Prepare input (convert to TensorData)
-      print('⏱️  Starting preprocessing...');
+      debugPrint('⏱️  Starting preprocessing...');
       final preprocessStopwatch = Stopwatch()..start();
       final tensorInputs = await _selectedModel!.prepareInput(input);
       preprocessStopwatch.stop();
       final preprocessingTime = preprocessStopwatch.elapsedMilliseconds.toDouble();
-      print('⏱️  Preprocessing completed: ${preprocessingTime.toStringAsFixed(0)}ms');
+      debugPrint('⏱️  Preprocessing completed: ${preprocessingTime.toStringAsFixed(0)}ms');
 
       // Step 2: Run inference
-      print('⏱️  Starting inference...');
+      debugPrint('⏱️  Starting inference...');
       final inferenceStopwatch = Stopwatch()..start();
       final inferenceResult = await _loadedExecuTorchModel!.runInference(
         inputs: tensorInputs,
       );
       inferenceStopwatch.stop();
       final inferenceTime = inferenceStopwatch.elapsedMilliseconds.toDouble();
-      print('⏱️  Inference completed: ${inferenceTime.toStringAsFixed(0)}ms');
+      debugPrint('⏱️  Inference completed: ${inferenceTime.toStringAsFixed(0)}ms');
 
       // Step 3: Process result using the model definition
-      print('⏱️  Starting postprocessing...');
+      debugPrint('⏱️  Starting postprocessing...');
       final postprocessStopwatch = Stopwatch()..start();
       final result = await _selectedModel!.processResult(
         input: input,
@@ -155,11 +155,11 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
       postprocessStopwatch.stop();
       final postprocessingTime = postprocessStopwatch.elapsedMilliseconds.toDouble();
-      print('⏱️  Postprocessing completed: ${postprocessingTime.toStringAsFixed(0)}ms');
+      debugPrint('⏱️  Postprocessing completed: ${postprocessingTime.toStringAsFixed(0)}ms');
 
       totalStopwatch.stop();
       final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();
-      print('⏱️  Total time: ${totalTime.toStringAsFixed(0)}ms');
+      debugPrint('⏱️  Total time: ${totalTime.toStringAsFixed(0)}ms');
 
       setState(() {
         _result = result;

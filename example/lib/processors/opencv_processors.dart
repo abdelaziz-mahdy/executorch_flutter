@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'image_processor.dart';
@@ -58,10 +59,10 @@ class OpenCVYoloPreprocessor {
     float32Mat.dispose();
     channels.dispose();
 
-    print(
+    debugPrint(
       '📊 OpenCV YOLO Tensor shape: [1, 3, ${config.targetHeight}, ${config.targetWidth}]',
     );
-    print('📊 OpenCV async processed ${floats.length} floats, range [0, 1]');
+    debugPrint('📊 OpenCV async processed ${floats.length} floats, range [0, 1]');
 
     return [
       TensorData(
@@ -178,10 +179,10 @@ class OpenCVImageNetPreprocessor {
     float32Mat.dispose();
     channels.dispose();
 
-    print(
+    debugPrint(
       '📊 OpenCV ImageNet Tensor shape: [1, 3, ${config.targetHeight}, ${config.targetWidth}]',
     );
-    print('📊 OpenCV async processed ${floats.length} floats');
+    debugPrint('📊 OpenCV async processed ${floats.length} floats');
 
     return [
       TensorData(
