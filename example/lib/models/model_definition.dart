@@ -1,0 +1,54 @@
+import 'package:flutter/material.dart';
+import 'package:executorch_flutter/executorch_flutter.dart';
+
+/// Base class for model definitions
+/// Each model type (YOLO, MobileNet, etc.) will extend this to define:
+/// - How to get input (camera, gallery, text field, etc.)
+/// - How to process the model output
+/// - How to render the results
+abstract class ModelDefinition<TInput, TResult> {
+  const ModelDefinition({
+    required this.name,
+    required this.displayName,
+    required this.description,
+    required this.icon,
+    required this.assetPath,
+    required this.inputSize,
+  });
+
+  final String name;
+  final String displayName;
+  final String description;
+  final IconData icon;
+  final String assetPath;
+  final int inputSize;
+
+  /// Build the input selection widget (e.g., camera/gallery picker, text input, audio recorder)
+  Widget buildInputWidget({
+    required BuildContext context,
+    required Function(TInput) onInputSelected,
+  });
+
+  /// Prepare input for inference (convert to TensorData)
+  Future<List<TensorData>> prepareInput(TInput input);
+
+  /// Process the model inference result
+  Future<TResult> processResult({
+    required TInput input,
+    required InferenceResult inferenceResult,
+  });
+
+  /// Build the result renderer widget
+  Widget buildResultRenderer({
+    required BuildContext context,
+    required TInput input,
+    required TResult? result,
+  });
+
+  /// Build the results details section (statistics, confidence scores, etc.)
+  Widget buildResultsDetailsSection({
+    required BuildContext context,
+    required TResult result,
+    required double? processingTime,
+  });
+}

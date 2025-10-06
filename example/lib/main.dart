@@ -16,7 +16,7 @@ import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 
 // Import model playground
-import 'screens/model_playground.dart';
+import 'screens/unified_model_playground.dart';
 
 // Import services
 import 'services/performance_service.dart';
@@ -90,7 +90,7 @@ class ExecuTorchPlaygroundApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const ModelPlayground(),
+      home: const UnifiedModelPlayground(),
       debugShowCheckedModeBanner: false,
     );
   }
