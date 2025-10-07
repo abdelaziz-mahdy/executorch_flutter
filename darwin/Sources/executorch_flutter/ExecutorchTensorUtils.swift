@@ -13,7 +13,17 @@
  * - Error handling with detailed diagnostics
  */
 import Foundation
-import ExecuTorch
+
+// ExecuTorch only supports arm64 architecture on macOS
+#if os(macOS)
+  #if arch(arm64)
+    import ExecuTorch
+  #else
+    #error("ExecuTorch only supports arm64 (Apple Silicon) on macOS. Intel Macs (x86_64) are NOT supported. Add to macos/Runner/Configs/Release.xcconfig: ARCHS = arm64 and ONLY_ACTIVE_ARCH = YES")
+  #endif
+#else
+  import ExecuTorch
+#endif
 
 /**
  * Utility extensions for TensorData validation and operations
