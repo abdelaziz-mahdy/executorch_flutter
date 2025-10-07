@@ -247,19 +247,6 @@ class ExecutorchManager {
     }
   }
 
-  /// Get version information about ExecuTorch and the Flutter plugin
-  ///
-  /// Returns a map with version details for debugging and compatibility checking.
-  Map<String, String> getVersionInfo() {
-    return {
-      'executorch_flutter_version': '1.0.0', // Would be read from pubspec.yaml
-      'flutter_version': 'unknown', // Would be detected at runtime
-      'dart_version': 'unknown', // Would be detected at runtime
-      'platform': Platform.operatingSystem,
-      'platform_version': Platform.operatingSystemVersion,
-    };
-  }
-
   /// Create tensor data with validation
   ///
   /// This is a convenience factory method for creating properly validated

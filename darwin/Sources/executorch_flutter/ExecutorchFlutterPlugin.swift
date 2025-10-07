@@ -91,7 +91,12 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         let plugin = ExecutorchFlutterPlugin()
 
         // Set up Pigeon-generated method channel
+        // iOS uses messenger() method, macOS uses messenger property
+        #if os(iOS)
+        ExecutorchHostApiSetup.setUp(binaryMessenger: registrar.messenger(), api: plugin)
+        #elseif os(macOS)
         ExecutorchHostApiSetup.setUp(binaryMessenger: registrar.messenger, api: plugin)
+        #endif
 
         print("[\(Self.TAG)] ExecutorchFlutterPlugin registered")
     }

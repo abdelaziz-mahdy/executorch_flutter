@@ -1,183 +1,75 @@
 # ExecuTorch Flutter
 
-A Flutter plugin package that enables on-device machine learning inference using ExecuTorch on Android and iOS platforms.
+A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, and macOS platforms.
 
 ## Overview
 
-ExecuTorch Flutter provides a simple, type-safe API for loading and running ExecuTorch models in Flutter applications. The package handles the complexity of native platform integration while providing developers with an intuitive Dart interface for ML inference.
+ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch models (`.pte` files) in your Flutter applications. The package handles all native platform integration, providing you with a straightforward interface for on-device machine learning inference.
 
 ## Features
 
-- ✅ **Cross-Platform Support**: Android (API 23+) and iOS (13.0+)
+- ✅ **Cross-Platform Support**: Android (API 23+), iOS (13.0+), and macOS (12.0+ Apple Silicon)
 - ✅ **Type-Safe API**: Generated with Pigeon for reliable cross-platform communication
 - ✅ **Async Operations**: Non-blocking model loading and inference execution
-- ✅ **Multiple Models**: Support for concurrent model instances (up to 5 simultaneously)
-- ✅ **Memory Efficient**: Optimized memory management and automatic model disposal
+- ✅ **Multiple Models**: Support for concurrent model instances
 - ✅ **Error Handling**: Structured exception handling with clear error messages
-- ✅ **Performance Optimized**: <200ms model loading, <50ms inference for typical models
-- ✅ **Native Integration**: ExecuTorch 0.7.0+ with latest backends (XNNPACK, CoreML, MPS)
-- ✅ **Swift Package Manager**: Modern iOS dependency management
-- ✅ **Resource Management**: Actor-based concurrency (iOS) and coroutines (Android)
+- ✅ **Backend Support**: XNNPACK, CoreML, MPS backends
 
-## Quick Start
-
-### Installation
+## Installation
 
 Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  executorch_flutter: ^1.0.0
+  executorch_flutter: ^0.0.1
 ```
 
-### Basic Usage
+## Basic Usage
+
+The package provides a simple workflow:
+
+### 1. Initialize and Load a Model
 
 ```dart
 import 'package:executorch_flutter/executorch_flutter.dart';
-import 'dart:typed_data';
-import 'dart:io';
 
-class MLInferenceExample extends StatefulWidget {
-  @override
-  _MLInferenceExampleState createState() => _MLInferenceExampleState();
-}
+// Initialize the manager (call once)
+await ExecutorchManager.instance.initialize();
 
-class _MLInferenceExampleState extends State<MLInferenceExample> {
-  ExecuTorchModel? _model;
-  String _status = 'Ready to load model';
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('ExecuTorch Flutter Demo')),
-      body: Column(
-        children: [
-          Text(_status),
-          ElevatedButton(
-            onPressed: _loadModel,
-            child: Text('Load Model'),
-          ),
-          ElevatedButton(
-            onPressed: _model != null ? _runInference : null,
-            child: Text('Run Inference'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _loadModel() async {
-    try {
-      setState(() => _status = 'Loading model...');
-
-      // Initialize ExecutorchManager
-      await ExecutorchManager.instance.initialize();
-
-      // Load model from assets or file path
-      final modelPath = 'assets/models/my_model.pte';
-      _model = await ExecutorchManager.instance.loadModel(modelPath);
-
-      // Check model metadata
-      final metadata = _model!.metadata;
-      setState(() => _status = 'Model loaded: ${metadata.modelName}');
-
-      print('Model loaded successfully');
-      print('- Name: ${metadata.modelName}');
-      print('- Memory: ${metadata.estimatedMemoryMB}MB');
-      print('- Inputs: ${metadata.inputSpecs.length}');
-      print('- Outputs: ${metadata.outputSpecs.length}');
-
-    } catch (e) {
-      setState(() => _status = 'Failed to load model: $e');
-      print('Model loading error: $e');
-    }
-  }
-
-  Future<void> _runInference() async {
-    if (_model == null) return;
-
-    try {
-      setState(() => _status = 'Running inference...');
-
-      // Prepare input tensor (example for image classification)
-      final inputData = _createSampleImageTensor(); // Your preprocessing
-      final inputTensor = TensorDataWrapper(
-        shape: [1, 3, 224, 224],
-        dataType: TensorType.float32,
-        data: inputData,
-        name: 'input',
-      );
-
-      // Run inference with timeout
-      final result = await _model!.runInference(
-        inputs: [inputTensor],
-        timeoutMs: 5000,
-      );
-
-      if (result.isSuccess) {
-        setState(() => _status =
-          'Inference completed in ${result.executionTimeMs.toStringAsFixed(1)}ms');
-
-        // Process outputs
-        for (int i = 0; i < result.outputs.length; i++) {
-          final output = result.outputs[i];
-          print('Output $i: shape=${output.shape}, type=${output.dataType}');
-        }
-      } else {
-        setState(() => _status = 'Inference failed: ${result.errorMessage}');
-      }
-    } catch (e) {
-      setState(() => _status = 'Inference error: $e');
-    }
-  }
-
-  Uint8List _createSampleImageTensor() {
-    // Create sample float32 tensor data (1 * 3 * 224 * 224 * 4 bytes)
-    const int size = 1 * 3 * 224 * 224;
-    final floats = Float32List(size);
-
-    // Fill with normalized values (example)
-    for (int i = 0; i < size; i++) {
-      floats[i] = (i % 256) / 255.0; // Sample data
-    }
-
-    return floats.buffer.asUint8List();
-  }
-
-  @override
-  void dispose() {
-    _model?.dispose();
-    super.dispose();
-  }
-}
+// Load a model from file path
+final model = await ExecutorchManager.instance.loadModel('/path/to/model.pte');
 ```
 
-### Loading Models from Different Sources
+### 2. Run Inference
 
 ```dart
-// Load from assets (bundled with app)
-final model1 = await ExecutorchManager.instance.loadModel(
-  'assets/models/mobilenet_v2.pte'
+// Prepare input tensor
+final inputTensor = TensorData(
+  shape: [1, 3, 224, 224],
+  dataType: TensorType.float32,
+  data: yourImageBytes, // FlutterStandardTypedData
 );
 
-// Load from device storage
-final model2 = await ExecutorchManager.instance.loadModel(
-  '/data/user/0/com.example.app/files/downloaded_model.pte'
-);
+// Run inference
+final result = await model.runInference(inputs: [inputTensor]);
 
-// Load from network (download first)
-Future<ExecuTorchModel> loadModelFromNetwork(String url) async {
-  final client = HttpClient();
-  final request = await client.getUrl(Uri.parse(url));
-  final response = await request.close();
-
-  final bytes = await consolidateHttpClientResponseBytes(response);
-  final file = File('${(await getTemporaryDirectory()).path}/temp_model.pte');
-  await file.writeAsBytes(bytes);
-
-  return ExecutorchManager.instance.loadModel(file.path);
+// Access outputs
+if (result.status == InferenceStatus.success) {
+  final output = result.outputs?.first;
+  print('Inference time: ${result.executionTimeMs}ms');
 }
+
+// Clean up when done
+await model.dispose();
 ```
+
+### Complete Examples
+
+See the `example/` directory for full working applications:
+
+- **[Image Classification](example/lib/screens/image_classification_demo.dart)** - MobileNet V3 image classification
+- **[Object Detection](example/lib/screens/object_detection_demo.dart)** - YOLO object detection with bounding boxes
+- **[Model Management](example/lib/screens/model_manager.dart)** - Loading models from assets, storage, and network
 
 ## Supported Model Formats
 
@@ -193,418 +85,58 @@ Future<ExecuTorchModel> loadModelFromNetwork(String url) async {
 
 ### Android
 - **Minimum SDK**: API 23 (Android 6.0)
-- **Architecture**: arm64-v8a (primary), armeabi-v7a (future)
-- **ExecuTorch Version**: 0.7.0 (via AAR dependency)
-- **Dependencies**: Automatically handled via Gradle
-  - `org.pytorch:executorch-android:0.7.0`
-  - `com.facebook.soloader:soloader:0.10.5`
-  - `com.facebook.fbjni:fbjni:0.7.0`
+- **Architecture**: arm64-v8a
+- **Supported Backends**: XNNPACK
 
 ### iOS
 - **Minimum Version**: iOS 13.0+
-- **Architecture**: arm64 (device), x86_64 (simulator)
-- **ExecuTorch Version**: 0.7.0 (via Swift Package Manager)
-- **Dependencies**: Automatically handled via SPM
-  - ExecuTorch core framework
-  - XNNPACK backend (CPU optimization)
-  - CoreML backend (Apple Neural Engine)
-  - MPS backend (Metal Performance Shaders)
-  - Optimized kernels package
+- **Architecture**: arm64 (device only)
+  - ⚠️ **iOS Simulator (x86_64) is NOT supported**
+- **Supported Backends**: XNNPACK, CoreML, MPS
 
-## Performance Characteristics
+### macOS
+- **Minimum Version**: macOS 12.0+ (Monterey)
+- **Architecture**: **arm64 only** (Apple Silicon)
+  - ⚠️ **Intel Macs (x86_64) are NOT supported**
+- **Supported Backends**: XNNPACK, CoreML, MPS
 
-- **Model Loading**: <200ms for models up to 100MB
-- **Inference Speed**: <50ms for typical mobile models
-- **Memory Usage**: <100MB additional RAM during inference
-- **Concurrent Models**: 2-3 models supported simultaneously
+#### macOS Build Limitations
+
+**Debug Builds**: ✅ Work by default on Apple Silicon Macs
+
+**Release Builds**: ⚠️ **Currently NOT working**
+
+> macOS release builds are not supported due to Flutter's build system forcing universal binaries (arm64 + x86_64), but ExecuTorch only provides arm64 libraries.
+>
+> 🔗 **Tracking**: [Flutter Issue #176605](https://github.com/flutter/flutter/issues/176605)
 
 ## Advanced Usage
 
-### Error Handling
+### Processor Interfaces
 
-```dart
-import 'package:executorch_flutter/executorch_flutter.dart';
+The package includes high-level processor interfaces that handle preprocessing and postprocessing:
 
-try {
-  // Load model
-  final model = await ExecutorchManager.instance.loadModel(modelPath);
+- **[ImageNetProcessor](example/lib/processors/imagenet_processor.dart)** - Image classification with MobileNet
+- **[YOLOProcessor](example/lib/processors/yolo_processor.dart)** - Object detection with bounding boxes
+- **[CustomProcessor](example/lib/processors/base_processor.dart)** - Create your own processors
 
-  // Run inference
-  final result = await model.runInference(inputs: [inputTensor]);
-
-  if (!result.isSuccess) {
-    print('Inference failed: ${result.errorMessage}');
-  }
-
-} on ExecuTorchModelLoadException catch (e) {
-  // Handle model loading errors
-  print('Model load error: ${e.message}');
-  switch (e.type) {
-    case ModelLoadErrorType.fileNotFound:
-      // Handle file not found
-      break;
-    case ModelLoadErrorType.invalidFormat:
-      // Handle invalid model format
-      break;
-    case ModelLoadErrorType.memoryError:
-      // Handle insufficient memory
-      break;
-  }
-} on ExecutorchInferenceException catch (e) {
-  // Handle inference execution errors
-  print('Inference error: ${e.message}');
-} on ExecutorchValidationException catch (e) {
-  // Handle input validation errors
-  print('Validation error: ${e.message}');
-} catch (e) {
-  // Handle other errors
-  print('Unexpected error: $e');
-}
-```
-
-### Model Metadata and Introspection
-
-```dart
-// Load model and examine metadata
-final model = await ExecutorchManager.instance.loadModel('path/to/model.pte');
-final metadata = model.metadata;
-
-print('Model Information:');
-print('- Name: ${metadata.modelName}');
-print('- Version: ${metadata.version}');
-print('- Estimated Memory: ${metadata.estimatedMemoryMB}MB');
-print('- Properties: ${metadata.properties}');
-
-// Examine input requirements
-print('\nInput Requirements:');
-for (int i = 0; i < metadata.inputSpecs.length; i++) {
-  final spec = metadata.inputSpecs[i];
-  print('Input $i:');
-  print('  - Name: ${spec.name}');
-  print('  - Shape: ${spec.shape}');
-  print('  - Type: ${spec.dataType}');
-  print('  - Optional: ${spec.optional}');
-  if (spec.validRange != null) {
-    print('  - Valid Range: ${spec.validRange}');
-  }
-}
-
-// Examine output specifications
-print('\nOutput Specifications:');
-for (int i = 0; i < metadata.outputSpecs.length; i++) {
-  final spec = metadata.outputSpecs[i];
-  print('Output $i: ${spec.name} - ${spec.shape} (${spec.dataType})');
-}
-```
-
-### Multiple Model Management
-
-```dart
-class MultiModelManager {
-  final Map<String, ExecuTorchModel> _models = {};
-
-  Future<void> loadModels() async {
-    // Load multiple models for different tasks
-    _models['classifier'] = await ExecutorchManager.instance.loadModel(
-      'assets/models/mobilenet_classifier.pte'
-    );
-
-    _models['detector'] = await ExecutorchManager.instance.loadModel(
-      'assets/models/yolo_detector.pte'
-    );
-
-    _models['embedder'] = await ExecutorchManager.instance.loadModel(
-      'assets/models/feature_extractor.pte'
-    );
-  }
-
-  Future<ClassificationResult> classify(Uint8List imageData) async {
-    final model = _models['classifier']!;
-    final input = TensorDataWrapper(
-      shape: [1, 3, 224, 224],
-      dataType: TensorType.float32,
-      data: imageData,
-      name: 'input',
-    );
-
-    final result = await model.runInference(inputs: [input]);
-    return ClassificationResult.fromTensorOutput(result.outputs.first);
-  }
-
-  Future<DetectionResult> detectObjects(Uint8List imageData) async {
-    final model = _models['detector']!;
-    // Similar pattern for object detection
-    // ...
-  }
-
-  void dispose() {
-    for (final model in _models.values) {
-      model.dispose();
-    }
-    _models.clear();
-  }
-}
-```
-
-### Tensor Utilities and Data Processing
-
-```dart
-import 'package:executorch_flutter/executorch_flutter.dart';
-
-// Image preprocessing utilities
-class ImageProcessor {
-  static Uint8List preprocessImage(Uint8List imageBytes) {
-    // Convert image to float32 tensor with normalization
-    // This is a simplified example - use image processing libraries in practice
-
-    final floats = Float32List(1 * 3 * 224 * 224);
-
-    // Normalize to [0, 1] and apply standard normalization
-    const mean = [0.485, 0.456, 0.406];
-    const std = [0.229, 0.224, 0.225];
-
-    for (int i = 0; i < floats.length; i++) {
-      final channel = i % 3;
-      final pixelValue = imageBytes[i] / 255.0;
-      floats[i] = (pixelValue - mean[channel]) / std[channel];
-    }
-
-    return floats.buffer.asUint8List();
-  }
-
-  static List<double> postprocessClassification(TensorDataWrapper output) {
-    // Convert output tensor to probabilities
-    final floats = output.data.buffer.asFloat32List();
-
-    // Apply softmax
-    double sum = 0.0;
-    final exp = <double>[];
-
-    for (final value in floats) {
-      final expValue = math.exp(value);
-      exp.add(expValue);
-      sum += expValue;
-    }
-
-    return exp.map((e) => e / sum).toList();
-  }
-}
-
-// Tensor validation utilities
-extension TensorValidation on TensorDataWrapper {
-  bool get isValidImageInput {
-    return shape.length == 4 &&
-           shape[1] == 3 &&
-           dataType == TensorType.float32;
-  }
-
-  int get elementCount {
-    return shape.reduce((a, b) => a * b);
-  }
-
-  int get expectedByteSize {
-    final bytesPerElement = switch (dataType) {
-      TensorType.float32 => 4,
-      TensorType.int32 => 4,
-      TensorType.int8 => 1,
-      TensorType.uint8 => 1,
-    };
-    return elementCount * bytesPerElement;
-  }
-}
-```
-
-## Processor Interfaces
-
-ExecuTorch Flutter provides high-level processor interfaces that handle the complete ML pipeline from input preprocessing to output postprocessing. These processors make it easy to work with common ML tasks while maintaining type safety and performance.
-
-### Image Classification with ImageNetProcessor
-
-```dart
-import 'package:executorch_flutter/executorch_flutter.dart';
-import 'dart:typed_data';
-
-class ImageClassificationExample {
-  late ImageNetProcessor _processor;
-  late ExecuTorchModel _model;
-
-  Future<void> initialize() async {
-    // Initialize ExecuTorch manager
-    await ExecutorchManager.instance.initialize();
-
-    // Load your ImageNet model
-    _model = await ExecutorchManager.instance.loadModel('assets/models/mobilenet_v3.pte');
-
-    // Create processor with ImageNet configuration
-    _processor = ImageNetProcessor(
-      preprocessConfig: const ImagePreprocessConfig(
-        targetWidth: 224,
-        targetHeight: 224,
-        normalizeToFloat: true,
-        meanSubtraction: [0.485, 0.456, 0.406], // ImageNet standards
-        standardDeviation: [0.229, 0.224, 0.225],
-        cropMode: ImageCropMode.centerCrop,
-      ),
-      classLabels: await _loadImageNetLabels(),
-    );
-  }
-
-  Future<ClassificationResult> classifyImage(Uint8List imageBytes) async {
-    // One-line processing: handles preprocessing → inference → postprocessing
-    final result = await _processor.process(imageBytes, _model);
-
-    print('Predicted: ${result.className}');
-    print('Confidence: ${(result.confidence * 100).toStringAsFixed(1)}%');
-    print('Class Index: ${result.classIndex}');
-
-    return result;
-  }
-
-  Future<List<String>> _loadImageNetLabels() async {
-    // Load your ImageNet class labels
-    final labelsText = await rootBundle.loadString('assets/imagenet_classes.txt');
-    return labelsText.trim().split('\n');
-  }
-}
-```
-
-### Text Classification with SentimentAnalysisProcessor
-
-```dart
-import 'package:executorch_flutter/executorch_flutter.dart';
-
-class TextSentimentExample {
-  late SentimentAnalysisProcessor _processor;
-  late ExecuTorchModel _model;
-
-  Future<void> initialize() async {
-    await ExecutorchManager.instance.initialize();
-    _model = await ExecutorchManager.instance.loadModel('assets/models/sentiment_model.pte');
-
-    // Create tokenizer with your vocabulary
-    final tokenizer = SimpleTokenizer(
-      vocabulary: await _loadVocabulary(),
-      maxLength: 128,
-    );
-
-    // Create sentiment analysis processor
-    _processor = SentimentAnalysisProcessor(tokenizer: tokenizer);
-  }
-
-  Future<TextClassificationResult> analyzeSentiment(String text) async {
-    final result = await _processor.process(text, _model);
-
-    print('Text: "$text"');
-    print('Sentiment: ${result.className}'); // 'positive', 'negative', 'neutral'
-    print('Confidence: ${(result.confidence * 100).toStringAsFixed(1)}%');
-
-    return result;
-  }
-
-  Future<Map<String, int>> _loadVocabulary() async {
-    // Load your model's vocabulary
-    final vocabJson = await rootBundle.loadString('assets/vocabulary.json');
-    return Map<String, int>.from(json.decode(vocabJson));
-  }
-}
-```
-
-### Audio Classification with EnvironmentalSoundProcessor
-
-```dart
-import 'package:executorch_flutter/executorch_flutter.dart';
-import 'dart:typed_data';
-
-class AudioClassificationExample {
-  late EnvironmentalSoundProcessor _processor;
-  late ExecuTorchModel _model;
-
-  Future<void> initialize() async {
-    await ExecutorchManager.instance.initialize();
-    _model = await ExecutorchManager.instance.loadModel('assets/models/audio_classifier.pte');
-
-    // Create environmental sound processor
-    _processor = EnvironmentalSoundProcessor(
-      sampleRate: 16000,
-      windowSize: 1024,
-    );
-  }
-
-  Future<AudioClassificationResult> classifyAudio(Float32List audioSamples) async {
-    final result = await _processor.process(audioSamples, _model);
-
-    print('Detected Sound: ${result.className}');
-    print('Confidence: ${(result.confidence * 100).toStringAsFixed(1)}%');
-    print('Audio Duration: ${result.audioDurationMs}ms');
-
-    return result;
-  }
-}
-```
-
-### Custom Processor Implementation
-
-You can create custom processors for your specific use cases:
-
-```dart
-class CustomImageProcessor extends ExecuTorchProcessor<Uint8List, MyCustomResult> {
-  @override
-  ExecuTorchPreprocessor<Uint8List> get preprocessor => _CustomPreprocessor();
-
-  @override
-  ExecuTorchPostprocessor<MyCustomResult> get postprocessor => _CustomPostprocessor();
-}
-
-class _CustomPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
-  @override
-  String get inputTypeName => 'Custom Image Input';
-
-  @override
-  bool validateInput(Uint8List input) {
-    return input.isNotEmpty;
-  }
-
-  @override
-  Future<List<TensorData>> preprocess(Uint8List input, {ModelMetadata? metadata}) async {
-    // Your custom preprocessing logic
-    final processedData = await customImageProcessing(input);
-
-    return [ProcessorTensorUtils.createTensor(
-      shape: [1, 3, 256, 256],
-      dataType: TensorType.float32,
-      data: processedData,
-    )];
-  }
-}
-```
-
-### Processor Benefits
-
-- **Type Safety**: Generic type parameters prevent runtime errors
-- **Error Handling**: Comprehensive exception hierarchy with clear messages
-- **Performance**: Optimized tensor operations with built-in timing metrics
-- **Flexibility**: Configurable preprocessing parameters
-- **Extensibility**: Easy to create custom processors for new model types
+See the example app for complete implementations of these processors.
 
 ## Example Applications
 
-Check the `/example` directory for complete sample applications:
+The `example/` directory contains complete working demos:
 
-- **Image Classification**: Basic image classification with MobileNet
-- **Object Detection**: Real-time object detection with YOLO models
-- **Text Processing**: NLP model integration examples
-- **Multiple Models**: Concurrent model usage patterns
-- **Network Loading**: Download and cache models from remote servers
+- **[Image Classification Demo](example/lib/screens/image_classification_demo.dart)** - MobileNet V3 classification
+- **[Object Detection Demo](example/lib/screens/object_detection_demo.dart)** - YOLO object detection
+- **[Model Manager](example/lib/screens/model_manager.dart)** - Load models from different sources
 
-### Converting PyTorch Models to ExecuTorch
+## Converting PyTorch Models to ExecuTorch
 
-To use your PyTorch models with this package, you need to convert them to ExecuTorch format (`.pte` files).
+To use your PyTorch models with this package, convert them to ExecuTorch format (`.pte` files).
 
-**📖 See the complete [Model Export Guide](MODEL_EXPORT_GUIDE.md)** for detailed instructions including:
-- Basic model export process with `torch.export`
-- Platform-specific backend selection (XNNPACK, CoreML, MPS, Vulkan)
-- Complete code examples and best practices
-- Integration with Flutter apps
+**📖 Complete guide**: [Model Export Guide](MODEL_EXPORT_GUIDE.md)
+
+**Quick reference**: [ExecuTorch Documentation](https://pytorch.org/executorch/)
 
 **Quick Setup for Example App:**
 
@@ -654,15 +186,15 @@ ExecutorchManager (High-level API)
 Pigeon Generated APIs (Type-safe communication)
        ↓
 Platform Channel Layer
-   ↓                    ↓
-Android               iOS
-(Kotlin)            (Swift)
-   ↓                    ↓
-ExecuTorch          ExecuTorch
-AAR 0.7.0           SPM 0.7.0
-   ↓                    ↓
-XNNPACK             CoreML/MPS
-Backends            Backends
+   ↓              ↓              ↓
+Android         iOS           macOS
+(Kotlin)      (Swift)        (Swift)
+   ↓              ↓              ↓
+ExecuTorch    ExecuTorch    ExecuTorch
+AAR 0.7.0     SPM 0.7.0     SPM 0.7.0
+   ↓              ↓              ↓
+XNNPACK       CoreML/MPS    CoreML/MPS
+Backends      Backends      Backends
 ```
 
 ### Key Components
@@ -676,20 +208,31 @@ Backends            Backends
 
 ### Thread Safety
 
-- **iOS**: Actor-based concurrency with Swift async/await
+- **iOS & macOS**: Actor-based concurrency with Swift async/await
 - **Android**: Kotlin coroutines with structured concurrency
 - **Flutter**: All operations return Futures for non-blocking UI
 
 ## License
 
-[Add your license here]
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
 For issues and questions:
-- Check the [quickstart guide](specs/001-we-are-building/quickstart.md)
-- Review [API documentation](specs/001-we-are-building/data-model.md)
-- File issues on GitHub with detailed reproduction steps
+- 📖 Check the [Model Export Guide](MODEL_EXPORT_GUIDE.md)
+- 🐛 [Report issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) on GitHub
+- 💬 [Discussions](https://github.com/abdelaziz-mahdy/executorch_flutter/discussions) for questions and feature requests
+
+## Roadmap
+
+See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
+- Live camera integration example
+- Additional preprocessing/postprocessing options for different model types
+- Platform expansion and more
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](https://github.com/abdelaziz-mahdy/executorch_flutter/blob/main/CONTRIBUTING.md) before submitting PRs.
 
 ---
 

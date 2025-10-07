@@ -2,14 +2,14 @@
 /// ExecuTorch Flutter Plugin - On-device ML inference with ExecuTorch
 ///
 /// This package provides Flutter developers with the ability to run
-/// ExecuTorch machine learning models on Android and iOS devices with
-/// high performance and low latency.
+/// ExecuTorch machine learning models on Android, iOS, and macOS platforms
+/// with high performance and low latency.
 ///
 /// ## Key Features
 ///
 /// - **High Performance**: Optimized for mobile inference with ExecuTorch runtime
 /// - **Type Safe**: Generated platform communication with Pigeon ensures type safety
-/// - **Cross Platform**: Identical APIs across Android and iOS platforms
+/// - **Cross Platform**: Identical APIs across Android, iOS, and macOS platforms
 /// - **Resource Management**: Automatic memory management and model lifecycle
 /// - **Easy Integration**: Simple API for loading models and running inference
 ///
@@ -64,13 +64,8 @@
 /// ## Platform Support
 ///
 /// - **Android**: API 23+ (Android 6.0+), arm64-v8a architecture
-/// - **iOS**: iOS 13.0+, arm64 architecture (device and simulator)
-///
-/// ## Performance Targets
-///
-/// - Model Loading: <200ms for models up to 100MB
-/// - Inference: <50ms for typical mobile models
-/// - Memory: <100MB additional RAM during inference
+/// - **iOS**: iOS 13.0+, arm64 (device only, simulator not supported)
+/// - **macOS**: macOS 12.0+ (Monterey), arm64 only (Apple Silicon)
 ///
 /// For detailed documentation and examples, see the individual class documentation.
 library executorch_flutter;

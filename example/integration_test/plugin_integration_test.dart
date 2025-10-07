@@ -24,9 +24,5 @@ void main() {
     // Test that manager is available after initialization
     final isAvailable = await manager.isAvailable();
     expect(isAvailable, true);
-
-    // Test version info
-    final versionInfo = manager.getVersionInfo();
-    expect(versionInfo.containsKey('executorch_flutter_version'), true);
   });
 }

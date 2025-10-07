@@ -1,26 +1,71 @@
 PODS:
+  - DartCvIOS (4.12.0.0):
+    - DartCvIOS/calib3d (= 4.12.0.0)
+    - DartCvIOS/contrib (= 4.12.0.0)
+    - DartCvIOS/core (= 4.12.0.0)
+    - DartCvIOS/features2d (= 4.12.0.0)
+    - DartCvIOS/imgproc (= 4.12.0.0)
+    - DartCvIOS/objdetect (= 4.12.0.0)
+    - DartCvIOS/photo (= 4.12.0.0)
+    - DartCvIOS/stitching (= 4.12.0.0)
+    - DartCvIOS/video (= 4.12.0.0)
+  - DartCvIOS/calib3d (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/contrib (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/core (4.12.0.0)
+  - DartCvIOS/dnn (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/features2d (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/imgproc (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/objdetect (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/photo (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/stitching (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/video (4.12.0.0):
+    - DartCvIOS/core
+  - DartCvIOS/videoio (4.12.0.0):
+    - DartCvIOS/core
   - device_info_plus (0.0.1):
     - Flutter
   - Flutter (1.0.0)
+  - opencv_dart (0.0.1):
+    - DartCvIOS (= 4.12.0.0)
+    - DartCvIOS/dnn (= 4.12.0.0)
+    - DartCvIOS/videoio (= 4.12.0.0)
+    - Flutter
   - permission_handler_apple (9.3.0):
     - Flutter
 
 DEPENDENCIES:
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
+  - opencv_dart (from `.symlinks/plugins/opencv_dart/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+
+SPEC REPOS:
+  trunk:
+    - DartCvIOS
 
 EXTERNAL SOURCES:
   device_info_plus:
     :path: ".symlinks/plugins/device_info_plus/ios"
   Flutter:
     :path: Flutter
+  opencv_dart:
+    :path: ".symlinks/plugins/opencv_dart/ios"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
 
 SPEC CHECKSUMS:
+  DartCvIOS: 3b4638e0f24b5f48a25378815618b9f8c1e87ad4
   device_info_plus: 71ffc6ab7634ade6267c7a93088ed7e4f74e5896
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  opencv_dart: 8557f576f2b8cf40854d36601432406dec990788
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
