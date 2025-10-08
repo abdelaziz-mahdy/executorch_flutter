@@ -1,9 +1,8 @@
-/**
- * ExecuTorch Error Handling - Cross-Platform Error Mapping
- *
- * This file provides standardized error handling across Android and iOS platforms,
- * ensuring consistent error reporting and debugging capabilities for ExecuTorch operations.
- */
+/// ExecuTorch Error Handling - Cross-Platform Error Mapping
+///
+/// This file provides standardized error handling across Android and iOS platforms,
+/// ensuring consistent error reporting and debugging capabilities for ExecuTorch operations.
+library;
 
 import 'generated/executorch_api.dart';
 

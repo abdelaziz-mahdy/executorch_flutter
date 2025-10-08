@@ -1,12 +1,12 @@
 /// Main ExecutorchManager API class providing high-level ExecuTorch inference management
-library executorch_inference;
+library;
 
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'executorch_model.dart';
 import 'executorch_errors.dart';
+import 'executorch_model.dart';
 import 'generated/executorch_api.dart';
 
 /// High-level manager for ExecuTorch inference operations
@@ -124,17 +124,13 @@ class ExecutorchManager {
   /// Get a loaded model by its ID
   ///
   /// Returns null if no model with the given ID is loaded.
-  ExecuTorchModel? getLoadedModel(String modelId) {
-    return _loadedModels[modelId];
-  }
+  ExecuTorchModel? getLoadedModel(String modelId) => _loadedModels[modelId];
 
   /// Get all currently loaded models
   ///
   /// Returns a list of all ExecuTorchModel instances that are currently loaded
   /// and available for inference.
-  List<ExecuTorchModel> getLoadedModels() {
-    return List.unmodifiable(_loadedModels.values);
-  }
+  List<ExecuTorchModel> getLoadedModels() => List.unmodifiable(_loadedModels.values);
 
   /// Get the IDs of all loaded models
   ///
@@ -292,9 +288,8 @@ class ExecutorchManager {
   /// Ensure the manager has been initialized
   void _ensureInitialized() {
     if (!_initialized) {
-      throw ExecuTorchPlatformException(
+      throw const ExecuTorchPlatformException(
         'ExecutorchManager not initialized. Call initialize() first.',
-        null,
       );
     }
   }
@@ -394,13 +389,9 @@ class TensorUtils {
   }
 
   /// Calculate the total number of elements in a tensor shape
-  static int calculateElementCount(List<int> shape) {
-    return shape.fold(1, (total, dim) => total * dim.abs());
-  }
+  static int calculateElementCount(List<int> shape) => shape.fold(1, (total, dim) => total * dim.abs());
 
   /// Format tensor shape as a human-readable string
-  static String formatShape(List<int> shape) {
-    return '[${shape.join(', ')}]';
-  }
+  static String formatShape(List<int> shape) => '[${shape.join(', ')}]';
 }
 

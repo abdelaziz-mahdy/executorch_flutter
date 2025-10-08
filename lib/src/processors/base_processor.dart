@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import '../executorch_model.dart';
 import '../executorch_errors.dart';
+import '../executorch_model.dart';
 import '../generated/executorch_api.dart';
 
 /// Utility class for tensor operations in processors
@@ -87,10 +87,10 @@ class ProcessorTensorUtils {
 
   /// Validates tensor shape matches expected dimensions
   static bool validateTensorShape(TensorData tensor, List<int> expectedShape) {
-    if (tensor.shape?.length != expectedShape.length) return false;
+    if (tensor.shape.length != expectedShape.length) return false;
 
-    for (int i = 0; i < expectedShape.length; i++) {
-      if (expectedShape[i] != -1 && tensor.shape![i] != expectedShape[i]) {
+    for (var i = 0; i < expectedShape.length; i++) {
+      if (expectedShape[i] != -1 && tensor.shape[i] != expectedShape[i]) {
         return false;
       }
     }
@@ -247,7 +247,7 @@ abstract class ExecuTorchProcessor<T, R> {
       final inputs = await preprocessor.preprocess(input);
 
       if (inputs.isEmpty) {
-        throw PreprocessingException(
+        throw const PreprocessingException(
           'Preprocessing produced no output tensors'
         );
       }

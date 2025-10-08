@@ -10,7 +10,7 @@
 /// - **High Performance**: Optimized for mobile inference with ExecuTorch runtime
 /// - **Type Safe**: Generated platform communication with Pigeon ensures type safety
 /// - **Cross Platform**: Identical APIs across Android, iOS, and macOS platforms
-/// - **Resource Management**: Automatic memory management and model lifecycle
+/// - **User-Controlled Resources**: Explicit model lifecycle management with load/dispose
 /// - **Easy Integration**: Simple API for loading models and running inference
 ///
 /// ## Quick Start
@@ -68,15 +68,15 @@
 /// - **macOS**: macOS 12.0+ (Monterey), arm64 only (Apple Silicon)
 ///
 /// For detailed documentation and examples, see the individual class documentation.
-library executorch_flutter;
+library;
 
+import 'package:executorch_flutter/executorch_flutter.dart' show ExecutorchManager, ExecuTorchModel, TensorData, InferenceResult, ExecuTorchPreprocessor, ExecuTorchPostprocessor, ExecuTorchProcessor;
+
+export 'src/executorch_errors.dart';
 // Core API exports
 export 'src/executorch_inference.dart';
 export 'src/executorch_model.dart';
-export 'src/executorch_errors.dart';
-
 // Generated Pigeon types - direct export for type safety
 export 'src/generated/executorch_api.dart';
-
 // Preprocessing and postprocessing utilities
 export 'src/processors/processors.dart';

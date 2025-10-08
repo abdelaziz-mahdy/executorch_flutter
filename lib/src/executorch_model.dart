@@ -1,10 +1,10 @@
 /// ExecuTorch model wrapper class providing high-level model management
-library executorch_model;
+library;
 
 import 'dart:async';
 
-import 'generated/executorch_api.dart';
 import 'executorch_errors.dart';
+import 'generated/executorch_api.dart';
 
 /// High-level wrapper for an ExecuTorch model instance
 ///
@@ -64,7 +64,7 @@ class ExecuTorchModel {
     String? requestId,
   }) async {
     if (_isDisposed) {
-      throw ExecuTorchException('Model has been disposed and cannot be used');
+      throw const ExecuTorchException('Model has been disposed and cannot be used');
     }
 
     final request = InferenceRequest(

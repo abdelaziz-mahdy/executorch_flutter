@@ -8,12 +8,10 @@ import 'dart:typed_data' show Float64List, Int32List, Int64List, Uint8List;
 import 'package:flutter/foundation.dart' show ReadBuffer, WriteBuffer;
 import 'package:flutter/services.dart';
 
-PlatformException _createConnectionError(String channelName) {
-  return PlatformException(
+PlatformException _createConnectionError(String channelName) => PlatformException(
     code: 'channel-error',
     message: 'Unable to establish connection on channel: "$channelName".',
   );
-}
 
 List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty = false}) {
   if (empty) {
@@ -66,14 +64,12 @@ class TensorData {
 
   String? name;
 
-  Object encode() {
-    return <Object?>[
+  Object encode() => <Object?>[
       shape,
       dataType.index,
       data,
       name,
     ];
-  }
 
   static TensorData decode(Object result) {
     result as List<Object?>;
@@ -106,15 +102,13 @@ class InferenceRequest {
 
   String? requestId;
 
-  Object encode() {
-    return <Object?>[
+  Object encode() => <Object?>[
       modelId,
       inputs,
       options,
       timeoutMs,
       requestId,
     ];
-  }
 
   static InferenceRequest decode(Object result) {
     result as List<Object?>;
@@ -151,8 +145,7 @@ class InferenceResult {
 
   Map<String?, Object?>? metadata;
 
-  Object encode() {
-    return <Object?>[
+  Object encode() => <Object?>[
       status.index,
       executionTimeMs,
       requestId,
@@ -160,7 +153,6 @@ class InferenceResult {
       errorMessage,
       metadata,
     ];
-  }
 
   static InferenceResult decode(Object result) {
     result as List<Object?>;
@@ -189,13 +181,11 @@ class ModelLoadResult {
 
   String? errorMessage;
 
-  Object encode() {
-    return <Object?>[
+  Object encode() => <Object?>[
       modelId,
       state.index,
       errorMessage,
     ];
-  }
 
   static ModelLoadResult decode(Object result) {
     result as List<Object?>;

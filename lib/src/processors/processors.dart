@@ -66,7 +66,11 @@
 /// For complete processor implementations, see the example app which contains
 /// reference implementations for image classification, object detection,
 /// text processing, and audio processing.
-library processors;
+library;
+
+import 'package:executorch_flutter/executorch_flutter.dart' show ExecuTorchPreprocessor, ExecuTorchPostprocessor, ExecuTorchProcessor, ProcessorTensorUtils, ProcessorException, PreprocessingException, PostprocessingException, InvalidInputException, InvalidOutputException;
+import 'package:executorch_flutter/src/processors/base_processor.dart' show ExecuTorchPreprocessor, ExecuTorchPostprocessor, ExecuTorchProcessor, ProcessorTensorUtils, ProcessorException, PreprocessingException, PostprocessingException, InvalidInputException, InvalidOutputException;
+import 'package:executorch_flutter/src/processors/processors.dart' show ExecuTorchPreprocessor, ExecuTorchPostprocessor, ExecuTorchProcessor, ProcessorTensorUtils, ProcessorException, PreprocessingException, PostprocessingException, InvalidInputException, InvalidOutputException;
 
 // Base processor classes and utilities only
 export 'base_processor.dart';
