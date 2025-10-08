@@ -1,0 +1,16 @@
+# Files to exclude from pub.dev publishing
+# Keep package size small and exclude development/example files
+
+# Internal development documentation
+specs/
+CLAUDE.md
+
+# Python scripts and tools
+python/
+
+# Temporary directories
+tmp/
+
+# Large example assets - users should generate their own
+example/assets/models/*.pte
+example/assets/images/*.jpg

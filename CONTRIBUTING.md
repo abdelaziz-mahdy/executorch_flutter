@@ -210,7 +210,7 @@ If modifying the platform API:
 - **Minimum SDK**: API 23
 - **Target Architecture**: arm64-v8a
 - **Dependencies**: Use Gradle for dependency management
-- **ExecuTorch**: Version 0.7.0+ via AAR
+- **ExecuTorch**: Version 1.0.0-rc2 via AAR (`org.pytorch:executorch-android:1.0.0-rc2`)
 
 ### iOS
 

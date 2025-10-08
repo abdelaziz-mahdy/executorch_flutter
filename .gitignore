@@ -47,3 +47,7 @@ example/assets/models/audio_class_labels.json
 # Darwin shared sources (actual files in darwin/, symlinked elsewhere)
 ios/executorch_flutter/Sources/executorch_flutter/
 macos/executorch_flutter/Sources/executorch_flutter/
+
+# Internal development documentation
+specs/
+PIGEON_MACOS_NOTES.md

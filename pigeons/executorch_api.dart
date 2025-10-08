@@ -1,7 +1,7 @@
 // Pigeon API specification for Flutter ExecuTorch package
 // This file defines the type-safe interface between Dart and native platforms
-// Updated: 2025-09-20 - Verified against latest ExecuTorch stable documentation
-// Android: ExecuTorch 0.7.0, iOS: Xcode 15+/Swift 5.9+
+// Updated: 2025-10-07 - Updated to ExecuTorch 1.0.0
+// Android: ExecuTorch 1.0.0-rc2, iOS/macOS: SPM 1.0.0, Xcode 15+/Swift 5.9+
 
 import 'package:pigeon/pigeon.dart';
 

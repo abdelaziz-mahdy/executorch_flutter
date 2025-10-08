@@ -2,6 +2,7 @@
 
 # Integration Test Runner for ExecuTorch Flutter Example App
 # This script runs integration tests on all supported platforms
+# Falls back to building if devices/simulators are not accessible
 
 set -e  # Exit on error
 
@@ -18,6 +19,7 @@ echo ""
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Track test results
@@ -39,6 +41,24 @@ run_tests() {
         return 0
     else
         echo "${RED}✗ $platform tests FAILED${NC}"
+        return 1
+    fi
+}
+
+# Function to build for a platform (fallback when no device)
+build_platform() {
+    local platform=$1
+    local build_command=$2
+
+    echo ""
+    echo "${BLUE}📦 Building for $platform (no device available)...${NC}"
+    echo "----------------------------------------"
+
+    if eval "$build_command"; then
+        echo "${GREEN}✓ $platform build SUCCESSFUL${NC}"
+        return 0
+    else
+        echo "${RED}✗ $platform build FAILED${NC}"
         return 1
     fi
 }
@@ -78,58 +98,62 @@ echo ""
 # Test on macOS (if on macOS)
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "📍 Detected macOS platform"
-    if run_tests "macOS" "-d macos"; then
-        MACOS_RESULT="✓ PASSED"
+
+    # Check if macOS device is available
+    if flutter devices | grep -q "macos"; then
+        if run_tests "macOS" "-d macos"; then
+            MACOS_RESULT="✓ PASSED (tests)"
+        else
+            MACOS_RESULT="✗ FAILED (tests)"
+        fi
     else
-        MACOS_RESULT="✗ FAILED"
+        # No macOS device, fallback to build
+        echo "${YELLOW}⚠️  macOS device not available, building instead...${NC}"
+        if build_platform "macOS" "flutter build macos --debug"; then
+            MACOS_RESULT="✓ BUILD OK"
+        else
+            MACOS_RESULT="✗ BUILD FAILED"
+        fi
     fi
 else
-    echo "⚠️  Skipping macOS tests (not on macOS)"
-    MACOS_RESULT="⊘ SKIPPED"
+    echo "⚠️  Skipping macOS (not on macOS)"
+    MACOS_RESULT="⊘ SKIPPED (not macOS)"
 fi
 
-# Test on iOS (launch simulator or use physical device)
+# Test on iOS (physical device only - simulator not supported)
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo ""
     echo "📍 Checking for iOS devices..."
 
     IOS_DEVICE=""
-    # Check if any iOS device is connected
-    if flutter devices | grep -q "ios"; then
-        IOS_DEVICE=$(flutter devices | grep "ios" | head -1 | awk '{print $5}' | tr -d '•')
-        echo "Found iOS device: $IOS_DEVICE"
-    else
-        echo "No iOS device found, checking for iOS Simulator..."
+    # Check if any iOS physical device is connected
+    if flutter devices | grep -q "ios" && ! flutter devices | grep "ios" | grep -q "simulator"; then
+        IOS_DEVICE=$(flutter devices | grep "ios" | grep -v "simulator" | head -1 | awk '{print $5}' | tr -d '•')
+        echo "Found iOS physical device: $IOS_DEVICE"
 
-        # Check for iOS Simulator
-        IOS_SIMULATOR=$(flutter emulators | grep "ios" | head -1 | awk '{print $1}')
-
-        if [ -n "$IOS_SIMULATOR" ]; then
-            echo "Found iOS Simulator: $IOS_SIMULATOR"
-            echo "${YELLOW}⚠️  Note: iOS Simulator (x86_64) is NOT supported for ExecuTorch${NC}"
-            echo "   Checking if physical device is available..."
-        fi
-
-        echo "${YELLOW}⚠️  No iOS physical device connected${NC}"
-        echo "   To run iOS tests, connect a physical iOS device (arm64)"
-        echo "   iOS Simulator is NOT supported for ExecuTorch"
-    fi
-
-    if [ -n "$IOS_DEVICE" ]; then
         if run_tests "iOS" "-d $IOS_DEVICE"; then
-            IOS_RESULT="✓ PASSED"
+            IOS_RESULT="✓ PASSED (tests)"
         else
-            IOS_RESULT="✗ FAILED"
+            IOS_RESULT="✗ FAILED (tests)"
         fi
     else
-        IOS_RESULT="⊘ SKIPPED (no device)"
+        # No physical device, fallback to build
+        echo "${YELLOW}⚠️  No iOS physical device connected${NC}"
+        echo "${YELLOW}⚠️  iOS Simulator is NOT supported (ExecuTorch requires arm64)${NC}"
+        echo "${BLUE}📦 Building iOS app for device instead...${NC}"
+
+        if build_platform "iOS" "flutter build ios --release --no-codesign"; then
+            IOS_RESULT="✓ BUILD OK (arm64)"
+        else
+            IOS_RESULT="✗ BUILD FAILED"
+        fi
     fi
 else
-    echo "⚠️  Skipping iOS tests (not on macOS)"
+    echo "⚠️  Skipping iOS (not on macOS)"
     IOS_RESULT="⊘ SKIPPED (not macOS)"
 fi
 
-# Test on Android (launch emulator if needed)
+# Test on Android (use emulator or device)
 echo ""
 echo "📍 Checking for Android devices..."
 
@@ -171,13 +195,20 @@ fi
 
 if [ -n "$ANDROID_DEVICE" ]; then
     if run_tests "Android" "-d $ANDROID_DEVICE"; then
-        ANDROID_RESULT="✓ PASSED"
+        ANDROID_RESULT="✓ PASSED (tests)"
     else
-        ANDROID_RESULT="✗ FAILED"
+        ANDROID_RESULT="✗ FAILED (tests)"
     fi
 else
-    echo "${YELLOW}⚠️  No Android device/emulator available, skipping Android tests${NC}"
-    ANDROID_RESULT="⊘ SKIPPED (no device)"
+    # No device/emulator, fallback to build
+    echo "${YELLOW}⚠️  No Android device/emulator available${NC}"
+    echo "${BLUE}📦 Building Android APK instead...${NC}"
+
+    if build_platform "Android" "flutter build apk --debug"; then
+        ANDROID_RESULT="✓ BUILD OK (APK)"
+    else
+        ANDROID_RESULT="✗ BUILD FAILED"
+    fi
 fi
 
 # Print summary
@@ -193,12 +224,30 @@ echo ""
 
 # Determine overall result
 if [[ "$MACOS_RESULT" == *"FAILED"* ]] || [[ "$IOS_RESULT" == *"FAILED"* ]] || [[ "$ANDROID_RESULT" == *"FAILED"* ]]; then
-    echo "${RED}❌ Some tests failed${NC}"
+    echo "${RED}❌ Some tests/builds failed${NC}"
     exit 1
 elif [[ "$MACOS_RESULT" == *"SKIPPED"* ]] && [[ "$IOS_RESULT" == *"SKIPPED"* ]] && [[ "$ANDROID_RESULT" == *"SKIPPED"* ]]; then
-    echo "${YELLOW}⚠️  All tests were skipped (no devices available)${NC}"
+    echo "${YELLOW}⚠️  All tests were skipped (no platforms available)${NC}"
     exit 1
 else
-    echo "${GREEN}✅ All available platform tests passed!${NC}"
+    echo "${GREEN}✅ All available platform tests/builds passed!${NC}"
+
+    # Print build artifact locations
+    if [[ "$ANDROID_RESULT" == *"BUILD OK"* ]]; then
+        echo ""
+        echo "${BLUE}Android APK:${NC} build/app/outputs/flutter-apk/app-debug.apk"
+    fi
+
+    if [[ "$IOS_RESULT" == *"BUILD OK"* ]]; then
+        echo ""
+        echo "${BLUE}iOS App:${NC} build/ios/iphoneos/Runner.app"
+    fi
+
+    if [[ "$MACOS_RESULT" == *"BUILD OK"* ]]; then
+        echo ""
+        echo "${BLUE}macOS App:${NC} build/macos/Build/Products/Debug/executorch_flutter_example.app"
+    fi
+
+    echo ""
     exit 0
 fi

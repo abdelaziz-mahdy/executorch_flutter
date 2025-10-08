@@ -191,7 +191,7 @@ Android         iOS           macOS
 (Kotlin)      (Swift)        (Swift)
    ↓              ↓              ↓
 ExecuTorch    ExecuTorch    ExecuTorch
-AAR 0.7.0     SPM 0.7.0     SPM 0.7.0
+1.0.0-rc2     SPM 1.0.0     SPM 1.0.0
    ↓              ↓              ↓
 XNNPACK       CoreML/MPS    CoreML/MPS
 Backends      Backends      Backends
