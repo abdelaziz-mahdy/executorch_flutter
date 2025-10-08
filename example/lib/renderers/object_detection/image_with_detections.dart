@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import '../processors/yolo_processor.dart';
+import '../../processors/yolo_processor.dart';
 import 'detection_box_painter.dart';
 
 /// Widget for displaying an image with object detection bounding boxes.

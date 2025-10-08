@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../processors/yolo_processor.dart';
-import '../image_with_detections.dart';
+import '../object_detection/image_with_detections.dart';
 import 'base_result_renderer.dart';
 
 /// Renderer for object detection results

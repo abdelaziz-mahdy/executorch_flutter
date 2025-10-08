@@ -1,9 +1,9 @@
 import 'dart:io';
+import 'package:executorch_flutter_example/processors/opencv/opencv_yolo_preprocessor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../processors/yolo_processor.dart';
-import '../processors/opencv_processors.dart';
 import '../renderers/screens/object_detection_renderer.dart';
 import '../widgets/image_input_widget.dart';
 import '../services/processor_preferences.dart';
@@ -44,8 +44,14 @@ class YoloModelDefinition extends ModelDefinition<File, ObjectDetectionResult> {
   Widget buildInputWidget({
     required BuildContext context,
     required Function(File) onInputSelected,
+    VoidCallback? onCameraModeToggle,
+    bool isCameraMode = false,
   }) {
-    return ImageInputWidget(onImageSelected: onInputSelected);
+    return ImageInputWidget(
+      onImageSelected: onInputSelected,
+      onCameraModeToggle: onCameraModeToggle,
+      isCameraMode: isCameraMode,
+    );
   }
 
   @override
@@ -86,7 +92,7 @@ class YoloModelDefinition extends ModelDefinition<File, ObjectDetectionResult> {
     );
 
     return await postprocessor.postprocess(
-      (inferenceResult.outputs ?? []).whereType<TensorData>().toList(),
+      inferenceResult.outputs.whereType<TensorData>().toList(),
     );
   }
 

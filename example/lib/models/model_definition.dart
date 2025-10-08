@@ -27,6 +27,8 @@ abstract class ModelDefinition<TInput, TResult> {
   Widget buildInputWidget({
     required BuildContext context,
     required Function(TInput) onInputSelected,
+    VoidCallback? onCameraModeToggle,
+    bool isCameraMode = false,
   });
 
   /// Prepare input for inference (convert to TensorData)

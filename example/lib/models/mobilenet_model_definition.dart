@@ -1,9 +1,9 @@
 import 'dart:io';
+import 'package:executorch_flutter_example/processors/opencv/opencv_imagenet_preprocessor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../processors/image_processor.dart';
-import '../processors/opencv_processors.dart';
 import '../renderers/screens/classification_renderer.dart';
 import '../widgets/image_input_widget.dart';
 import '../services/processor_preferences.dart';
@@ -45,8 +45,14 @@ class MobileNetModelDefinition
   Widget buildInputWidget({
     required BuildContext context,
     required Function(File) onInputSelected,
+    VoidCallback? onCameraModeToggle,
+    bool isCameraMode = false,
   }) {
-    return ImageInputWidget(onImageSelected: onInputSelected);
+    return ImageInputWidget(
+      onImageSelected: onInputSelected,
+      onCameraModeToggle: onCameraModeToggle,
+      isCameraMode: isCameraMode,
+    );
   }
 
   @override
@@ -85,7 +91,7 @@ class MobileNetModelDefinition
     final postprocessor = ImageNetPostprocessor(classLabels: labels);
 
     return await postprocessor.postprocess(
-      (inferenceResult.outputs ?? []).whereType<TensorData>().toList(),
+      inferenceResult.outputs.whereType<TensorData>().toList(),
     );
   }
 

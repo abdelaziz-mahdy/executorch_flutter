@@ -6,6 +6,8 @@ import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_definition.dart';
 import '../models/model_registry.dart';
 import '../services/processor_preferences.dart';
+import '../widgets/camera_stream_processor.dart';
+import '../processors/camera_image_converter.dart';
 
 /// Unified Model Playground - works with any model type through ModelDefinition
 class UnifiedModelPlayground extends StatefulWidget {
@@ -29,6 +31,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   // UI state
   bool _isInputExpanded = true;
   bool _useOpenCVProcessor = false;
+  bool _isCameraMode = false;
 
   // Input/Result state (generic)
   Object? _input;
@@ -407,6 +410,14 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           _selectedModel!.buildInputWidget(
             context: context,
             onInputSelected: _processInput,
+            onCameraModeToggle: () {
+              setState(() {
+                _isCameraMode = !_isCameraMode;
+                _input = null;
+                _result = null;
+              });
+            },
+            isCameraMode: _isCameraMode,
           ),
         ],
       ),
@@ -414,6 +425,13 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Widget _buildResultSection({bool isLargeScreen = false}) {
+    // Show camera stream processor when in camera mode
+    if (_isCameraMode &&
+        _loadedExecuTorchModel != null &&
+        _selectedModel != null) {
+      return _buildCameraSection();
+    }
+
     if (_isProcessing) {
       return const Center(
         child: Column(
@@ -504,6 +522,67 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           if (_isInputExpanded) const SizedBox(height: 150),
         ],
       ),
+    );
+  }
+
+  Widget _buildCameraSection() {
+    final converter = _useOpenCVProcessor
+        ? OpenCVCameraConverter()
+        : ImageLibCameraConverter();
+
+    return Stack(
+      children: [
+        // Camera stream with processing overlay
+        CameraStreamProcessor(
+          converter: converter,
+          onFrameProcessed: (imageBytes) async {
+            if (_selectedModel == null || _loadedExecuTorchModel == null) {
+              return;
+            }
+
+            try {
+              // Create temporary file from bytes to match File input type
+              final tempDir = await getTemporaryDirectory();
+              final tempFile = File('${tempDir.path}/camera_frame.jpg');
+              await tempFile.writeAsBytes(imageBytes);
+
+              // Prepare input using model's preprocessor
+              final tensorInputs = await _selectedModel!.prepareInput(tempFile);
+
+              // Run inference
+              final inferenceResult = await _loadedExecuTorchModel!
+                  .runInference(inputs: tensorInputs);
+
+              // Process result using model's postprocessor
+              final result = await _selectedModel!.processResult(
+                input: tempFile,
+                inferenceResult: inferenceResult,
+              );
+
+              // Update UI with result
+              if (mounted) {
+                setState(() {
+                  _input = tempFile;
+                  _result = result;
+                  _inferenceTime = inferenceResult.executionTimeMs;
+                });
+              }
+            } catch (e) {
+              debugPrint('Camera frame processing error: $e');
+            }
+          },
+        ),
+
+        // Result overlay (bounding boxes, etc.)
+        if (_result != null && _input != null)
+          Positioned.fill(
+            child: _selectedModel!.buildResultRenderer(
+              context: context,
+              input: _input!,
+              result: _result,
+            ),
+          ),
+      ],
     );
   }
 
@@ -644,6 +723,14 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                   _selectedModel!.buildInputWidget(
                     context: context,
                     onInputSelected: _processInput,
+                    onCameraModeToggle: () {
+                      setState(() {
+                        _isCameraMode = !_isCameraMode;
+                        _input = null;
+                        _result = null;
+                      });
+                    },
+                    isCameraMode: _isCameraMode,
                   ),
                 ],
               ),
