@@ -65,7 +65,8 @@ class ExecuTorchModel {
     String? requestId,
   }) async {
     if (_isDisposed) {
-      throw const ExecuTorchException('Model has been disposed and cannot be used');
+      throw const ExecuTorchException(
+          'Model has been disposed and cannot be used');
     }
 
     final request = InferenceRequest(
@@ -101,4 +102,3 @@ class ExecuTorchModel {
   /// Check if this model has been disposed
   bool get isDisposed => _isDisposed;
 }
-

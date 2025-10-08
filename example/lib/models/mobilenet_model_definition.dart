@@ -82,9 +82,7 @@ class MobileNetModelDefinition
     required InferenceResult inferenceResult,
   }) async {
     final labels = await _loadLabels();
-    final postprocessor = ImageNetPostprocessor(
-      classLabels: labels,
-    );
+    final postprocessor = ImageNetPostprocessor(classLabels: labels);
 
     return await postprocessor.postprocess(
       (inferenceResult.outputs ?? []).whereType<TensorData>().toList(),
@@ -97,10 +95,7 @@ class MobileNetModelDefinition
     required File input,
     required ClassificationResult? result,
   }) {
-    return ClassificationRenderer(
-      input: input,
-      result: result,
-    );
+    return ClassificationRenderer(input: input, result: result);
   }
 
   @override
@@ -117,56 +112,57 @@ class MobileNetModelDefinition
       children: [
         Text(
           'Top Predictions',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        ...topPredictions.map((prediction) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          prediction.className,
-                          style: Theme.of(context).textTheme.bodyMedium,
+        ...topPredictions.map(
+          (prediction) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        prediction.className,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${(prediction.confidence * 100).toStringAsFixed(1)}%',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${(prediction.confidence * 100).toStringAsFixed(1)}%',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  LinearProgressIndicator(
-                    value: prediction.confidence,
-                    backgroundColor: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                  ),
-                ],
-              ),
-            )),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(
+                  value: prediction.confidence,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

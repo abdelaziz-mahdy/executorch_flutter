@@ -4,8 +4,6 @@
 /// ensuring consistent error reporting and debugging capabilities for ExecuTorch operations.
 library;
 
-import 'generated/executorch_api.dart';
-
 /// Base exception class for all ExecuTorch-related errors
 class ExecuTorchException implements Exception {
   const ExecuTorchException(this.message, [this.details]);
@@ -15,8 +13,8 @@ class ExecuTorchException implements Exception {
 
   @override
   String toString() => details != null
-    ? 'ExecuTorchException: $message\nDetails: $details'
-    : 'ExecuTorchException: $message';
+      ? 'ExecuTorchException: $message\nDetails: $details'
+      : 'ExecuTorchException: $message';
 }
 
 /// Model loading and lifecycle errors
@@ -51,9 +49,9 @@ class ExecuTorchPlatformException extends ExecuTorchException {
 
 /// Error mapping utilities for cross-platform consistency
 class ExecuTorchErrorMapper {
-
   /// Map platform-specific error messages to standardized exceptions
-  static ExecuTorchException mapPlatformError(String platformError, [String? details]) {
+  static ExecuTorchException mapPlatformError(String platformError,
+      [String? details]) {
     final lowerError = platformError.toLowerCase();
 
     // Model loading errors
@@ -94,5 +92,4 @@ class ExecuTorchErrorMapper {
     // Default to platform exception
     return ExecuTorchPlatformException(platformError, details);
   }
-
 }

@@ -19,8 +19,7 @@ class ProcessorTensorUtils {
 
     if (data.length != elementCount) {
       throw ArgumentError(
-        'Data length (${data.length}) does not match shape element count ($elementCount)'
-      );
+          'Data length (${data.length}) does not match shape element count ($elementCount)');
     }
 
     Uint8List bytes;
@@ -51,9 +50,7 @@ class ProcessorTensorUtils {
   /// Extracts Float32 data from a tensor
   static Float32List extractFloat32Data(TensorData tensor) {
     if (tensor.dataType != TensorType.float32) {
-      throw ArgumentError(
-        'Expected Float32 tensor, got ${tensor.dataType}'
-      );
+      throw ArgumentError('Expected Float32 tensor, got ${tensor.dataType}');
     }
     return tensor.data.buffer.asFloat32List();
   }
@@ -61,20 +58,15 @@ class ProcessorTensorUtils {
   /// Extracts Int32 data from a tensor
   static Int32List extractInt32Data(TensorData tensor) {
     if (tensor.dataType != TensorType.int32) {
-      throw ArgumentError(
-        'Expected Int32 tensor, got ${tensor.dataType}'
-      );
+      throw ArgumentError('Expected Int32 tensor, got ${tensor.dataType}');
     }
     return tensor.data.buffer.asInt32List();
   }
 
-
   /// Extracts Uint8 data from a tensor
   static Uint8List extractUint8Data(TensorData tensor) {
     if (tensor.dataType != TensorType.uint8) {
-      throw ArgumentError(
-        'Expected Uint8 tensor, got ${tensor.dataType}'
-      );
+      throw ArgumentError('Expected Uint8 tensor, got ${tensor.dataType}');
     }
     return tensor.data;
   }
@@ -239,8 +231,7 @@ abstract class ExecuTorchProcessor<T, R> {
       // Validate input
       if (!preprocessor.validateInput(input)) {
         throw InvalidInputException(
-          'Input validation failed for ${preprocessor.inputTypeName}'
-        );
+            'Input validation failed for ${preprocessor.inputTypeName}');
       }
 
       // Preprocess input
@@ -248,19 +239,21 @@ abstract class ExecuTorchProcessor<T, R> {
 
       if (inputs.isEmpty) {
         throw const PreprocessingException(
-          'Preprocessing produced no output tensors'
-        );
+            'Preprocessing produced no output tensors');
       }
 
       // Run inference (throws exception on failure)
       final inferenceResult = await model.runInference(inputs: inputs);
 
       // Validate outputs - filter out null values
-      final validOutputs = inferenceResult.outputs?.where((output) => output != null).cast<TensorData>().toList() ?? [];
+      final validOutputs = inferenceResult.outputs
+              .where((output) => output != null)
+              .cast<TensorData>()
+              .toList() ??
+          [];
       if (!postprocessor.validateOutputs(validOutputs)) {
         throw InvalidOutputException(
-          'Model outputs validation failed for ${postprocessor.outputTypeName}'
-        );
+            'Model outputs validation failed for ${postprocessor.outputTypeName}');
       }
 
       // Postprocess outputs
@@ -271,7 +264,8 @@ abstract class ExecuTorchProcessor<T, R> {
       if (e is ProcessorException || e is ExecuTorchException) {
         rethrow;
       }
-      throw GenericProcessorException('Unexpected error during processing: $e', e);
+      throw GenericProcessorException(
+          'Unexpected error during processing: $e', e);
     }
   }
 }

@@ -133,8 +133,11 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       final preprocessStopwatch = Stopwatch()..start();
       final tensorInputs = await _selectedModel!.prepareInput(input);
       preprocessStopwatch.stop();
-      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds.toDouble();
-      debugPrint('⏱️  Preprocessing completed: ${preprocessingTime.toStringAsFixed(0)}ms');
+      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds
+          .toDouble();
+      debugPrint(
+        '⏱️  Preprocessing completed: ${preprocessingTime.toStringAsFixed(0)}ms',
+      );
 
       // Step 2: Run inference
       debugPrint('⏱️  Starting inference...');
@@ -144,7 +147,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
       inferenceStopwatch.stop();
       final inferenceTime = inferenceStopwatch.elapsedMilliseconds.toDouble();
-      debugPrint('⏱️  Inference completed: ${inferenceTime.toStringAsFixed(0)}ms');
+      debugPrint(
+        '⏱️  Inference completed: ${inferenceTime.toStringAsFixed(0)}ms',
+      );
 
       // Step 3: Process result using the model definition
       debugPrint('⏱️  Starting postprocessing...');
@@ -154,8 +159,11 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         inferenceResult: inferenceResult,
       );
       postprocessStopwatch.stop();
-      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds.toDouble();
-      debugPrint('⏱️  Postprocessing completed: ${postprocessingTime.toStringAsFixed(0)}ms');
+      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds
+          .toDouble();
+      debugPrint(
+        '⏱️  Postprocessing completed: ${postprocessingTime.toStringAsFixed(0)}ms',
+      );
 
       totalStopwatch.stop();
       final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();
@@ -241,14 +249,13 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                                   // Left: Result display (60% width)
                                   Expanded(
                                     flex: 6,
-                                    child: _buildResultSection(isLargeScreen: true),
+                                    child: _buildResultSection(
+                                      isLargeScreen: true,
+                                    ),
                                   ),
 
                                   // Right: Input + Details (40% width)
-                                  Expanded(
-                                    flex: 4,
-                                    child: _buildSidePanel(),
-                                  ),
+                                  Expanded(flex: 4, child: _buildSidePanel()),
                                 ],
                               );
                             } else {
@@ -267,7 +274,8 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                                   ),
 
                                   // Toggle button
-                                  if (!_isInputExpanded && _selectedModel != null)
+                                  if (!_isInputExpanded &&
+                                      _selectedModel != null)
                                     Positioned(
                                       right: 16,
                                       bottom: 16,
@@ -295,7 +303,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     return Container(
       padding: const EdgeInsets.all(16),
       child: DropdownButtonFormField<ModelDefinition>(
-        value: _selectedModel,
+        initialValue: _selectedModel,
         decoration: InputDecoration(
           labelText: 'Select Model',
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -377,9 +385,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               const SizedBox(width: 8),
               Text(
                 'Input',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const Spacer(),
               IconButton(
@@ -505,9 +513,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          top: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
       ),
       child: Column(
@@ -522,10 +528,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               const SizedBox(width: 12),
               Text(
                 'Results',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               if (_totalTime != null)
@@ -541,11 +546,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                   child: Text(
                     '${_totalTime!.toStringAsFixed(0)}ms',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onPrimaryContainer,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
                   ),
                 ),
             ],
@@ -561,9 +564,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               children: [
                 Text(
                   'Performance',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 _buildTimingRow(
@@ -610,9 +613,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLow,
         border: Border(
-          left: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
+          left: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
       ),
       child: SingleChildScrollView(
@@ -635,10 +636,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 children: [
                   Text(
                     'Input',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _selectedModel!.buildInputWidget(
@@ -665,9 +665,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                         const SizedBox(width: 12),
                         Text(
                           'Results',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const Spacer(),
@@ -678,21 +676,19 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
                               '${_totalTime!.toStringAsFixed(0)}ms',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
                                   ),
                             ),
                           ),
@@ -709,10 +705,8 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                         children: [
                           Text(
                             'Performance',
-                            style:
-                                Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 12),
                           _buildTimingRow(
@@ -776,23 +770,17 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
             Container(
               width: 12,
               height: 12,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
             ),
             Text(
               '${time.toStringAsFixed(0)}ms',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 8),
             Text(
@@ -808,7 +796,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: ratio,
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 6,
           ),

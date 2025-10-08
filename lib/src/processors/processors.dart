@@ -68,9 +68,39 @@
 /// text processing, and audio processing.
 library;
 
-import 'package:executorch_flutter/executorch_flutter.dart' show ExecuTorchPreprocessor, ExecuTorchPostprocessor, ExecuTorchProcessor, ProcessorTensorUtils, ProcessorException, PreprocessingException, PostprocessingException, InvalidInputException, InvalidOutputException;
-import 'package:executorch_flutter/src/processors/base_processor.dart' show ExecuTorchPreprocessor, ExecuTorchPostprocessor, ExecuTorchProcessor, ProcessorTensorUtils, ProcessorException, PreprocessingException, PostprocessingException, InvalidInputException, InvalidOutputException;
-import 'package:executorch_flutter/src/processors/processors.dart' show ExecuTorchPreprocessor, ExecuTorchPostprocessor, ExecuTorchProcessor, ProcessorTensorUtils, ProcessorException, PreprocessingException, PostprocessingException, InvalidInputException, InvalidOutputException;
+import 'package:executorch_flutter/executorch_flutter.dart'
+    show
+        ExecuTorchPreprocessor,
+        ExecuTorchPostprocessor,
+        ExecuTorchProcessor,
+        ProcessorTensorUtils,
+        ProcessorException,
+        PreprocessingException,
+        PostprocessingException,
+        InvalidInputException,
+        InvalidOutputException;
+import 'package:executorch_flutter/src/processors/base_processor.dart'
+    show
+        ExecuTorchPreprocessor,
+        ExecuTorchPostprocessor,
+        ExecuTorchProcessor,
+        ProcessorTensorUtils,
+        ProcessorException,
+        PreprocessingException,
+        PostprocessingException,
+        InvalidInputException,
+        InvalidOutputException;
+import 'package:executorch_flutter/src/processors/processors.dart'
+    show
+        ExecuTorchPreprocessor,
+        ExecuTorchPostprocessor,
+        ExecuTorchProcessor,
+        ProcessorTensorUtils,
+        ProcessorException,
+        PreprocessingException,
+        PostprocessingException,
+        InvalidInputException,
+        InvalidOutputException;
 
 // Base processor classes and utilities only
 export 'base_processor.dart';

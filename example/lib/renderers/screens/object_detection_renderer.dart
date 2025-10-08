@@ -30,10 +30,7 @@ class ObjectDetectionRenderer
   Widget build(BuildContext context) {
     if (result == null) {
       // No detection result, just show the image
-      return Image.file(
-        input,
-        fit: BoxFit.contain,
-      );
+      return Image.file(input, fit: BoxFit.contain);
     }
 
     return ImageWithDetections(

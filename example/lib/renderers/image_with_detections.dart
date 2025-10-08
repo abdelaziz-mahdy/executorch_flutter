@@ -75,16 +75,20 @@ class _ImageWithDetectionsState extends State<ImageWithDetections>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    widget.image.image.resolve(const ImageConfiguration()).addListener(
-      ImageStreamListener((ImageInfo info, bool _) {
-        if (!completer.isCompleted) {
-          completer.complete(info.image);
-        }
+    widget.image.image
+        .resolve(const ImageConfiguration())
+        .addListener(
+          ImageStreamListener((ImageInfo info, bool _) {
+            if (!completer.isCompleted) {
+              completer.complete(info.image);
+            }
+          }),
+        );
+    Future.microtask(
+      () => completer.future.then((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => measureSize());
       }),
     );
-    Future.microtask(() => completer.future.then((_) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => measureSize());
-        }));
   }
 
   @override

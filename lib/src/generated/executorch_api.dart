@@ -8,26 +8,25 @@ import 'dart:typed_data' show Float64List, Int32List, Int64List, Uint8List;
 import 'package:flutter/foundation.dart' show ReadBuffer, WriteBuffer;
 import 'package:flutter/services.dart';
 
-PlatformException _createConnectionError(String channelName) {
-  return PlatformException(
-    code: 'channel-error',
-    message: 'Unable to establish connection on channel: "$channelName".',
-  );
-}
+PlatformException _createConnectionError(String channelName) =>
+    PlatformException(
+      code: 'channel-error',
+      message: 'Unable to establish connection on channel: "$channelName".',
+    );
 bool _deepEquals(Object? a, Object? b) {
   if (a is List && b is List) {
     return a.length == b.length &&
         a.indexed
-        .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
   }
   if (a is Map && b is Map) {
-    return a.length == b.length && a.entries.every((MapEntry<Object?, Object?> entry) =>
-        (b as Map<Object?, Object?>).containsKey(entry.key) &&
-        _deepEquals(entry.value, b[entry.key]));
+    return a.length == b.length &&
+        a.entries.every((MapEntry<Object?, Object?> entry) =>
+            (b as Map<Object?, Object?>).containsKey(entry.key) &&
+            _deepEquals(entry.value, b[entry.key]));
   }
   return a == b;
 }
-
 
 /// Tensor data type enumeration
 enum TensorType {
@@ -54,17 +53,14 @@ class TensorData {
 
   String? name;
 
-  List<Object?> _toList() {
-    return <Object?>[
-      shape,
-      dataType,
-      data,
-      name,
-    ];
-  }
+  List<Object?> _toList() => <Object?>[
+        shape,
+        dataType,
+        data,
+        name,
+      ];
 
-  Object encode() {
-    return _toList();  }
+  Object encode() => _toList();
 
   static TensorData decode(Object result) {
     result as List<Object?>;
@@ -90,8 +86,7 @@ class TensorData {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 /// Inference request parameters
@@ -114,18 +109,15 @@ class InferenceRequest {
 
   String? requestId;
 
-  List<Object?> _toList() {
-    return <Object?>[
-      modelId,
-      inputs,
-      options,
-      timeoutMs,
-      requestId,
-    ];
-  }
+  List<Object?> _toList() => <Object?>[
+        modelId,
+        inputs,
+        options,
+        timeoutMs,
+        requestId,
+      ];
 
-  Object encode() {
-    return _toList();  }
+  Object encode() => _toList();
 
   static InferenceRequest decode(Object result) {
     result as List<Object?>;
@@ -152,8 +144,7 @@ class InferenceRequest {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 /// Inference execution result
@@ -172,16 +163,13 @@ class InferenceResult {
 
   String? requestId;
 
-  List<Object?> _toList() {
-    return <Object?>[
-      outputs,
-      executionTimeMs,
-      requestId,
-    ];
-  }
+  List<Object?> _toList() => <Object?>[
+        outputs,
+        executionTimeMs,
+        requestId,
+      ];
 
-  Object encode() {
-    return _toList();  }
+  Object encode() => _toList();
 
   static InferenceResult decode(Object result) {
     result as List<Object?>;
@@ -206,8 +194,7 @@ class InferenceResult {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 /// Model loading result
@@ -220,14 +207,11 @@ class ModelLoadResult {
 
   String modelId;
 
-  List<Object?> _toList() {
-    return <Object?>[
-      modelId,
-    ];
-  }
+  List<Object?> _toList() => <Object?>[
+        modelId,
+      ];
 
-  Object encode() {
-    return _toList();  }
+  Object encode() => _toList();
 
   static ModelLoadResult decode(Object result) {
     result as List<Object?>;
@@ -250,10 +234,8 @@ class ModelLoadResult {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
-
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -262,19 +244,19 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is TensorType) {
+    } else if (value is TensorType) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    }    else if (value is TensorData) {
+    } else if (value is TensorData) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    }    else if (value is InferenceRequest) {
+    } else if (value is InferenceRequest) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    }    else if (value is InferenceResult) {
+    } else if (value is InferenceResult) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is ModelLoadResult) {
+    } else if (value is ModelLoadResult) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
     } else {
@@ -285,16 +267,16 @@ class _PigeonCodec extends StandardMessageCodec {
   @override
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
-      case 129: 
+      case 129:
         final int? value = readValue(buffer) as int?;
         return value == null ? null : TensorType.values[value];
-      case 130: 
+      case 130:
         return TensorData.decode(readValue(buffer)!);
-      case 131: 
+      case 131:
         return InferenceRequest.decode(readValue(buffer)!);
-      case 132: 
+      case 132:
         return InferenceResult.decode(readValue(buffer)!);
-      case 133: 
+      case 133:
         return ModelLoadResult.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -308,9 +290,11 @@ class ExecutorchHostApi {
   /// Constructor for [ExecutorchHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  ExecutorchHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  ExecutorchHostApi(
+      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+        pigeonVar_messageChannelSuffix =
+            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -321,13 +305,16 @@ class ExecutorchHostApi {
   /// Returns a unique model ID for subsequent operations
   /// Throws: PlatformException if file not found or model loading fails
   Future<ModelLoadResult> loadModel(String filePath) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.loadModel$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.loadModel$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[filePath]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[filePath]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -352,13 +339,16 @@ class ExecutorchHostApi {
   /// Returns inference results with outputs and timing
   /// Throws: PlatformException if model not found or inference fails
   Future<InferenceResult> runInference(InferenceRequest request) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.runInference$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.runInference$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[request]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[request]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -383,13 +373,16 @@ class ExecutorchHostApi {
   /// User has full control over memory management
   /// Throws: PlatformException if model not found
   Future<void> disposeModel(String modelId) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.disposeModel$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.disposeModel$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[modelId]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[modelId]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -408,8 +401,10 @@ class ExecutorchHostApi {
   /// Get list of currently loaded model IDs
   /// Returns empty list if no models loaded
   Future<List<String?>> getLoadedModels() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getLoadedModels$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getLoadedModels$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -438,13 +433,16 @@ class ExecutorchHostApi {
   /// Enable or disable ExecuTorch debug logging
   /// Only works in debug builds
   Future<void> setDebugLogging(bool enabled) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.setDebugLogging$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.setDebugLogging$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[enabled]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[enabled]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {

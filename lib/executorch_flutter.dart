@@ -1,4 +1,3 @@
-
 /// ExecuTorch Flutter Plugin - On-device ML inference with ExecuTorch
 ///
 /// This package provides Flutter developers with the ability to run
@@ -70,7 +69,15 @@
 /// For detailed documentation and examples, see the individual class documentation.
 library;
 
-import 'package:executorch_flutter/executorch_flutter.dart' show ExecutorchManager, ExecuTorchModel, TensorData, InferenceResult, ExecuTorchPreprocessor, ExecuTorchPostprocessor, ExecuTorchProcessor;
+import 'package:executorch_flutter/executorch_flutter.dart'
+    show
+        ExecutorchManager,
+        ExecuTorchModel,
+        TensorData,
+        InferenceResult,
+        ExecuTorchPreprocessor,
+        ExecuTorchPostprocessor,
+        ExecuTorchProcessor;
 
 export 'src/executorch_errors.dart';
 // Core API exports

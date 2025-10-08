@@ -77,8 +77,8 @@ class PerformanceService {
     // Simple heuristic based on device model
     final model = info.model.toLowerCase();
     return model.contains('iphone 6') ||
-           model.contains('iphone 7') ||
-           model.contains('iphone se');
+        model.contains('iphone 7') ||
+        model.contains('iphone se');
   }
 
   ProcessingMode _getRecommendedMode(AndroidDeviceInfo info) {
@@ -96,8 +96,7 @@ class PerformanceService {
         model.contains('iphone 14') ||
         model.contains('iphone 15')) {
       return ProcessingMode.performance;
-    } else if (model.contains('iphone 11') ||
-               model.contains('iphone 12')) {
+    } else if (model.contains('iphone 11') || model.contains('iphone 12')) {
       return ProcessingMode.balanced;
     }
     return ProcessingMode.efficient;
@@ -163,7 +162,8 @@ class PerformanceService {
     if (_processingTimes.length < 10) return false;
 
     final recentTimes = _processingTimes.sublist(_processingTimes.length - 10);
-    final averageTime = recentTimes.reduce((a, b) => a + b) / recentTimes.length;
+    final averageTime =
+        recentTimes.reduce((a, b) => a + b) / recentTimes.length;
 
     return averageTime < _slowFrameThreshold * 0.7; // 30% buffer
   }
@@ -198,7 +198,9 @@ class PerformanceService {
         targetFPS: 15.0,
         shouldQuantize: true,
         maxConcurrentInferences: 1,
-        reason: _isThrottled ? 'Performance throttling active' : 'Low-end device detected',
+        reason: _isThrottled
+            ? 'Performance throttling active'
+            : 'Low-end device detected',
       );
     }
 
@@ -262,8 +264,4 @@ class ProcessingRecommendation {
   });
 }
 
-enum ProcessingMode {
-  efficient,
-  balanced,
-  performance,
-}
+enum ProcessingMode { efficient, balanced, performance }

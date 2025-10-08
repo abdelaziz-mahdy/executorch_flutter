@@ -45,7 +45,7 @@
 /// );
 /// final detections = await yoloProcessor.process(imageBytes, model);
 /// ```
-library example_processors;
+library;
 
 // Image classification
 export 'image_processor.dart';

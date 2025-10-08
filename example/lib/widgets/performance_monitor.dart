@@ -23,7 +23,9 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
           ListTile(
             leading: Icon(
               Icons.speed,
-              color: _performanceService.isThrottled ? Colors.orange : Colors.green,
+              color: _performanceService.isThrottled
+                  ? Colors.orange
+                  : Colors.green,
             ),
             title: const Text('Performance Monitor'),
             subtitle: Text(_getStatusText()),
@@ -100,7 +102,12 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
     );
   }
 
-  Widget _buildMetricCard(String label, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -128,10 +135,7 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -144,7 +148,7 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -152,7 +156,11 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
         children: [
           Row(
             children: [
-              Icon(Icons.phone_android, size: 16, color: theme.colorScheme.primary),
+              Icon(
+                Icons.phone_android,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Device Information',
@@ -165,7 +173,10 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
           const SizedBox(height: 8),
           _buildInfoRow('Platform', capabilities.platform),
           _buildInfoRow('Model', capabilities.model),
-          _buildInfoRow('Performance Class', capabilities.isLowEndDevice ? 'Basic' : 'High-end'),
+          _buildInfoRow(
+            'Performance Class',
+            capabilities.isLowEndDevice ? 'Basic' : 'High-end',
+          ),
           _buildInfoRow('Max Models', '${capabilities.maxConcurrentModels}'),
         ],
       ),
@@ -178,16 +189,10 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12),
-          ),
+          Text(label, style: const TextStyle(fontSize: 12)),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -220,9 +225,18 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
           ),
           const SizedBox(height: 8),
           _buildRecommendationRow('Mode', _getModeString(recommendation.mode)),
-          _buildRecommendationRow('Target FPS', '${recommendation.targetFPS.toStringAsFixed(0)}'),
-          _buildRecommendationRow('Quantization', recommendation.shouldQuantize ? 'Enabled' : 'Disabled'),
-          _buildRecommendationRow('Max Concurrent', '${recommendation.maxConcurrentInferences}'),
+          _buildRecommendationRow(
+            'Target FPS',
+            recommendation.targetFPS.toStringAsFixed(0),
+          ),
+          _buildRecommendationRow(
+            'Quantization',
+            recommendation.shouldQuantize ? 'Enabled' : 'Disabled',
+          ),
+          _buildRecommendationRow(
+            'Max Concurrent',
+            '${recommendation.maxConcurrentInferences}',
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(8),
@@ -250,16 +264,10 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12),
-          ),
+          Text(label, style: const TextStyle(fontSize: 12)),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
       ),

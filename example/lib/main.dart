@@ -30,7 +30,9 @@ void main() async {
     if (instance is CameraDelegatingImagePickerPlatform) {
       // For now, camera is not supported on desktop - use gallery only
       // Users should use ImageSource.gallery instead of ImageSource.camera
-      debugPrint('⚠️  Camera not supported on desktop platforms. Use gallery instead.');
+      debugPrint(
+        '⚠️  Camera not supported on desktop platforms. Use gallery instead.',
+      );
     }
   }
 

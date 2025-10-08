@@ -8,14 +8,13 @@ import 'package:pigeon/pigeon.dart';
 @ConfigurePigeon(PigeonOptions(
   dartOut: 'lib/src/generated/executorch_api.dart',
   dartOptions: DartOptions(),
-  kotlinOut: 'android/src/main/kotlin/com/zcreations/executorch_flutter/generated/ExecutorchApi.kt',
+  kotlinOut:
+      'android/src/main/kotlin/com/zcreations/executorch_flutter/generated/ExecutorchApi.kt',
   kotlinOptions: KotlinOptions(
     package: 'com.zcreations.executorch_flutter.generated',
   ),
   swiftOut: 'darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift',
-  swiftOptions: SwiftOptions(
-    includeErrorClass: true,
-  ),
+  swiftOptions: SwiftOptions(),
   dartPackageName: 'executorch_flutter',
 ))
 
@@ -92,7 +91,6 @@ class ModelLoadResult {
 
   String modelId;
 }
-
 
 /// Host API - Called from Dart to native platforms
 /// All methods throw PlatformException on error

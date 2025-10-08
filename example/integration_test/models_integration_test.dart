@@ -13,7 +13,7 @@ void main() {
     final Map<String, String> modelPaths = {};
 
     /// Load an asset model to the cache directory
-    Future<String> _loadAssetModel(String assetPath) async {
+    Future<String> loadAssetModel(String assetPath) async {
       final byteData = await rootBundle.load(assetPath);
       final directory = await getApplicationCacheDirectory();
       final fileName = assetPath.split('/').last;
@@ -44,7 +44,7 @@ void main() {
       };
 
       for (final entry in models.entries) {
-        modelPaths[entry.key] = await _loadAssetModel(entry.value);
+        modelPaths[entry.key] = await loadAssetModel(entry.value);
         print('📦 Loaded ${entry.key}: ${modelPaths[entry.key]}');
       }
     });
@@ -53,71 +53,92 @@ void main() {
       await manager.disposeAllModels();
     });
 
-    testWidgets('ExecutorchManager should initialize successfully',
-        (WidgetTester tester) async {
+    testWidgets('ExecutorchManager should initialize successfully', (
+      WidgetTester tester,
+    ) async {
       final isAvailable = await manager.isAvailable();
-      expect(isAvailable, true,
-          reason: 'ExecutorchManager should be available after initialization');
+      expect(
+        isAvailable,
+        true,
+        reason: 'ExecutorchManager should be available after initialization',
+      );
     });
 
-    testWidgets('Should load MobileNet V3 model successfully',
-        (WidgetTester tester) async {
+    testWidgets('Should load MobileNet V3 model successfully', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['mobilenet']!;
 
       // Load the model
       final model = await manager.loadModel(modelPath);
 
-      expect(model.modelId, isNotEmpty,
-          reason: 'Loaded model should have a valid ID');
+      expect(
+        model.modelId,
+        isNotEmpty,
+        reason: 'Loaded model should have a valid ID',
+      );
 
       // Cleanup
       await model.dispose();
     });
 
-    testWidgets('Should load YOLO11n model successfully',
-        (WidgetTester tester) async {
+    testWidgets('Should load YOLO11n model successfully', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['yolo11n']!;
 
       // Load the model
       final model = await manager.loadModel(modelPath);
 
-      expect(model.modelId, isNotEmpty,
-          reason: 'Loaded YOLO11n model should have a valid ID');
+      expect(
+        model.modelId,
+        isNotEmpty,
+        reason: 'Loaded YOLO11n model should have a valid ID',
+      );
 
       // Cleanup
       await model.dispose();
     });
 
-    testWidgets('Should load YOLOv5n model successfully',
-        (WidgetTester tester) async {
+    testWidgets('Should load YOLOv5n model successfully', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['yolov5n']!;
 
       // Load the model
       final model = await manager.loadModel(modelPath);
 
-      expect(model.modelId, isNotEmpty,
-          reason: 'Loaded YOLOv5n model should have a valid ID');
+      expect(
+        model.modelId,
+        isNotEmpty,
+        reason: 'Loaded YOLOv5n model should have a valid ID',
+      );
 
       // Cleanup
       await model.dispose();
     });
 
-    testWidgets('Should load YOLOv8n model successfully',
-        (WidgetTester tester) async {
+    testWidgets('Should load YOLOv8n model successfully', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['yolov8n']!;
 
       // Load the model
       final model = await manager.loadModel(modelPath);
 
-      expect(model.modelId, isNotEmpty,
-          reason: 'Loaded YOLOv8n model should have a valid ID');
+      expect(
+        model.modelId,
+        isNotEmpty,
+        reason: 'Loaded YOLOv8n model should have a valid ID',
+      );
 
       // Cleanup
       await model.dispose();
     });
 
-    testWidgets('Should run inference on MobileNet V3 model',
-        (WidgetTester tester) async {
+    testWidgets('Should run inference on MobileNet V3 model', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['mobilenet']!;
       final model = await manager.loadModel(modelPath);
 
@@ -132,19 +153,29 @@ void main() {
       // Run inference
       final result = await model.runInference(inputs: [inputTensor]);
 
-      expect(result.outputs, isNotNull,
-          reason: 'Inference should return output tensors');
-      expect(result.outputs!.isNotEmpty, true,
-          reason: 'Output tensors should not be empty');
-      expect(result.executionTimeMs, greaterThan(0),
-          reason: 'Execution time should be recorded');
+      expect(
+        result.outputs,
+        isNotNull,
+        reason: 'Inference should return output tensors',
+      );
+      expect(
+        result.outputs.isNotEmpty,
+        true,
+        reason: 'Output tensors should not be empty',
+      );
+      expect(
+        result.executionTimeMs,
+        greaterThan(0),
+        reason: 'Execution time should be recorded',
+      );
 
       // Cleanup
       await model.dispose();
     });
 
-    testWidgets('Should run inference on YOLO11n model',
-        (WidgetTester tester) async {
+    testWidgets('Should run inference on YOLO11n model', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['yolo11n']!;
       final model = await manager.loadModel(modelPath);
 
@@ -159,17 +190,24 @@ void main() {
       // Run inference
       final result = await model.runInference(inputs: [inputTensor]);
 
-      expect(result.outputs, isNotNull,
-          reason: 'Inference should return output tensors');
-      expect(result.executionTimeMs, greaterThan(0),
-          reason: 'Execution time should be recorded');
+      expect(
+        result.outputs,
+        isNotNull,
+        reason: 'Inference should return output tensors',
+      );
+      expect(
+        result.executionTimeMs,
+        greaterThan(0),
+        reason: 'Execution time should be recorded',
+      );
 
       // Cleanup
       await model.dispose();
     });
 
-    testWidgets('Should run inference on YOLOv5n model',
-        (WidgetTester tester) async {
+    testWidgets('Should run inference on YOLOv5n model', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['yolov5n']!;
       final model = await manager.loadModel(modelPath);
 
@@ -184,17 +222,24 @@ void main() {
       // Run inference
       final result = await model.runInference(inputs: [inputTensor]);
 
-      expect(result.outputs, isNotNull,
-          reason: 'Inference should return output tensors');
-      expect(result.executionTimeMs, greaterThan(0),
-          reason: 'Execution time should be recorded');
+      expect(
+        result.outputs,
+        isNotNull,
+        reason: 'Inference should return output tensors',
+      );
+      expect(
+        result.executionTimeMs,
+        greaterThan(0),
+        reason: 'Execution time should be recorded',
+      );
 
       // Cleanup
       await model.dispose();
     });
 
-    testWidgets('Should run inference on YOLOv8n model',
-        (WidgetTester tester) async {
+    testWidgets('Should run inference on YOLOv8n model', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['yolov8n']!;
       final model = await manager.loadModel(modelPath);
 
@@ -209,17 +254,24 @@ void main() {
       // Run inference
       final result = await model.runInference(inputs: [inputTensor]);
 
-      expect(result.outputs, isNotNull,
-          reason: 'Inference should return output tensors');
-      expect(result.executionTimeMs, greaterThan(0),
-          reason: 'Execution time should be recorded');
+      expect(
+        result.outputs,
+        isNotNull,
+        reason: 'Inference should return output tensors',
+      );
+      expect(
+        result.executionTimeMs,
+        greaterThan(0),
+        reason: 'Execution time should be recorded',
+      );
 
       // Cleanup
       await model.dispose();
     });
 
-    testWidgets('Should handle multiple models concurrently',
-        (WidgetTester tester) async {
+    testWidgets('Should handle multiple models concurrently', (
+      WidgetTester tester,
+    ) async {
       final mobilenetPath = modelPaths['mobilenet']!;
       final yoloPath = modelPaths['yolo11n']!;
 
@@ -229,40 +281,57 @@ void main() {
 
       // Verify both models are loaded
       final loadedModelIds = await manager.getLoadedModelIds();
-      expect(loadedModelIds.length, greaterThanOrEqualTo(2),
-          reason: 'Should have at least 2 models loaded');
-      expect(loadedModelIds.contains(mobilenet.modelId), true,
-          reason: 'MobileNet should be in loaded models');
-      expect(loadedModelIds.contains(yolo.modelId), true,
-          reason: 'YOLO should be in loaded models');
+      expect(
+        loadedModelIds.length,
+        greaterThanOrEqualTo(2),
+        reason: 'Should have at least 2 models loaded',
+      );
+      expect(
+        loadedModelIds.contains(mobilenet.modelId),
+        true,
+        reason: 'MobileNet should be in loaded models',
+      );
+      expect(
+        loadedModelIds.contains(yolo.modelId),
+        true,
+        reason: 'YOLO should be in loaded models',
+      );
 
       // Cleanup
       await mobilenet.dispose();
       await yolo.dispose();
     });
 
-    testWidgets('Should properly dispose models and free resources',
-        (WidgetTester tester) async {
+    testWidgets('Should properly dispose models and free resources', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['mobilenet']!;
       final model = await manager.loadModel(modelPath);
       final modelId = model.modelId;
 
       // Verify model is loaded
       var loadedIds = await manager.getLoadedModelIds();
-      expect(loadedIds.contains(modelId), true,
-          reason: 'Model should be in loaded models list');
+      expect(
+        loadedIds.contains(modelId),
+        true,
+        reason: 'Model should be in loaded models list',
+      );
 
       // Dispose the model
       await model.dispose();
 
       // Verify model is no longer loaded
       loadedIds = await manager.getLoadedModelIds();
-      expect(loadedIds.contains(modelId), false,
-          reason: 'Model should not be in loaded models list after disposal');
+      expect(
+        loadedIds.contains(modelId),
+        false,
+        reason: 'Model should not be in loaded models list after disposal',
+      );
     });
 
-    testWidgets('Should handle model reload correctly',
-        (WidgetTester tester) async {
+    testWidgets('Should handle model reload correctly', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['mobilenet']!;
 
       // Load model first time
@@ -277,16 +346,20 @@ void main() {
       final modelId2 = model2.modelId;
 
       // Model IDs should be different (new instance)
-      expect(modelId1 != modelId2, true,
-          reason: 'Reloaded model should have a new ID');
+      expect(
+        modelId1 != modelId2,
+        true,
+        reason: 'Reloaded model should have a new ID',
+      );
 
       // Cleanup
       await model2.dispose();
     });
 
     // Error handling tests
-    testWidgets('Should throw exception when loading non-existent model',
-        (WidgetTester tester) async {
+    testWidgets('Should throw exception when loading non-existent model', (
+      WidgetTester tester,
+    ) async {
       final invalidPath = '/non/existent/model.pte';
 
       // Attempt to load non-existent model
@@ -297,32 +370,35 @@ void main() {
       );
     });
 
-    testWidgets('Should throw exception when running inference on disposed model',
-        (WidgetTester tester) async {
-      final modelPath = modelPaths['mobilenet']!;
-      final model = await manager.loadModel(modelPath);
+    testWidgets(
+      'Should throw exception when running inference on disposed model',
+      (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
 
-      // Dispose the model
-      await model.dispose();
+        // Dispose the model
+        await model.dispose();
 
-      // Create dummy input
-      final inputData = List.filled(1 * 3 * 224 * 224, 0.5);
-      final inputTensor = manager.createTensorData(
-        shape: [1, 3, 224, 224],
-        dataType: TensorType.float32,
-        data: inputData,
-      );
+        // Create dummy input
+        final inputData = List.filled(1 * 3 * 224 * 224, 0.5);
+        final inputTensor = manager.createTensorData(
+          shape: [1, 3, 224, 224],
+          dataType: TensorType.float32,
+          data: inputData,
+        );
 
-      // Attempt to run inference on disposed model
-      expect(
-        () async => await model.runInference(inputs: [inputTensor]),
-        throwsA(isA<ExecuTorchException>()),
-        reason: 'Running inference on disposed model should throw exception',
-      );
-    });
+        // Attempt to run inference on disposed model
+        expect(
+          () async => await model.runInference(inputs: [inputTensor]),
+          throwsA(isA<ExecuTorchException>()),
+          reason: 'Running inference on disposed model should throw exception',
+        );
+      },
+    );
 
-    testWidgets('Should handle invalid model file format',
-        (WidgetTester tester) async {
+    testWidgets('Should handle invalid model file format', (
+      WidgetTester tester,
+    ) async {
       // Create a temporary invalid file
       final directory = await getApplicationCacheDirectory();
       final invalidFile = File('${directory.path}/invalid_model.pte');
@@ -339,8 +415,9 @@ void main() {
       await invalidFile.delete();
     });
 
-    testWidgets('Should handle multiple dispose calls gracefully',
-        (WidgetTester tester) async {
+    testWidgets('Should handle multiple dispose calls gracefully', (
+      WidgetTester tester,
+    ) async {
       final modelPath = modelPaths['mobilenet']!;
       final model = await manager.loadModel(modelPath);
 
@@ -350,13 +427,18 @@ void main() {
       // Second dispose should not throw (idempotent)
       await model.dispose();
 
-      expect(model.isDisposed, true,
-          reason: 'Model should be marked as disposed');
+      expect(
+        model.isDisposed,
+        true,
+        reason: 'Model should be marked as disposed',
+      );
     });
 
     // Tensor shape and data type tests
     group('Tensor Shape Tests', () {
-      testWidgets('Should handle 1D tensor shapes', (WidgetTester tester) async {
+      testWidgets('Should handle 1D tensor shapes', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -377,14 +459,19 @@ void main() {
           );
 
           // Verify tensor was created with correct shape
-          expect(inputTensor.shape, equals(shape),
-              reason: 'Tensor shape should match input shape');
+          expect(
+            inputTensor.shape,
+            equals(shape),
+            reason: 'Tensor shape should match input shape',
+          );
         }
 
         await model.dispose();
       });
 
-      testWidgets('Should handle 2D tensor shapes', (WidgetTester tester) async {
+      testWidgets('Should handle 2D tensor shapes', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -405,14 +492,19 @@ void main() {
             data: inputData,
           );
 
-          expect(inputTensor.shape, equals(shape),
-              reason: 'Tensor shape should match input shape');
+          expect(
+            inputTensor.shape,
+            equals(shape),
+            reason: 'Tensor shape should match input shape',
+          );
         }
 
         await model.dispose();
       });
 
-      testWidgets('Should handle 3D tensor shapes', (WidgetTester tester) async {
+      testWidgets('Should handle 3D tensor shapes', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -432,14 +524,19 @@ void main() {
             data: inputData,
           );
 
-          expect(inputTensor.shape, equals(shape),
-              reason: 'Tensor shape should match input shape');
+          expect(
+            inputTensor.shape,
+            equals(shape),
+            reason: 'Tensor shape should match input shape',
+          );
         }
 
         await model.dispose();
       });
 
-      testWidgets('Should handle 4D tensor shapes', (WidgetTester tester) async {
+      testWidgets('Should handle 4D tensor shapes', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -460,14 +557,19 @@ void main() {
             data: inputData,
           );
 
-          expect(inputTensor.shape, equals(shape),
-              reason: 'Tensor shape should match input shape');
+          expect(
+            inputTensor.shape,
+            equals(shape),
+            reason: 'Tensor shape should match input shape',
+          );
         }
 
         await model.dispose();
       });
 
-      testWidgets('Should handle float32 data type', (WidgetTester tester) async {
+      testWidgets('Should handle float32 data type', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -480,8 +582,11 @@ void main() {
           data: inputData,
         );
 
-        expect(inputTensor.dataType, equals(TensorType.float32),
-            reason: 'Tensor data type should be float32');
+        expect(
+          inputTensor.dataType,
+          equals(TensorType.float32),
+          reason: 'Tensor data type should be float32',
+        );
 
         await model.dispose();
       });
@@ -499,8 +604,11 @@ void main() {
           data: inputData,
         );
 
-        expect(inputTensor.dataType, equals(TensorType.int32),
-            reason: 'Tensor data type should be int32');
+        expect(
+          inputTensor.dataType,
+          equals(TensorType.int32),
+          reason: 'Tensor data type should be int32',
+        );
 
         await model.dispose();
       });
@@ -518,8 +626,11 @@ void main() {
           data: inputData,
         );
 
-        expect(inputTensor.dataType, equals(TensorType.uint8),
-            reason: 'Tensor data type should be uint8');
+        expect(
+          inputTensor.dataType,
+          equals(TensorType.uint8),
+          reason: 'Tensor data type should be uint8',
+        );
 
         await model.dispose();
       });
@@ -537,13 +648,18 @@ void main() {
           data: inputData,
         );
 
-        expect(inputTensor.dataType, equals(TensorType.int8),
-            reason: 'Tensor data type should be int8');
+        expect(
+          inputTensor.dataType,
+          equals(TensorType.int8),
+          reason: 'Tensor data type should be int8',
+        );
 
         await model.dispose();
       });
 
-      testWidgets('Should handle single element tensor', (WidgetTester tester) async {
+      testWidgets('Should handle single element tensor', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -555,13 +671,18 @@ void main() {
           data: inputData,
         );
 
-        expect(inputTensor.shape, equals(shape),
-            reason: 'Single element tensor should have correct shape');
+        expect(
+          inputTensor.shape,
+          equals(shape),
+          reason: 'Single element tensor should have correct shape',
+        );
 
         await model.dispose();
       });
 
-      testWidgets('Should handle large tensor shapes', (WidgetTester tester) async {
+      testWidgets('Should handle large tensor shapes', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -575,13 +696,18 @@ void main() {
           data: inputData,
         );
 
-        expect(inputTensor.shape, equals(shape),
-            reason: 'Large tensor should have correct shape');
+        expect(
+          inputTensor.shape,
+          equals(shape),
+          reason: 'Large tensor should have correct shape',
+        );
 
         await model.dispose();
       });
 
-      testWidgets('Should handle different batch sizes', (WidgetTester tester) async {
+      testWidgets('Should handle different batch sizes', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -598,15 +724,19 @@ void main() {
             data: inputData,
           );
 
-          expect(inputTensor.shape[0], equals(batchSize),
-              reason: 'Batch size should be preserved in tensor shape');
+          expect(
+            inputTensor.shape[0],
+            equals(batchSize),
+            reason: 'Batch size should be preserved in tensor shape',
+          );
         }
 
         await model.dispose();
       });
 
-      testWidgets('Should verify tensor data size matches shape',
-          (WidgetTester tester) async {
+      testWidgets('Should verify tensor data size matches shape', (
+        WidgetTester tester,
+      ) async {
         final modelPath = modelPaths['mobilenet']!;
         final model = await manager.loadModel(modelPath);
 
@@ -620,11 +750,14 @@ void main() {
         );
 
         // Verify the tensor shape produces the correct total size
-        final actualSize = inputTensor.shape
-            .whereType<int>()
-            .reduce((a, b) => a * b);
-        expect(actualSize, equals(expectedSize),
-            reason: 'Tensor data size should match product of shape dimensions');
+        final actualSize = inputTensor.shape.whereType<int>().reduce(
+          (a, b) => a * b,
+        );
+        expect(
+          actualSize,
+          equals(expectedSize),
+          reason: 'Tensor data size should match product of shape dimensions',
+        );
 
         await model.dispose();
       });

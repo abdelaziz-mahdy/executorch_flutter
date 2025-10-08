@@ -1,5 +1,5 @@
 /// Test image utilities for ExecuTorch model testing
-library test_images;
+library;
 
 import 'dart:io';
 import 'package:flutter/services.dart';
@@ -19,13 +19,7 @@ class TestImages {
   static const String street = 'assets/images/street.jpg';
 
   /// All available test images
-  static const List<String> all = [
-    cat,
-    dog,
-    car,
-    person,
-    street,
-  ];
+  static const List<String> all = [cat, dog, car, person, street];
 
   /// Get a temporary file from an asset image
   /// This is useful for APIs that require a File path instead of asset bytes

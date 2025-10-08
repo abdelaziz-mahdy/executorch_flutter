@@ -130,7 +130,8 @@ class ExecutorchManager {
   ///
   /// Returns a list of all ExecuTorchModel instances that are currently loaded
   /// and available for inference.
-  List<ExecuTorchModel> getLoadedModels() => List.unmodifiable(_loadedModels.values);
+  List<ExecuTorchModel> getLoadedModels() =>
+      List.unmodifiable(_loadedModels.values);
 
   /// Get the IDs of all loaded models
   ///
@@ -267,21 +268,26 @@ class ExecutorchManager {
   }
 
   /// Utility method to convert numeric data to bytes
-  static Uint8List _convertNumericDataToBytes(List<num> data, TensorType dataType) {
+  static Uint8List _convertNumericDataToBytes(
+      List<num> data, TensorType dataType) {
     switch (dataType) {
       case TensorType.float32:
-        final float32List = Float32List.fromList(data.map((e) => e.toDouble()).toList());
+        final float32List =
+            Float32List.fromList(data.map((e) => e.toDouble()).toList());
         return float32List.buffer.asUint8List();
 
       case TensorType.int32:
-        final int32List = Int32List.fromList(data.map((e) => e.toInt()).toList());
+        final int32List =
+            Int32List.fromList(data.map((e) => e.toInt()).toList());
         return int32List.buffer.asUint8List();
 
       case TensorType.int8:
-        return Uint8List.fromList(data.map((e) => e.toInt().clamp(-128, 127) + 128).toList());
+        return Uint8List.fromList(
+            data.map((e) => e.toInt().clamp(-128, 127) + 128).toList());
 
       case TensorType.uint8:
-        return Uint8List.fromList(data.map((e) => e.toInt().clamp(0, 255)).toList());
+        return Uint8List.fromList(
+            data.map((e) => e.toInt().clamp(0, 255)).toList());
     }
   }
 
@@ -336,7 +342,8 @@ class TensorUtils {
     final depth = data.length;
     final height = depth > 0 ? data[0].length : 0;
     final width = height > 0 ? data[0][0].length : 0;
-    final flatData = data.expand((plane) => plane.expand((row) => row)).toList();
+    final flatData =
+        data.expand((plane) => plane.expand((row) => row)).toList();
 
     return ExecutorchManager.instance.createTensorData(
       shape: [depth, height, width],
@@ -356,8 +363,8 @@ class TensorUtils {
     final height = depth > 0 ? data[0][0].length : 0;
     final width = height > 0 ? data[0][0][0].length : 0;
     final flatData = data
-        .expand((batchItem) => batchItem
-            .expand((plane) => plane.expand((row) => row)))
+        .expand((batchItem) =>
+            batchItem.expand((plane) => plane.expand((row) => row)))
         .toList();
 
     return ExecutorchManager.instance.createTensorData(
@@ -389,9 +396,9 @@ class TensorUtils {
   }
 
   /// Calculate the total number of elements in a tensor shape
-  static int calculateElementCount(List<int> shape) => shape.fold(1, (total, dim) => total * dim.abs());
+  static int calculateElementCount(List<int> shape) =>
+      shape.fold(1, (total, dim) => total * dim.abs());
 
   /// Format tensor shape as a human-readable string
   static String formatShape(List<int> shape) => '[${shape.join(', ')}]';
 }
-

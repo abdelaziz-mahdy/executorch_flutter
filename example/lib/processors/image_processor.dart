@@ -350,8 +350,8 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
         // Apply mean subtraction and standard deviation for red channel
         if (config.meanSubtraction.isNotEmpty &&
             config.standardDeviation.isNotEmpty &&
-            config.meanSubtraction.length > 0 &&
-            config.standardDeviation.length > 0) {
+            config.meanSubtraction.isNotEmpty &&
+            config.standardDeviation.isNotEmpty) {
           value =
               (value - config.meanSubtraction[0]) / config.standardDeviation[0];
         }
@@ -430,7 +430,7 @@ class ImageNetPostprocessor
     if (output.dataType != TensorType.float32) return false;
 
     // Check if shape represents logits/probabilities
-    final shape = output.shape?.where((dim) => dim != null).toList() ?? [];
+    final shape = output.shape.where((dim) => dim != null).toList() ?? [];
     if (shape.isEmpty) return false;
 
     // Should have reasonable number of outputs (at least 100 classes, max 100k)

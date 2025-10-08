@@ -62,7 +62,9 @@ class OpenCVYoloPreprocessor {
     debugPrint(
       '📊 OpenCV YOLO Tensor shape: [1, 3, ${config.targetHeight}, ${config.targetWidth}]',
     );
-    debugPrint('📊 OpenCV async processed ${floats.length} floats, range [0, 1]');
+    debugPrint(
+      '📊 OpenCV async processed ${floats.length} floats, range [0, 1]',
+    );
 
     return [
       TensorData(
@@ -85,11 +87,10 @@ class OpenCVYoloPreprocessor {
     final newHeight = (image.rows * scale).round();
 
     // Resize image maintaining aspect ratio
-    final resized = await cv.resizeAsync(
-      image,
-      (newWidth, newHeight),
-      interpolation: cv.INTER_LINEAR,
-    );
+    final resized = await cv.resizeAsync(image, (
+      newWidth,
+      newHeight,
+    ), interpolation: cv.INTER_LINEAR);
 
     // Create target mat with gray padding (114, 114, 114)
     final target = cv.Mat.create(

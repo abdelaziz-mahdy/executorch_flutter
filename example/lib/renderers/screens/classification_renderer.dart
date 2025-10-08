@@ -14,10 +14,7 @@ class ClassificationRenderer
 
   @override
   Widget build(BuildContext context) {
-    return Image.file(
-      input,
-      fit: BoxFit.contain,
-    );
+    return Image.file(input, fit: BoxFit.contain);
     // Note: Classification results are typically shown in a separate section
     // (like a list of top predictions), not overlaid on the image
   }
