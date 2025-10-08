@@ -76,11 +76,6 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
 
     // Model management
     private var modelManager: ExecutorchModelManager!
-    private var lifecycleManager: ExecutorchLifecycleManager!
-
-    // Background queue for model operations
-    private let modelQueue = DispatchQueue(label: "com.zcreations.executorch_flutter.models",
-                                         qos: .default)
 
     // ExecuTorch logging
     private var logSink: ExecutorchLogSink?
@@ -104,22 +99,13 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
     public override init() {
         super.init()
 
-        // Initialize the lifecycle manager
-        self.lifecycleManager = ExecutorchLifecycleManager.shared
-
         // Initialize the model manager
-        self.modelManager = ExecutorchModelManager(queue: modelQueue)
-
-        // Register model manager with lifecycle manager
-        self.lifecycleManager.registerModelManager(modelManager)
+        self.modelManager = ExecutorchModelManager()
 
         print("[\(Self.TAG)] ExecutorchFlutterPlugin initialized")
     }
 
     deinit {
-        // Unregister from lifecycle manager
-        lifecycleManager.unregisterModelManager(modelManager)
-
         // Note: Models are cleaned up when the model manager is deallocated
         print("[\(Self.TAG)] ExecutorchFlutterPlugin deinitialized")
     }

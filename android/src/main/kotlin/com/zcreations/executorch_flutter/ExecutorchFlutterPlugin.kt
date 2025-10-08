@@ -8,15 +8,15 @@
  * Features:
  * - Type-safe method channel communication via Pigeon
  * - ExecuTorch AAR 0.7.0+ integration with Module.load() API pattern
- * - Thread-safe model management with lifecycle handling
- * - Proper memory management and resource cleanup
+ * - Thread-safe model management
+ * - User-controlled resource management
  * - Performance monitoring and error handling
  *
  * Architecture:
  * - ExecutorchFlutterPlugin: Main plugin entry point and Pigeon interface implementation
  * - ExecutorchModelManager: Core model lifecycle and inference management
- * - Background thread execution for non-blocking model operations
- * - Proper Android context and lifecycle awareness
+ * - Coroutines for non-blocking model operations
+ * - User-controlled model lifecycle
  */
 package com.zcreations.executorch_flutter
 
@@ -43,7 +43,6 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
 
     // Model management
     private lateinit var modelManager: ExecutorchModelManager
-    private lateinit var lifecycleManager: ExecutorchLifecycleManager
 
     // Coroutine scope for async operations
     private val pluginScope = CoroutineScope(
@@ -54,15 +53,8 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
 
-        // Initialize lifecycle manager
-        val application = context.applicationContext as android.app.Application
-        lifecycleManager = ExecutorchLifecycleManager.getInstance(application)
-
         // Initialize the model manager
-        modelManager = ExecutorchModelManager(context, pluginScope)
-
-        // Register model manager with lifecycle manager
-        lifecycleManager.registerModelManager("main", modelManager)
+        modelManager = ExecutorchModelManager(context)
 
         // Set up Pigeon-generated method channel
         ExecutorchHostApi.setUp(flutterPluginBinding.binaryMessenger, this)
@@ -71,9 +63,6 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
-        // Unregister from lifecycle manager
-        lifecycleManager.unregisterModelManager("main")
-
         // Clean up resources
         pluginScope.cancel()
 
@@ -81,7 +70,7 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
         ExecutorchHostApi.setUp(binding.binaryMessenger, null)
 
         // Dispose all models
-        runBlocking {
+        runBlocking(Dispatchers.IO) {
             modelManager.disposeAllModels()
         }
 
@@ -102,7 +91,6 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
                 val errorResult = ModelLoadResult(
                     modelId = "",
                     state = ModelState.ERROR,
-                    metadata = null,
                     errorMessage = "Failed to load model: ${e.message}"
                 )
                 callback(Result.success(errorResult))

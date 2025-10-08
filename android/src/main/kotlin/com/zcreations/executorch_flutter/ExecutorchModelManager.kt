@@ -41,8 +41,7 @@ import com.zcreations.executorch_flutter.generated.*
  * Manages ExecuTorch model lifecycle and inference operations
  */
 class ExecutorchModelManager(
-    private val context: Context,
-    private val scope: CoroutineScope
+    private val context: Context
 ) {
     companion object {
         private const val TAG = "ExecutorchModelManager"
@@ -123,7 +122,6 @@ class ExecutorchModelManager(
             ModelLoadResult(
                 modelId = "",
                 state = ModelState.ERROR,
-                metadata = null,
                 errorMessage = "Failed to load model: ${e.message}"
             )
         }
@@ -202,6 +200,17 @@ class ExecutorchModelManager(
      */
     fun getLoadedModels(): List<String?> {
         return loadedModels.keys.toList()
+    }
+
+    /**
+     * Dispose all loaded models
+     */
+    suspend fun disposeAllModels() = withContext(Dispatchers.IO) {
+        val modelIds = loadedModels.keys.toList()
+        modelIds.forEach { modelId ->
+            disposeModel(modelId)
+        }
+        Log.d(TAG, "Disposed all models (${modelIds.size} total)")
     }
 
     /**

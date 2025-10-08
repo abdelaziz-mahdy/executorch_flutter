@@ -7,9 +7,9 @@
  *
  * Features:
  * - ExecuTorch Module integration with proper error handling
- * - Thread-safe model management with actor-based concurrency
+ * - Thread-safe model management
  * - Efficient tensor data conversion between Flutter and ExecuTorch formats
- * - Memory management with ARC compliance and proper resource cleanup
+ * - User-controlled memory management and resource cleanup
  * - Performance monitoring and comprehensive error handling
  * - Model metadata extraction and validation
  * - Memory mapping support for large models
@@ -17,8 +17,8 @@
  * Integration Pattern:
  * - Uses ExecuTorchModule for model loading and inference
  * - ExecuTorchTensor/ExecuTorchValue API for input/output data handling
- * - Proper iOS memory mapping and lifecycle management
- * - Background queue execution for non-blocking operations
+ * - Async/await for non-blocking operations
+ * - User-controlled model lifecycle
  *
  * Requirements:
  * - iOS 13.0+ for ExecuTorch framework support
@@ -57,8 +57,6 @@ actor ExecutorchModelManager {
     private var modelStates: [String: ModelState] = [:]
     private var modelCounter: Int = 0
 
-    private let queue: DispatchQueue
-
     /**
      * Represents a loaded ExecuTorch model with metadata
      */
@@ -68,8 +66,7 @@ actor ExecutorchModelManager {
         let loadTime: TimeInterval = Date().timeIntervalSince1970
     }
 
-    init(queue: DispatchQueue) {
-        self.queue = queue
+    init() {
         print("[\(Self.TAG)] ExecutorchModelManager initialized")
     }
 
