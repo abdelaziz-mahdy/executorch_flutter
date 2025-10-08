@@ -171,10 +171,13 @@ This project is actively developed following these principles:
 
 ## Contributing
 
-1. Review the project constitution in `.specify/memory/constitution.md`
-2. Check current development status in `CLAUDE.md`
-3. Follow the specification-driven development process
-4. Ensure all tests pass before submitting PRs
+Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for:
+
+- Development setup and prerequisites
+- Automated Pigeon code generation script
+- Integration testing workflow
+- Code standards and PR process
+- Platform-specific guidelines
 
 ## Architecture
 
@@ -229,10 +232,6 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
 - Live camera integration example
 - Additional preprocessing/postprocessing options for different model types
 - Platform expansion and more
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](https://github.com/abdelaziz-mahdy/executorch_flutter/blob/main/CONTRIBUTING.md) before submitting PRs.
 
 ---
 

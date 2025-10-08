@@ -88,12 +88,7 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
                 callback(Result.success(result))
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load model: $filePath", e)
-                val errorResult = ModelLoadResult(
-                    modelId = "",
-                    state = ModelState.ERROR,
-                    errorMessage = "Failed to load model: ${e.message}"
-                )
-                callback(Result.success(errorResult))
+                callback(Result.failure(Exception("Failed to load model: ${e.message}", e)))
             }
         }
     }
@@ -114,12 +109,9 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
                 // Override execution time with measured value if not set
                 val finalResult = if (result.executionTimeMs == 0.0) {
                     InferenceResult(
-                        status = result.status,
-                        executionTimeMs = executionTime,
-                        requestId = result.requestId,
                         outputs = result.outputs,
-                        errorMessage = result.errorMessage,
-                        metadata = result.metadata
+                        executionTimeMs = executionTime,
+                        requestId = result.requestId
                     )
                 } else {
                     result
@@ -127,15 +119,7 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
                 callback(Result.success(finalResult))
             } catch (e: Exception) {
                 Log.e(TAG, "Inference failed for model: ${request.modelId}", e)
-                val errorResult = InferenceResult(
-                    status = InferenceStatus.ERROR,
-                    executionTimeMs = 0.0,
-                    requestId = request.requestId,
-                    outputs = null,
-                    errorMessage = "Inference failed: ${e.message}",
-                    metadata = null
-                )
-                callback(Result.success(errorResult))
+                callback(Result.failure(Exception("Inference failed: ${e.message}", e)))
             }
         }
     }
@@ -148,6 +132,7 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
                 Log.d(TAG, "Model disposed successfully: $modelId")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to dispose model: $modelId", e)
+                throw Exception("Failed to dispose model $modelId: ${e.message}", e)
             }
         }
     }

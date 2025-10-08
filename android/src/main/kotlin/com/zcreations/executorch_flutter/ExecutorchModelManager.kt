@@ -48,9 +48,8 @@ class ExecutorchModelManager(
         private const val MODEL_ID_PREFIX = "executorch_model_"
     }
 
-    // Model storage and state management
+    // Model storage
     private val loadedModels = ConcurrentHashMap<String, LoadedModel>()
-    private val modelStates = ConcurrentHashMap<String, ModelState>()
     private val modelCounter = java.util.concurrent.atomic.AtomicInteger(0)
 
     /**
@@ -64,80 +63,62 @@ class ExecutorchModelManager(
 
     /**
      * Load an ExecuTorch model from a file path
+     * Throws ModelLoadException on failure
      */
     suspend fun loadModel(filePath: String): ModelLoadResult = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Loading ExecuTorch model from: $filePath")
+
+        // Validate file exists and is readable
+        val file = File(filePath)
+        if (!file.exists()) {
+            throw ModelLoadException("Model file not found: $filePath")
+        }
+
+        if (!file.canRead()) {
+            throw ModelLoadException("Model file not readable: $filePath")
+        }
+
+        // Generate unique model ID
+        val modelId = generateModelId()
+
         try {
-            Log.d(TAG, "Loading ExecuTorch model from: $filePath")
+            // Load model using ExecuTorch Module.load() API
+            Log.d(TAG, "Loading ExecuTorch module with Module.load()")
+            val module = Module.load(filePath)
 
-            // Validate file exists and is readable
-            val file = File(filePath)
-            if (!file.exists()) {
-                throw ModelLoadException("Model file not found: $filePath")
-            }
+            // Store loaded model
+            val loadedModel = LoadedModel(
+                module = module,
+                filePath = filePath
+            )
 
-            if (!file.canRead()) {
-                throw ModelLoadException("Model file not readable: $filePath")
-            }
+            loadedModels[modelId] = loadedModel
 
-            // Generate unique model ID
-            val modelId = generateModelId()
+            Log.d(TAG, "Successfully loaded model: $modelId from $filePath")
 
-            // Update state to loading
-            modelStates[modelId] = ModelState.LOADING
-
-            try {
-                // Load model using ExecuTorch Module.load() API
-                Log.d(TAG, "Loading ExecuTorch module with Module.load()")
-                val module = Module.load(filePath)
-
-                // Store loaded model
-                val loadedModel = LoadedModel(
-                    module = module,
-                    filePath = filePath
-                )
-
-                loadedModels[modelId] = loadedModel
-                modelStates[modelId] = ModelState.READY
-
-                Log.d(TAG, "Successfully loaded model: $modelId from $filePath")
-
-                ModelLoadResult(
-                    modelId = modelId,
-                    state = ModelState.READY,
-                    errorMessage = null
-                )
-
-            } catch (e: Exception) {
-                // Clean up on failure
-                modelStates[modelId] = ModelState.ERROR
-                loadedModels.remove(modelId)
-
-                Log.e(TAG, "Failed to load ExecuTorch module: $filePath", e)
-                throw ModelLoadException("ExecuTorch module loading failed: ${e.message}", e)
-            }
+            ModelLoadResult(modelId = modelId)
 
         } catch (e: Exception) {
-            Log.e(TAG, "Model loading failed: $filePath", e)
+            // Clean up on failure
+            loadedModels.remove(modelId)
 
-            ModelLoadResult(
-                modelId = "",
-                state = ModelState.ERROR,
-                errorMessage = "Failed to load model: ${e.message}"
-            )
+            Log.e(TAG, "Failed to load ExecuTorch module: $filePath", e)
+            throw ModelLoadException("ExecuTorch module loading failed: ${e.message}", e)
         }
     }
 
     /**
      * Run inference on a loaded model
+     * Throws InferenceException on failure
      */
     suspend fun runInference(request: InferenceRequest): InferenceResult = withContext(Dispatchers.Default) {
+        val modelId = request.modelId
+        val loadedModel = loadedModels[modelId]
+            ?: throw ModelNotFoundException("Model not found: $modelId")
+
+        Log.d(TAG, "Running inference on model: $modelId")
+
         try {
-            val modelId = request.modelId
-            val loadedModel = loadedModels[modelId]
-                ?: throw ModelNotFoundException("Model not found: $modelId")
-
-            Log.d(TAG, "Running inference on model: $modelId")
-
             // Filter out null inputs
             val validInputs = request.inputs.filterNotNull()
 
@@ -158,41 +139,27 @@ class ExecutorchModelManager(
             Log.d(TAG, "Inference completed in ${executionTimeMs}ms for model: $modelId")
 
             InferenceResult(
-                status = InferenceStatus.SUCCESS,
-                executionTimeMs = executionTimeMs,
-                requestId = request.requestId,
                 outputs = outputTensors,
-                errorMessage = null,
-                metadata = createInferenceMetadata(loadedModel) as Map<String?, Any?>?
+                executionTimeMs = executionTimeMs,
+                requestId = request.requestId
             )
 
         } catch (e: Exception) {
             Log.e(TAG, "Inference failed for model: ${request.modelId}", e)
-
-            InferenceResult(
-                status = InferenceStatus.ERROR,
-                executionTimeMs = 0.0,
-                requestId = request.requestId,
-                outputs = null,
-                errorMessage = "Inference failed: ${e.message}",
-                metadata = null
-            )
+            throw InferenceException("Inference failed: ${e.message}", e)
         }
     }
 
     /**
      * Dispose a loaded model and free its resources
+     * Throws ModelNotFoundException if model not found
      */
     suspend fun disposeModel(modelId: String) = withContext(Dispatchers.IO) {
         val loadedModel = loadedModels.remove(modelId)
-        modelStates.remove(modelId)
+            ?: throw ModelNotFoundException("Model not found: $modelId")
 
-        if (loadedModel != null) {
-            // Note: ExecuTorch Module cleanup handled by garbage collection
-            Log.d(TAG, "Disposed model: $modelId")
-        } else {
-            Log.w(TAG, "Attempted to dispose unknown model: $modelId")
-        }
+        // Note: ExecuTorch Module cleanup handled by garbage collection
+        Log.d(TAG, "Disposed model: $modelId")
     }
 
     /**
@@ -307,12 +274,4 @@ class ExecutorchModelManager(
         }
     }
 
-    private fun createInferenceMetadata(loadedModel: LoadedModel): Map<String, Any> {
-        return mapOf(
-            "model_id" to loadedModel.hashCode().toString(),
-            "backend" to "executorch_android",
-            "timestamp" to System.currentTimeMillis(),
-            "model_file" to loadedModel.filePath
-        )
-    }
 }

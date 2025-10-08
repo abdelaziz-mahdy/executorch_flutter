@@ -35,18 +35,19 @@ class ExecuTorchModel {
   /// Returns the loaded model instance or throws an exception if loading fails.
   static Future<ExecuTorchModel> loadFromFile(String filePath) async {
     final hostApi = ExecutorchHostApi();
-    final loadResult = await hostApi.loadModel(filePath);
 
-    if (loadResult.state != ModelState.ready) {
+    try {
+      final loadResult = await hostApi.loadModel(filePath);
+
+      return ExecuTorchModel._(
+        modelId: loadResult.modelId,
+        hostApi: hostApi,
+      );
+    } catch (e) {
       throw ExecuTorchException(
-        'Failed to load model from $filePath: ${loadResult.errorMessage ?? "Unknown error"}',
+        'Failed to load model from $filePath: $e',
       );
     }
-
-    return ExecuTorchModel._(
-      modelId: loadResult.modelId,
-      hostApi: hostApi,
-    );
   }
 
   /// Run inference on this model with the provided inputs
@@ -75,16 +76,15 @@ class ExecuTorchModel {
       requestId: requestId,
     );
 
-    final result = await hostApi.runInference(request);
-
-    if (result.status != InferenceStatus.success) {
+    try {
+      final result = await hostApi.runInference(request);
+      return result;
+    } catch (e) {
       throw ExecuTorchInferenceException(
-        'Inference failed: ${result.errorMessage ?? "Unknown error"}',
-        result.errorMessage,
+        'Inference failed: $e',
+        e.toString(),
       );
     }
-
-    return result;
   }
 
   /// Dispose this model and free its resources

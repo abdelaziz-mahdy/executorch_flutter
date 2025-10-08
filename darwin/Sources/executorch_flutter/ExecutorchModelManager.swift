@@ -52,9 +52,8 @@ actor ExecutorchModelManager {
     internal static let TAG = "ExecutorchModelManager"
     private static let MODEL_ID_PREFIX = "executorch_model_"
 
-    // Model storage and state management
+    // Model storage
     private var loadedModels: [String: LoadedModel] = [:]
-    private var modelStates: [String: ModelState] = [:]
     private var modelCounter: Int = 0
 
     /**
@@ -78,6 +77,7 @@ actor ExecutorchModelManager {
 
     /**
      * Load an ExecuTorch model from a file path
+     * Throws ExecutorchError on failure
      */
     func loadModel(filePath: String) async throws -> ModelLoadResult {
         print("[\(Self.TAG)] Loading ExecuTorch model from: \(filePath)")
@@ -93,9 +93,6 @@ actor ExecutorchModelManager {
 
         // Generate unique model ID
         let modelId = generateModelId()
-
-        // Update state to loading
-        modelStates[modelId] = ModelState.loading
 
         do {
             // Load model using ExecuTorch Module API
@@ -118,19 +115,13 @@ actor ExecutorchModelManager {
             )
 
             loadedModels[modelId] = loadedModel
-            modelStates[modelId] = ModelState.ready
 
             print("[\(Self.TAG)] Successfully loaded model: \(modelId) from \(filePath)")
 
-            return ModelLoadResult(
-                modelId: modelId,
-                state: ModelState.ready,
-                errorMessage: nil
-            )
+            return ModelLoadResult(modelId: modelId)
 
         } catch {
             // Clean up on failure
-            modelStates[modelId] = ModelState.error
             loadedModels.removeValue(forKey: modelId)
 
             print("[\(Self.TAG)] Failed to load ExecuTorch module: \(filePath), error: \(error)")
@@ -140,6 +131,7 @@ actor ExecutorchModelManager {
 
     /**
      * Run inference on a loaded model
+     * Throws ExecutorchError on failure
      */
     func runInference(request: InferenceRequest) async throws -> InferenceResult {
         guard let loadedModel = loadedModels[request.modelId] else {
@@ -167,12 +159,9 @@ actor ExecutorchModelManager {
             print("[\(Self.TAG)] Inference completed in \(executionTimeMs)ms for model: \(request.modelId)")
 
             return InferenceResult(
-                status: InferenceStatus.success,
-                executionTimeMs: executionTimeMs,
-                requestId: request.requestId,
                 outputs: outputTensors,
-                errorMessage: nil,
-                metadata: nil
+                executionTimeMs: executionTimeMs,
+                requestId: request.requestId
             )
 
         } catch {
@@ -183,17 +172,17 @@ actor ExecutorchModelManager {
 
     /**
      * Dispose a loaded model and free its resources
+     * Throws ExecutorchError.modelNotFound if model not found
      */
     func disposeModel(modelId: String) async throws {
         let loadedModel = loadedModels.removeValue(forKey: modelId)
-        modelStates.removeValue(forKey: modelId)
 
-        if loadedModel != nil {
-            // Note: ExecuTorchModule cleanup handled by ARC
-            print("[\(Self.TAG)] Disposed model: \(modelId)")
-        } else {
-            print("[\(Self.TAG)] Attempted to dispose unknown model: \(modelId)")
+        guard loadedModel != nil else {
+            throw ExecutorchError.modelNotFound(modelId)
         }
+
+        // Note: ExecuTorchModule cleanup handled by ARC
+        print("[\(Self.TAG)] Disposed model: \(modelId)")
     }
 
     /**

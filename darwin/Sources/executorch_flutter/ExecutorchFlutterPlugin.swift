@@ -120,14 +120,22 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
                 let result = try await self.modelManager.loadModel(filePath: filePath)
                 print("[\(Self.TAG)] Model loaded successfully: \(result.modelId)")
                 completion(.success(result))
+            } catch let executorchError as ExecutorchError {
+                print("[\(Self.TAG)] Failed to load model: \(filePath), error: \(executorchError)")
+                let pigeonError = PigeonError(
+                    code: executorchError.errorCode,
+                    message: executorchError.localizedDescription,
+                    details: nil
+                )
+                completion(.failure(pigeonError))
             } catch {
                 print("[\(Self.TAG)] Failed to load model: \(filePath), error: \(error)")
-                let errorResult = ModelLoadResult(
-                    modelId: "",
-                    state: ModelState.error,
-                    errorMessage: "Failed to load model: \(error.localizedDescription)"
+                let pigeonError = PigeonError(
+                    code: "UNKNOWN_ERROR",
+                    message: error.localizedDescription,
+                    details: nil
                 )
-                completion(.success(errorResult))
+                completion(.failure(pigeonError))
             }
         }
     }
@@ -149,26 +157,30 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
                 let finalResult: InferenceResult
                 if result.executionTimeMs == 0.0 {
                     finalResult = InferenceResult(
-                        status: result.status,
-                        executionTimeMs: executionTime,
-                        requestId: result.requestId,
                         outputs: result.outputs,
-                        errorMessage: result.errorMessage
+                        executionTimeMs: executionTime,
+                        requestId: result.requestId
                     )
                 } else {
                     finalResult = result
                 }
                 completion(.success(finalResult))
+            } catch let executorchError as ExecutorchError {
+                print("[\(Self.TAG)] Inference failed for model: \(request.modelId), error: \(executorchError)")
+                let pigeonError = PigeonError(
+                    code: executorchError.errorCode,
+                    message: executorchError.localizedDescription,
+                    details: nil
+                )
+                completion(.failure(pigeonError))
             } catch {
                 print("[\(Self.TAG)] Inference failed for model: \(request.modelId), error: \(error)")
-                let errorResult = InferenceResult(
-                    status: InferenceStatus.error,
-                    executionTimeMs: 0.0,
-                    requestId: request.requestId,
-                    outputs: nil,
-                    errorMessage: "Inference failed: \(error.localizedDescription)"
+                let pigeonError = PigeonError(
+                    code: "UNKNOWN_ERROR",
+                    message: error.localizedDescription,
+                    details: nil
                 )
-                completion(.success(errorResult))
+                completion(.failure(pigeonError))
             }
         }
     }
@@ -278,6 +290,19 @@ enum ExecutorchError: Error, LocalizedError {
     case fileNotFound(String)
     case invalidModelFormat(String)
     case memoryError(String)
+
+    var errorCode: String {
+        switch self {
+        case .modelNotFound: return "MODEL_NOT_FOUND"
+        case .modelLoadFailed: return "MODEL_LOAD_FAILED"
+        case .inferenceFailed: return "INFERENCE_FAILED"
+        case .validationError: return "VALIDATION_ERROR"
+        case .internalError: return "INTERNAL_ERROR"
+        case .fileNotFound: return "FILE_NOT_FOUND"
+        case .invalidModelFormat: return "INVALID_MODEL_FORMAT"
+        case .memoryError: return "MEMORY_ERROR"
+        }
+    }
 
     var errorDescription: String? {
         switch self {

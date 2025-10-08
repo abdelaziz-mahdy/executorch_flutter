@@ -12,9 +12,9 @@ import 'package:pigeon/pigeon.dart';
   kotlinOptions: KotlinOptions(
     package: 'com.zcreations.executorch_flutter.generated',
   ),
-  swiftOut: 'ios/Classes/Generated/ExecutorchApi.swift',
+  swiftOut: 'darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift',
   swiftOptions: SwiftOptions(
-    includeErrorClass: false,
+    includeErrorClass: true,
   ),
   dartPackageName: 'executorch_flutter',
 ))
@@ -27,22 +27,10 @@ enum TensorType {
   uint8,
 }
 
-/// Model loading and execution states
-enum ModelState {
-  loading,
-  ready,
-  error,
-  disposed,
-}
-
-
-/// Inference execution status
-enum InferenceStatus {
-  success,
-  error,
-  timeout,
-  cancelled,
-}
+// API uses exceptions for error handling instead of status enums
+// On success: methods return result
+// On failure: methods throw PlatformException with error details
+// Dart wrappers catch and convert to typed ExecuTorch exceptions
 
 // Metadata removed - ExecuTorch doesn't provide runtime introspection
 // Models should document their input/output specs externally
@@ -80,70 +68,58 @@ class InferenceRequest {
 }
 
 /// Inference execution result
+/// On success: contains outputs and timing info
+/// On failure: platform throws exception
 class InferenceResult {
   InferenceResult({
-    required this.status,
+    required this.outputs,
     required this.executionTimeMs,
     this.requestId,
-    this.outputs,
-    this.errorMessage,
-    this.metadata,
   });
 
-  InferenceStatus status;
+  List<TensorData?> outputs; // Pigeon requires nullable generics
   double executionTimeMs;
   String? requestId;
-  List<TensorData?>? outputs; // Pigeon requires nullable generics
-  String? errorMessage;
-  Map<String?, Object?>? metadata; // Pigeon requires nullable generics
 }
 
 /// Model loading result
+/// On success: returns unique model ID
+/// On failure: platform throws exception
 class ModelLoadResult {
   ModelLoadResult({
     required this.modelId,
-    required this.state,
-    this.errorMessage,
   });
 
   String modelId;
-  ModelState state;
-  String? errorMessage;
 }
 
 
 /// Host API - Called from Dart to native platforms
-/// Simplified to core operations: load, inference, dispose
+/// All methods throw PlatformException on error
 @HostApi()
 abstract class ExecutorchHostApi {
   /// Load a model from the specified file path
   /// Returns a unique model ID for subsequent operations
+  /// Throws: PlatformException if file not found or model loading fails
   @async
   ModelLoadResult loadModel(String filePath);
 
   /// Run inference on a loaded model
-  /// Returns inference results or error information
+  /// Returns inference results with outputs and timing
+  /// Throws: PlatformException if model not found or inference fails
   @async
   InferenceResult runInference(InferenceRequest request);
 
   /// Dispose a loaded model and free its resources
   /// User has full control over memory management
+  /// Throws: PlatformException if model not found
   void disposeModel(String modelId);
 
   /// Get list of currently loaded model IDs
+  /// Returns empty list if no models loaded
   List<String?> getLoadedModels();
 
   /// Enable or disable ExecuTorch debug logging
   /// Only works in debug builds
   void setDebugLogging(bool enabled);
-}
-
-/// Flutter API - Called from native platforms to Dart (optional)
-@FlutterApi()
-abstract class ExecutorchFlutterApi {
-  /// Notify Dart about model loading progress (optional)
-  void onModelLoadProgress(String modelId, double progress);
-
-  /// Notify Dart about inference completion (optional)
-  void onInferenceComplete(String requestId, InferenceResult result);
 }

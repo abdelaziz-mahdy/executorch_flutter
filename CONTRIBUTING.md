@@ -156,12 +156,68 @@ docs(readme): update installation instructions
 If modifying the platform API:
 
 1. **Update** `pigeons/executorch_api.dart`
-2. **Regenerate** platform code:
+2. **Regenerate** platform code using the automated script:
    ```bash
    ./scripts/generate_pigeon.sh
    ```
 3. **Update** all platform implementations (Android, iOS/macOS)
-4. **Verify** changes work on all platforms using the example app
+4. **Test** changes using integration tests (see below)
+
+#### Pigeon Generation Script
+
+The automated script handles all code generation and post-processing:
+
+**What it does**:
+1. Runs `dart pub global run pigeon --input pigeons/executorch_api.dart`
+2. Automatically makes Swift types `public` (required for SPM)
+3. Makes `PigeonError` class and initializer public for proper Swift error handling
+4. Creates symlinks for iOS and macOS to shared darwin code
+
+**Generated files**:
+- `lib/src/generated/executorch_api.dart` (Dart)
+- `android/src/main/kotlin/com/zcreations/executorch_flutter/generated/ExecutorchApi.kt` (Kotlin)
+- `darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift` (Shared Darwin)
+- `ios/Classes/Generated/ExecutorchApi.swift` → symlink to darwin
+- `macos/Classes/Generated/ExecutorchApi.swift` → symlink to darwin
+
+**Important**: Generated files ARE committed to version control.
+
+### Integration Testing
+
+After making changes, run the comprehensive integration test suite:
+
+```bash
+cd example
+./scripts/run_integration_tests.sh           # Run tests on all platforms
+./scripts/run_integration_tests.sh macos     # Run tests only on macOS
+./scripts/run_integration_tests.sh ios       # Run tests only on iOS
+./scripts/run_integration_tests.sh android   # Run tests only on Android
+```
+
+**What it does**:
+1. Checks for required model files (MobileNet, YOLO variants)
+2. Runs integration tests on available platforms:
+   - **macOS**: Tests on macOS device
+   - **iOS**: Tests on physical device (arm64 only, no simulator)
+   - **Android**: Tests on emulator or physical device (auto-launches emulator if needed)
+3. Falls back to building if no device/simulator is available
+4. Provides detailed summary of test results
+
+**Prerequisites**:
+- Models must be in `example/assets/models/`:
+  - `mobilenet_v3_small_xnnpack.pte`
+  - `yolo11n_xnnpack.pte`
+  - `yolov5n_xnnpack.pte`
+  - `yolov8n_xnnpack.pte`
+- Run model setup if needed: `cd python && python3 setup_models.py`
+
+**Script Features**:
+- ✅ Multi-platform support (macOS, iOS, Android)
+- ✅ Auto-detects and launches Android emulator
+- ✅ Validates model files before testing
+- ✅ Fallback to build if no device available
+- ✅ Color-coded output with test summary
+- ✅ Exit codes for CI/CD integration
 
 ## Submitting Changes
 

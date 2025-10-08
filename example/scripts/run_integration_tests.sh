@@ -3,6 +3,12 @@
 # Integration Test Runner for ExecuTorch Flutter Example App
 # This script runs integration tests on all supported platforms
 # Falls back to building if devices/simulators are not accessible
+#
+# Usage:
+#   ./run_integration_tests.sh           # Run tests on all platforms
+#   ./run_integration_tests.sh macos     # Run tests only on macOS
+#   ./run_integration_tests.sh ios       # Run tests only on iOS
+#   ./run_integration_tests.sh android   # Run tests only on Android
 
 set -e  # Exit on error
 
@@ -11,8 +17,27 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
+# Parse platform argument
+TARGET_PLATFORM="${1:-all}"
+
+# Validate platform argument
+if [[ ! "$TARGET_PLATFORM" =~ ^(all|macos|ios|android)$ ]]; then
+    echo "Error: Invalid platform '$TARGET_PLATFORM'"
+    echo "Usage: $0 [all|macos|ios|android]"
+    echo ""
+    echo "Examples:"
+    echo "  $0          # Run tests on all platforms (default)"
+    echo "  $0 macos    # Run tests only on macOS"
+    echo "  $0 ios      # Run tests only on iOS"
+    echo "  $0 android  # Run tests only on Android"
+    exit 1
+fi
+
 echo "🧪 ExecuTorch Flutter Integration Tests"
 echo "========================================"
+if [ "$TARGET_PLATFORM" != "all" ]; then
+    echo "Target Platform: $TARGET_PLATFORM"
+fi
 echo ""
 
 # Colors for output
@@ -96,119 +121,134 @@ echo "✅ All required models found"
 echo ""
 
 # Test on macOS (if on macOS)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "📍 Detected macOS platform"
+if [[ "$TARGET_PLATFORM" == "all" || "$TARGET_PLATFORM" == "macos" ]]; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "📍 Detected macOS platform"
 
-    # Check if macOS device is available
-    if flutter devices | grep -q "macos"; then
-        if run_tests "macOS" "-d macos"; then
-            MACOS_RESULT="✓ PASSED (tests)"
+        # Check if macOS device is available
+        if flutter devices | grep -q "macos"; then
+            if run_tests "macOS" "-d macos"; then
+                MACOS_RESULT="✓ PASSED (tests)"
+            else
+                MACOS_RESULT="✗ FAILED (tests)"
+            fi
         else
-            MACOS_RESULT="✗ FAILED (tests)"
+            # No macOS device, fallback to build
+            echo "${YELLOW}⚠️  macOS device not available, building instead...${NC}"
+            if build_platform "macOS" "flutter build macos --debug"; then
+                MACOS_RESULT="✓ BUILD OK"
+            else
+                MACOS_RESULT="✗ BUILD FAILED"
+            fi
         fi
     else
-        # No macOS device, fallback to build
-        echo "${YELLOW}⚠️  macOS device not available, building instead...${NC}"
-        if build_platform "macOS" "flutter build macos --debug"; then
-            MACOS_RESULT="✓ BUILD OK"
-        else
-            MACOS_RESULT="✗ BUILD FAILED"
-        fi
+        echo "⚠️  Skipping macOS (not on macOS)"
+        MACOS_RESULT="⊘ SKIPPED (not macOS)"
     fi
 else
-    echo "⚠️  Skipping macOS (not on macOS)"
-    MACOS_RESULT="⊘ SKIPPED (not macOS)"
+    MACOS_RESULT="⊘ SKIPPED (not selected)"
 fi
 
 # Test on iOS (physical device only - simulator not supported)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo ""
-    echo "📍 Checking for iOS devices..."
+if [[ "$TARGET_PLATFORM" == "all" || "$TARGET_PLATFORM" == "ios" ]]; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo ""
+        echo "📍 Checking for iOS devices..."
 
-    IOS_DEVICE=""
-    # Check if any iOS physical device is connected
-    if flutter devices | grep -q "ios" && ! flutter devices | grep "ios" | grep -q "simulator"; then
-        IOS_DEVICE=$(flutter devices | grep "ios" | grep -v "simulator" | head -1 | awk '{print $5}' | tr -d '•')
-        echo "Found iOS physical device: $IOS_DEVICE"
+        IOS_DEVICE=""
+        # Check if any iOS physical device is connected
+        if flutter devices | grep -q "ios" && ! flutter devices | grep "ios" | grep -q "simulator"; then
+            # Extract device ID from flutter devices output (format: "name • device_id • platform • details")
+            IOS_DEVICE=$(flutter devices | grep "ios" | grep -v "simulator" | head -1 | sed -E 's/.*• ([^ ]+) *• ios.*/\1/')
+            echo "Found iOS physical device: $IOS_DEVICE"
 
-        if run_tests "iOS" "-d $IOS_DEVICE"; then
-            IOS_RESULT="✓ PASSED (tests)"
+            if run_tests "iOS" "-d $IOS_DEVICE"; then
+                IOS_RESULT="✓ PASSED (tests)"
+            else
+                IOS_RESULT="✗ FAILED (tests)"
+            fi
         else
-            IOS_RESULT="✗ FAILED (tests)"
+            # No physical device, fallback to build
+            echo "${YELLOW}⚠️  No iOS physical device connected${NC}"
+            echo "${YELLOW}⚠️  iOS Simulator is NOT supported (ExecuTorch requires arm64)${NC}"
+            echo "${BLUE}📦 Building iOS app for device instead...${NC}"
+
+            if build_platform "iOS" "flutter build ios --release --no-codesign"; then
+                IOS_RESULT="✓ BUILD OK (arm64)"
+            else
+                IOS_RESULT="✗ BUILD FAILED"
+            fi
         fi
     else
-        # No physical device, fallback to build
-        echo "${YELLOW}⚠️  No iOS physical device connected${NC}"
-        echo "${YELLOW}⚠️  iOS Simulator is NOT supported (ExecuTorch requires arm64)${NC}"
-        echo "${BLUE}📦 Building iOS app for device instead...${NC}"
-
-        if build_platform "iOS" "flutter build ios --release --no-codesign"; then
-            IOS_RESULT="✓ BUILD OK (arm64)"
-        else
-            IOS_RESULT="✗ BUILD FAILED"
-        fi
+        echo "⚠️  Skipping iOS (not on macOS)"
+        IOS_RESULT="⊘ SKIPPED (not macOS)"
     fi
 else
-    echo "⚠️  Skipping iOS (not on macOS)"
-    IOS_RESULT="⊘ SKIPPED (not macOS)"
+    IOS_RESULT="⊘ SKIPPED (not selected)"
 fi
 
 # Test on Android (use emulator or device)
-echo ""
-echo "📍 Checking for Android devices..."
+if [[ "$TARGET_PLATFORM" == "all" || "$TARGET_PLATFORM" == "android" ]]; then
+    echo ""
+    echo "📍 Checking for Android devices..."
 
-ANDROID_DEVICE=""
-if flutter devices | grep -q "android"; then
-    ANDROID_DEVICE=$(flutter devices | grep "android" | head -1 | awk '{print $5}' | tr -d '•')
-    echo "Found Android device: $ANDROID_DEVICE"
-else
-    echo "No Android device found, checking for available emulators..."
+    ANDROID_DEVICE=""
+    if flutter devices | grep -q "android"; then
+        # Extract device ID from flutter devices output (format: "name • device_id • platform • details")
+        ANDROID_DEVICE=$(flutter devices | grep "android" | head -1 | sed -E 's/.*• ([^ ]+) *• android.*/\1/')
+        echo "Found Android device: $ANDROID_DEVICE"
+    else
+        echo "No Android device found, checking for available emulators..."
 
-    # Get list of Android emulators
-    ANDROID_EMULATOR=$(flutter emulators | grep "android" | head -1 | awk '{print $1}')
+        # Get list of Android emulators
+        ANDROID_EMULATOR=$(flutter emulators | grep "android" | head -1 | awk '{print $1}')
 
-    if [ -n "$ANDROID_EMULATOR" ]; then
-        echo "Found Android emulator: $ANDROID_EMULATOR"
-        echo "Launching Android emulator..."
-        flutter emulators --launch "$ANDROID_EMULATOR" > /dev/null 2>&1 &
+        if [ -n "$ANDROID_EMULATOR" ]; then
+            echo "Found Android emulator: $ANDROID_EMULATOR"
+            echo "Launching Android emulator..."
+            flutter emulators --launch "$ANDROID_EMULATOR" > /dev/null 2>&1 &
 
-        # Wait for emulator to boot (max 2 minutes)
-        echo "Waiting for emulator to boot..."
-        COUNTER=0
-        while [ $COUNTER -lt 120 ]; do
-            sleep 2
-            if flutter devices | grep -q "android"; then
-                ANDROID_DEVICE=$(flutter devices | grep "android" | head -1 | awk '{print $5}' | tr -d '•')
-                echo "${GREEN}✓ Android emulator ready: $ANDROID_DEVICE${NC}"
-                break
+            # Wait for emulator to boot (max 2 minutes)
+            echo "Waiting for emulator to boot..."
+            COUNTER=0
+            while [ $COUNTER -lt 120 ]; do
+                sleep 2
+                if flutter devices | grep -q "android"; then
+                    # Extract device ID from flutter devices output (format: "name • device_id • platform • details")
+                    ANDROID_DEVICE=$(flutter devices | grep "android" | head -1 | sed -E 's/.*• ([^ ]+) *• android.*/\1/')
+                    echo "${GREEN}✓ Android emulator ready: $ANDROID_DEVICE${NC}"
+                    break
+                fi
+                COUNTER=$((COUNTER + 2))
+            done
+
+            if [ -z "$ANDROID_DEVICE" ]; then
+                echo "${RED}✗ Timeout waiting for Android emulator to boot${NC}"
             fi
-            COUNTER=$((COUNTER + 2))
-        done
+        else
+            echo "${YELLOW}⚠️  No Android emulator found${NC}"
+        fi
+    fi
 
-        if [ -z "$ANDROID_DEVICE" ]; then
-            echo "${RED}✗ Timeout waiting for Android emulator to boot${NC}"
+    if [ -n "$ANDROID_DEVICE" ]; then
+        if run_tests "Android" "-d $ANDROID_DEVICE"; then
+            ANDROID_RESULT="✓ PASSED (tests)"
+        else
+            ANDROID_RESULT="✗ FAILED (tests)"
         fi
     else
-        echo "${YELLOW}⚠️  No Android emulator found${NC}"
-    fi
-fi
+        # No device/emulator, fallback to build
+        echo "${YELLOW}⚠️  No Android device/emulator available${NC}"
+        echo "${BLUE}📦 Building Android APK instead...${NC}"
 
-if [ -n "$ANDROID_DEVICE" ]; then
-    if run_tests "Android" "-d $ANDROID_DEVICE"; then
-        ANDROID_RESULT="✓ PASSED (tests)"
-    else
-        ANDROID_RESULT="✗ FAILED (tests)"
+        if build_platform "Android" "flutter build apk --debug"; then
+            ANDROID_RESULT="✓ BUILD OK (APK)"
+        else
+            ANDROID_RESULT="✗ BUILD FAILED"
+        fi
     fi
 else
-    # No device/emulator, fallback to build
-    echo "${YELLOW}⚠️  No Android device/emulator available${NC}"
-    echo "${BLUE}📦 Building Android APK instead...${NC}"
-
-    if build_platform "Android" "flutter build apk --debug"; then
-        ANDROID_RESULT="✓ BUILD OK (APK)"
-    else
-        ANDROID_RESULT="✗ BUILD FAILED"
-    fi
+    ANDROID_RESULT="⊘ SKIPPED (not selected)"
 fi
 
 # Print summary

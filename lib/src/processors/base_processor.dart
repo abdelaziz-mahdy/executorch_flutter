@@ -252,14 +252,8 @@ abstract class ExecuTorchProcessor<T, R> {
         );
       }
 
-      // Run inference
+      // Run inference (throws exception on failure)
       final inferenceResult = await model.runInference(inputs: inputs);
-
-      if (inferenceResult.status != InferenceStatus.success) {
-        throw ExecuTorchInferenceException(
-          inferenceResult.errorMessage ?? 'Inference failed with unknown error'
-        );
-      }
 
       // Validate outputs - filter out null values
       final validOutputs = inferenceResult.outputs?.where((output) => output != null).cast<TensorData>().toList() ?? [];

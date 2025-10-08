@@ -237,19 +237,80 @@ ExecuTorchException              // Base exception
 
 ## Pigeon Code Generation
 
-### Workflow
+### Automated Script
+
+The package includes an automated Pigeon generation script that handles all code generation and post-processing:
+
+```bash
+./scripts/generate_pigeon.sh
+```
+
+**What it does**:
+1. Runs `dart pub global run pigeon --input pigeons/executorch_api.dart`
+2. Automatically makes Swift types `public` (required for SPM)
+3. Makes `PigeonError` class and initializer public
+4. Creates symlinks for iOS and macOS to shared darwin code
+
+**Script Features**:
+- ✅ Generates code for all platforms (Dart, Kotlin, Swift)
+- ✅ Auto-fixes Swift visibility for SPM compatibility
+- ✅ Keeps PigeonError for proper Swift error handling
+- ✅ Creates platform symlinks automatically
+- ✅ Color-coded output for easy debugging
+
+### Manual Workflow (if needed)
 
 1. **Edit interface**: Modify `pigeons/executorch_api.dart`
-2. **Generate code**: Run `./scripts/generate_pigeon.sh` or `flutter pub run pigeon --input pigeons/executorch_api.dart`
+2. **Generate code**: Run `./scripts/generate_pigeon.sh` (recommended) or `dart pub global run pigeon --input pigeons/executorch_api.dart`
 3. **Implement native**: Add implementations in Kotlin/Swift
-4. **Test**: Run example app to verify
+4. **Test**: Run integration tests (see below)
+
+## Integration Testing
+
+### Automated Test Script
+
+The example app includes an automated integration test runner that tests all platforms:
+
+```bash
+cd example
+./scripts/run_integration_tests.sh           # Run tests on all platforms (default)
+./scripts/run_integration_tests.sh macos     # Run tests only on macOS
+./scripts/run_integration_tests.sh ios       # Run tests only on iOS
+./scripts/run_integration_tests.sh android   # Run tests only on Android
+```
+
+**What it does**:
+1. Checks for required model files (MobileNet, YOLO variants)
+2. Runs integration tests on available platforms:
+   - **macOS**: Tests on macOS device
+   - **iOS**: Tests on physical device (arm64 only, no simulator)
+   - **Android**: Tests on emulator or physical device (auto-launches emulator if needed)
+3. Falls back to building if no device/simulator is available
+4. Provides detailed summary of test results
+
+**Script Features**:
+- ✅ Multi-platform support (macOS, iOS, Android)
+- ✅ Auto-detects and launches Android emulator
+- ✅ Validates model files before testing
+- ✅ Fallback to build if no device available
+- ✅ Color-coded output with test summary
+- ✅ Exit codes for CI/CD integration
+
+**Prerequisites**:
+- Models must be in `example/assets/models/`:
+  - `mobilenet_v3_small_xnnpack.pte`
+  - `yolo11n_xnnpack.pte`
+  - `yolov5n_xnnpack.pte`
+  - `yolov8n_xnnpack.pte`
+- Run model setup: `cd python && python3 setup_models.py`
 
 ### Generated Files
 
 - `lib/src/generated/executorch_api.dart` (Dart)
-- `android/src/main/kotlin/com/zcreations/executorch_flutter/Generated/ExecutorchApi.kt` (Kotlin)
-- `ios/Classes/Generated/ExecutorchApi.swift` (iOS Swift)
-- `macos/Classes/Generated/ExecutorchApi.swift` (macOS Swift)
+- `android/src/main/kotlin/com/zcreations/executorch_flutter/generated/ExecutorchApi.kt` (Kotlin)
+- `darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift` (Shared Darwin)
+- `ios/Classes/Generated/ExecutorchApi.swift` → symlink to darwin
+- `macos/Classes/Generated/ExecutorchApi.swift` → symlink to darwin
 
 **Important**: Generated files ARE committed to version control.
 

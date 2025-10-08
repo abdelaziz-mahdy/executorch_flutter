@@ -132,8 +132,6 @@ void main() {
       // Run inference
       final result = await model.runInference(inputs: [inputTensor]);
 
-      expect(result.status, InferenceStatus.success,
-          reason: 'MobileNet inference should succeed');
       expect(result.outputs, isNotNull,
           reason: 'Inference should return output tensors');
       expect(result.outputs!.isNotEmpty, true,
@@ -161,8 +159,6 @@ void main() {
       // Run inference
       final result = await model.runInference(inputs: [inputTensor]);
 
-      expect(result.status, InferenceStatus.success,
-          reason: 'YOLO11n inference should succeed');
       expect(result.outputs, isNotNull,
           reason: 'Inference should return output tensors');
       expect(result.executionTimeMs, greaterThan(0),
@@ -188,8 +184,6 @@ void main() {
       // Run inference
       final result = await model.runInference(inputs: [inputTensor]);
 
-      expect(result.status, InferenceStatus.success,
-          reason: 'YOLOv5n inference should succeed');
       expect(result.outputs, isNotNull,
           reason: 'Inference should return output tensors');
       expect(result.executionTimeMs, greaterThan(0),
@@ -215,8 +209,6 @@ void main() {
       // Run inference
       final result = await model.runInference(inputs: [inputTensor]);
 
-      expect(result.status, InferenceStatus.success,
-          reason: 'YOLOv8n inference should succeed');
       expect(result.outputs, isNotNull,
           reason: 'Inference should return output tensors');
       expect(result.executionTimeMs, greaterThan(0),
@@ -290,6 +282,352 @@ void main() {
 
       // Cleanup
       await model2.dispose();
+    });
+
+    // Error handling tests
+    testWidgets('Should throw exception when loading non-existent model',
+        (WidgetTester tester) async {
+      final invalidPath = '/non/existent/model.pte';
+
+      // Attempt to load non-existent model
+      expect(
+        () async => await manager.loadModel(invalidPath),
+        throwsA(isA<ExecuTorchException>()),
+        reason: 'Loading non-existent model should throw exception',
+      );
+    });
+
+    testWidgets('Should throw exception when running inference on disposed model',
+        (WidgetTester tester) async {
+      final modelPath = modelPaths['mobilenet']!;
+      final model = await manager.loadModel(modelPath);
+
+      // Dispose the model
+      await model.dispose();
+
+      // Create dummy input
+      final inputData = List.filled(1 * 3 * 224 * 224, 0.5);
+      final inputTensor = manager.createTensorData(
+        shape: [1, 3, 224, 224],
+        dataType: TensorType.float32,
+        data: inputData,
+      );
+
+      // Attempt to run inference on disposed model
+      expect(
+        () async => await model.runInference(inputs: [inputTensor]),
+        throwsA(isA<ExecuTorchException>()),
+        reason: 'Running inference on disposed model should throw exception',
+      );
+    });
+
+    testWidgets('Should handle invalid model file format',
+        (WidgetTester tester) async {
+      // Create a temporary invalid file
+      final directory = await getApplicationCacheDirectory();
+      final invalidFile = File('${directory.path}/invalid_model.pte');
+      await invalidFile.writeAsString('This is not a valid model file');
+
+      // Attempt to load invalid model
+      expect(
+        () async => await manager.loadModel(invalidFile.path),
+        throwsA(isA<ExecuTorchException>()),
+        reason: 'Loading invalid model file should throw exception',
+      );
+
+      // Cleanup
+      await invalidFile.delete();
+    });
+
+    testWidgets('Should handle multiple dispose calls gracefully',
+        (WidgetTester tester) async {
+      final modelPath = modelPaths['mobilenet']!;
+      final model = await manager.loadModel(modelPath);
+
+      // First dispose should succeed
+      await model.dispose();
+
+      // Second dispose should not throw (idempotent)
+      await model.dispose();
+
+      expect(model.isDisposed, true,
+          reason: 'Model should be marked as disposed');
+    });
+
+    // Tensor shape and data type tests
+    group('Tensor Shape Tests', () {
+      testWidgets('Should handle 1D tensor shapes', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        // Test various 1D shapes
+        final shapes = [
+          [10],
+          [100],
+          [1000],
+        ];
+
+        for (final shape in shapes) {
+          final size = shape.reduce((a, b) => a * b);
+          final inputData = List.filled(size, 0.5);
+          final inputTensor = manager.createTensorData(
+            shape: shape,
+            dataType: TensorType.float32,
+            data: inputData,
+          );
+
+          // Verify tensor was created with correct shape
+          expect(inputTensor.shape, equals(shape),
+              reason: 'Tensor shape should match input shape');
+        }
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle 2D tensor shapes', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        // Test various 2D shapes
+        final shapes = [
+          [1, 10],
+          [10, 10],
+          [100, 100],
+          [224, 224],
+        ];
+
+        for (final shape in shapes) {
+          final size = shape.reduce((a, b) => a * b);
+          final inputData = List.filled(size, 0.5);
+          final inputTensor = manager.createTensorData(
+            shape: shape,
+            dataType: TensorType.float32,
+            data: inputData,
+          );
+
+          expect(inputTensor.shape, equals(shape),
+              reason: 'Tensor shape should match input shape');
+        }
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle 3D tensor shapes', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        // Test various 3D shapes
+        final shapes = [
+          [1, 3, 10],
+          [3, 224, 224],
+          [4, 128, 128],
+        ];
+
+        for (final shape in shapes) {
+          final size = shape.reduce((a, b) => a * b);
+          final inputData = List.filled(size, 0.5);
+          final inputTensor = manager.createTensorData(
+            shape: shape,
+            dataType: TensorType.float32,
+            data: inputData,
+          );
+
+          expect(inputTensor.shape, equals(shape),
+              reason: 'Tensor shape should match input shape');
+        }
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle 4D tensor shapes', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        // Test various 4D shapes (typical image tensor shapes)
+        final shapes = [
+          [1, 3, 224, 224], // MobileNet input
+          [1, 3, 640, 640], // YOLO input
+          [2, 3, 224, 224], // Batch size 2
+          [1, 1, 128, 128], // Grayscale
+        ];
+
+        for (final shape in shapes) {
+          final size = shape.reduce((a, b) => a * b);
+          final inputData = List.filled(size, 0.5);
+          final inputTensor = manager.createTensorData(
+            shape: shape,
+            dataType: TensorType.float32,
+            data: inputData,
+          );
+
+          expect(inputTensor.shape, equals(shape),
+              reason: 'Tensor shape should match input shape');
+        }
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle float32 data type', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        final shape = [1, 3, 224, 224];
+        final size = shape.reduce((a, b) => a * b);
+        final inputData = List.filled(size, 0.5);
+        final inputTensor = manager.createTensorData(
+          shape: shape,
+          dataType: TensorType.float32,
+          data: inputData,
+        );
+
+        expect(inputTensor.dataType, equals(TensorType.float32),
+            reason: 'Tensor data type should be float32');
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle int32 data type', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        final shape = [1, 10];
+        final size = shape.reduce((a, b) => a * b);
+        final inputData = List.filled(size, 42);
+        final inputTensor = manager.createTensorData(
+          shape: shape,
+          dataType: TensorType.int32,
+          data: inputData,
+        );
+
+        expect(inputTensor.dataType, equals(TensorType.int32),
+            reason: 'Tensor data type should be int32');
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle uint8 data type', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        final shape = [1, 224, 224];
+        final size = shape.reduce((a, b) => a * b);
+        final inputData = List.filled(size, 128);
+        final inputTensor = manager.createTensorData(
+          shape: shape,
+          dataType: TensorType.uint8,
+          data: inputData,
+        );
+
+        expect(inputTensor.dataType, equals(TensorType.uint8),
+            reason: 'Tensor data type should be uint8');
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle int8 data type', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        final shape = [1, 100];
+        final size = shape.reduce((a, b) => a * b);
+        final inputData = List.filled(size, -50);
+        final inputTensor = manager.createTensorData(
+          shape: shape,
+          dataType: TensorType.int8,
+          data: inputData,
+        );
+
+        expect(inputTensor.dataType, equals(TensorType.int8),
+            reason: 'Tensor data type should be int8');
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle single element tensor', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        final shape = [1];
+        final inputData = [1.0];
+        final inputTensor = manager.createTensorData(
+          shape: shape,
+          dataType: TensorType.float32,
+          data: inputData,
+        );
+
+        expect(inputTensor.shape, equals(shape),
+            reason: 'Single element tensor should have correct shape');
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle large tensor shapes', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        // Test with a reasonably large tensor (not too large to cause OOM)
+        final shape = [1, 3, 512, 512];
+        final size = shape.reduce((a, b) => a * b);
+        final inputData = List.filled(size, 0.5);
+        final inputTensor = manager.createTensorData(
+          shape: shape,
+          dataType: TensorType.float32,
+          data: inputData,
+        );
+
+        expect(inputTensor.shape, equals(shape),
+            reason: 'Large tensor should have correct shape');
+
+        await model.dispose();
+      });
+
+      testWidgets('Should handle different batch sizes', (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        // Test various batch sizes
+        final batchSizes = [1, 2, 4];
+
+        for (final batchSize in batchSizes) {
+          final shape = [batchSize, 3, 224, 224];
+          final size = shape.reduce((a, b) => a * b);
+          final inputData = List.filled(size, 0.5);
+          final inputTensor = manager.createTensorData(
+            shape: shape,
+            dataType: TensorType.float32,
+            data: inputData,
+          );
+
+          expect(inputTensor.shape[0], equals(batchSize),
+              reason: 'Batch size should be preserved in tensor shape');
+        }
+
+        await model.dispose();
+      });
+
+      testWidgets('Should verify tensor data size matches shape',
+          (WidgetTester tester) async {
+        final modelPath = modelPaths['mobilenet']!;
+        final model = await manager.loadModel(modelPath);
+
+        final shape = [2, 3, 4, 5];
+        final expectedSize = shape.reduce((a, b) => a * b); // 120
+        final inputData = List.filled(expectedSize, 0.5);
+        final inputTensor = manager.createTensorData(
+          shape: shape,
+          dataType: TensorType.float32,
+          data: inputData,
+        );
+
+        // Verify the tensor shape produces the correct total size
+        final actualSize = inputTensor.shape
+            .whereType<int>()
+            .reduce((a, b) => a * b);
+        expect(actualSize, equals(expectedSize),
+            reason: 'Tensor data size should match product of shape dimensions');
+
+        await model.dispose();
+      });
     });
   });
 }

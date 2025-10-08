@@ -95,19 +95,4 @@ class ExecuTorchErrorMapper {
     return ExecuTorchPlatformException(platformError, details);
   }
 
-  /// Create standardized error from ModelLoadResult
-  static ExecuTorchException? fromModelLoadResult(ModelLoadResult result) {
-    if (result.state == ModelState.error && result.errorMessage != null) {
-      return mapPlatformError(result.errorMessage!);
-    }
-    return null;
-  }
-
-  /// Create standardized error from InferenceResult
-  static ExecuTorchException? fromInferenceResult(InferenceResult result) {
-    if (result.status == InferenceStatus.error && result.errorMessage != null) {
-      return mapPlatformError(result.errorMessage!);
-    }
-    return null;
-  }
 }
