@@ -23,6 +23,7 @@ class ImageLibCameraConverter implements CameraImageConverter {
     if (Platform.isAndroid) {
       convertedImage = _convertYUV420ToImage(cameraImage);
     } else {
+      // iOS and macOS both use BGRA8888
       convertedImage = _convertBGRA8888ToImage(cameraImage);
     }
 
@@ -103,6 +104,7 @@ class OpenCVCameraConverter implements CameraImageConverter {
     if (Platform.isAndroid) {
       mat = await _convertYUV420ToMat(cameraImage);
     } else {
+      // iOS and macOS both use BGRA8888
       mat = await _convertBGRA8888ToMat(cameraImage);
     }
 
