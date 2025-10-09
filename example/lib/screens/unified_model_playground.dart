@@ -52,13 +52,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   void initState() {
     super.initState();
     _loadAvailableModels();
-    _initializeCameraController();
-  }
-
-  void _initializeCameraController() {
-    // Get camera controller from service locator
-    _cameraController = getIt<CameraController>();
-    debugPrint('✅ Camera controller obtained from GetIt');
+    // Camera controller will be initialized when camera mode is turned on
   }
 
   Future<void> _toggleCameraMode() async {
@@ -69,6 +63,11 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     });
 
     if (_isCameraMode) {
+      // Get fresh camera controller from GetIt
+      if (_cameraController == null) {
+        _cameraController = getIt<CameraController>();
+      }
+
       // Start camera and subscribe to frames
       try {
         await _cameraController?.start();
@@ -82,11 +81,18 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         });
       }
     } else {
-      // Stop camera and unsubscribe
+      // Stop camera, unsubscribe, and dispose to free resources
       await _frameSubscription?.cancel();
       _frameSubscription = null;
-      await _cameraController?.stop();
-      debugPrint('🛑 Camera stopped and unsubscribed from frame stream');
+      await _cameraController?.dispose();
+      _cameraController = null;
+
+      // Unregister from GetIt so a fresh instance is created next time
+      if (getIt.isRegistered<CameraController>()) {
+        getIt.unregister<CameraController>();
+      }
+
+      debugPrint('🛑 Camera disposed and resources freed');
     }
   }
 
@@ -153,7 +159,15 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   void dispose() {
     _frameSubscription?.cancel();
     _loadedExecuTorchModel?.dispose();
-    // Don't dispose the controller - it's managed by GetIt
+
+    // Dispose camera controller if still active
+    if (_cameraController != null) {
+      _cameraController?.dispose();
+      if (getIt.isRegistered<CameraController>()) {
+        getIt.unregister<CameraController>();
+      }
+    }
+
     super.dispose();
   }
 
