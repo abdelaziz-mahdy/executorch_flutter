@@ -8,10 +8,11 @@ import '../renderers/screens/classification_renderer.dart';
 import '../widgets/image_input_widget.dart';
 import '../services/processor_preferences.dart';
 import 'model_definition.dart';
+import 'model_input.dart';
 
 /// MobileNet Image Classification Model Definition
 class MobileNetModelDefinition
-    extends ModelDefinition<File, ClassificationResult> {
+    extends ModelDefinition<ModelInput, ClassificationResult> {
   const MobileNetModelDefinition({
     required super.name,
     required super.displayName,
@@ -44,20 +45,29 @@ class MobileNetModelDefinition
   @override
   Widget buildInputWidget({
     required BuildContext context,
-    required Function(File) onInputSelected,
+    required Function(ModelInput) onInputSelected,
     VoidCallback? onCameraModeToggle,
     bool isCameraMode = false,
   }) {
     return ImageInputWidget(
-      onImageSelected: onInputSelected,
+      onImageSelected: (File file) => onInputSelected(ImageFileInput(file)),
       onCameraModeToggle: onCameraModeToggle,
       isCameraMode: isCameraMode,
     );
   }
 
   @override
-  Future<List<TensorData>> prepareInput(File input) async {
-    final bytes = await input.readAsBytes();
+  Future<List<TensorData>> prepareInput(ModelInput input) async {
+    // Extract bytes from input (works for both ImageFileInput and LiveCameraInput)
+    final Uint8List bytes;
+    if (input is ImageFileInput) {
+      bytes = await input.file.readAsBytes();
+    } else if (input is LiveCameraInput) {
+      bytes = input.frameBytes;
+    } else {
+      throw UnsupportedError('Unsupported input type: ${input.runtimeType}');
+    }
+
     final useOpenCV = await ProcessorPreferences.getUseOpenCV();
 
     // Dynamically select preprocessor based on user preference
@@ -84,7 +94,7 @@ class MobileNetModelDefinition
 
   @override
   Future<ClassificationResult> processResult({
-    required File input,
+    required ModelInput input,
     required InferenceResult inferenceResult,
   }) async {
     final labels = await _loadLabels();
@@ -98,10 +108,13 @@ class MobileNetModelDefinition
   @override
   Widget buildResultRenderer({
     required BuildContext context,
-    required File input,
+    required ModelInput input,
     required ClassificationResult? result,
   }) {
-    return ClassificationRenderer(input: input, result: result);
+    return ClassificationRenderer(
+      input: input,
+      result: result,
+    );
   }
 
   @override

@@ -12,7 +12,7 @@ import 'detection_box_painter.dart';
 /// - Scaling detection boxes from normalized coordinates to render space
 /// - Reacting to window resize and layout changes
 class ImageWithDetections extends StatefulWidget {
-  /// The image to be displayed.
+  /// The image to be displayed (typically Image.file or Image.memory).
   final Image image;
 
   /// The list of detections to be displayed on the image.
@@ -75,6 +75,10 @@ class _ImageWithDetectionsState extends State<ImageWithDetections>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _resolveImage();
+  }
+
+  void _resolveImage() {
     widget.image.image
         .resolve(const ImageConfiguration())
         .addListener(
@@ -89,6 +93,16 @@ class _ImageWithDetectionsState extends State<ImageWithDetections>
         WidgetsBinding.instance.addPostFrameCallback((_) => measureSize());
       }),
     );
+  }
+
+  @override
+  void didUpdateWidget(ImageWithDetections oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset completer when image changes (for camera frames)
+    if (oldWidget.image.image != widget.image.image) {
+      completer = Completer<ui.Image>();
+      _resolveImage();
+    }
   }
 
   @override
@@ -134,6 +148,8 @@ class _ImageWithDetectionsState extends State<ImageWithDetections>
                 image: widget.image.image,
                 fit: widget.imageFit,
                 key: imageKey,
+                gaplessPlayback: true,
+                excludeFromSemantics: true,
               ),
               if (imageSize != null)
                 Positioned.fill(

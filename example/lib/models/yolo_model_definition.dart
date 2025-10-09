@@ -8,9 +8,10 @@ import '../renderers/screens/object_detection_renderer.dart';
 import '../widgets/image_input_widget.dart';
 import '../services/processor_preferences.dart';
 import 'model_definition.dart';
+import 'model_input.dart';
 
 /// YOLO Object Detection Model Definition
-class YoloModelDefinition extends ModelDefinition<File, ObjectDetectionResult> {
+class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionResult> {
   const YoloModelDefinition({
     required super.name,
     required super.displayName,
@@ -43,20 +44,29 @@ class YoloModelDefinition extends ModelDefinition<File, ObjectDetectionResult> {
   @override
   Widget buildInputWidget({
     required BuildContext context,
-    required Function(File) onInputSelected,
+    required Function(ModelInput) onInputSelected,
     VoidCallback? onCameraModeToggle,
     bool isCameraMode = false,
   }) {
     return ImageInputWidget(
-      onImageSelected: onInputSelected,
+      onImageSelected: (File file) => onInputSelected(ImageFileInput(file)),
       onCameraModeToggle: onCameraModeToggle,
       isCameraMode: isCameraMode,
     );
   }
 
   @override
-  Future<List<TensorData>> prepareInput(File input) async {
-    final bytes = await input.readAsBytes();
+  Future<List<TensorData>> prepareInput(ModelInput input) async {
+    // Extract bytes from input (works for both ImageFileInput and LiveCameraInput)
+    final Uint8List bytes;
+    if (input is ImageFileInput) {
+      bytes = await input.file.readAsBytes();
+    } else if (input is LiveCameraInput) {
+      bytes = input.frameBytes;
+    } else {
+      throw UnsupportedError('Unsupported input type: ${input.runtimeType}');
+    }
+
     final useOpenCV = await ProcessorPreferences.getUseOpenCV();
 
     // Dynamically select preprocessor based on user preference
@@ -81,7 +91,7 @@ class YoloModelDefinition extends ModelDefinition<File, ObjectDetectionResult> {
 
   @override
   Future<ObjectDetectionResult> processResult({
-    required File input,
+    required ModelInput input,
     required InferenceResult inferenceResult,
   }) async {
     final labels = await _loadLabels();
@@ -99,7 +109,7 @@ class YoloModelDefinition extends ModelDefinition<File, ObjectDetectionResult> {
   @override
   Widget buildResultRenderer({
     required BuildContext context,
-    required File input,
+    required ModelInput input,
     required ObjectDetectionResult? result,
   }) {
     return ObjectDetectionRenderer(

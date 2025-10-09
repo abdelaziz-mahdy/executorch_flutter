@@ -10,30 +10,25 @@
 /// - Modern Material 3 design
 library;
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
-import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 
 // Import model playground
 import 'screens/unified_model_playground.dart';
 
 // Import services
 import 'services/performance_service.dart';
+import 'services/service_locator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set up camera delegate for desktop platforms (macOS, Windows, Linux)
-  if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-    final ImagePickerPlatform instance = ImagePickerPlatform.instance;
-    if (instance is CameraDelegatingImagePickerPlatform) {
-      // For now, camera is not supported on desktop - use gallery only
-      // Users should use ImageSource.gallery instead of ImageSource.camera
-      debugPrint(
-        '⚠️  Camera not supported on desktop platforms. Use gallery instead.',
-      );
-    }
+  // Initialize service locator (camera controllers, etc.)
+  try {
+    await setupServiceLocator();
+    debugPrint('✅ Service Locator initialized successfully');
+  } catch (e) {
+    debugPrint('❌ Failed to initialize Service Locator: $e');
   }
 
   // Initialize ExecuTorch manager

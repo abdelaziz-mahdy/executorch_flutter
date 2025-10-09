@@ -1,13 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_definition.dart';
+import '../models/model_input.dart';
 import '../models/model_registry.dart';
-import '../services/processor_preferences.dart';
-import '../widgets/camera_stream_processor.dart';
-import '../processors/camera_image_converter.dart';
+import '../services/service_locator.dart';
+import '../controllers/camera_controller.dart';
 
 /// Unified Model Playground - works with any model type through ModelDefinition
 class UnifiedModelPlayground extends StatefulWidget {
@@ -27,14 +28,15 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   bool _isLoadingModels = true;
   bool _isLoadingModel = false;
   bool _isProcessing = false;
+  bool _isProcessingFrame = false; // Prevent frame processing queue buildup
+  int _frameCounter = 0; // Incremental counter to force Image widget rebuild
 
   // UI state
   bool _isInputExpanded = true;
-  bool _useOpenCVProcessor = false;
   bool _isCameraMode = false;
 
   // Input/Result state (generic)
-  Object? _input;
+  ModelInput? _input;
   Object? _result;
   double? _preprocessingTime;
   double? _inferenceTime;
@@ -42,23 +44,116 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   double? _totalTime;
   String? _errorMessage;
 
+  // Camera controller from GetIt
+  CameraController? _cameraController;
+  StreamSubscription<Uint8List>? _frameSubscription;
+
   @override
   void initState() {
     super.initState();
     _loadAvailableModels();
-    _loadProcessorPreference();
+    _initializeCameraController();
   }
 
-  Future<void> _loadProcessorPreference() async {
-    final useOpenCV = await ProcessorPreferences.getUseOpenCV();
+  void _initializeCameraController() {
+    // Get camera controller from service locator
+    _cameraController = getIt<CameraController>();
+    debugPrint('✅ Camera controller obtained from GetIt');
+  }
+
+  Future<void> _toggleCameraMode() async {
     setState(() {
-      _useOpenCVProcessor = useOpenCV;
+      _isCameraMode = !_isCameraMode;
+      _input = null;
+      _result = null;
     });
+
+    if (_isCameraMode) {
+      // Start camera and subscribe to frames
+      try {
+        await _cameraController?.start();
+        _frameSubscription = _cameraController?.frameStream.listen(_processFrameBytes);
+        debugPrint('✅ Camera started and subscribed to frame stream');
+      } catch (e) {
+        debugPrint('❌ Failed to start camera: $e');
+        setState(() {
+          _isCameraMode = false;
+          _errorMessage = 'Failed to start camera: $e';
+        });
+      }
+    } else {
+      // Stop camera and unsubscribe
+      await _frameSubscription?.cancel();
+      _frameSubscription = null;
+      await _cameraController?.stop();
+      debugPrint('🛑 Camera stopped and unsubscribed from frame stream');
+    }
+  }
+
+
+  Future<void> _processFrameBytes(Uint8List imageBytes) async {
+    // Skip if already processing to prevent queue buildup
+    if (_isProcessingFrame) {
+      debugPrint('⏭️ Skipping frame - already processing');
+      return;
+    }
+
+    if (_selectedModel == null || _loadedExecuTorchModel == null) {
+      debugPrint('❌ Model not ready');
+      return;
+    }
+
+    _isProcessingFrame = true;
+    final startTime = DateTime.now();
+
+    try {
+      debugPrint('📦 Processing camera frame: ${imageBytes.length} bytes, hashCode: ${imageBytes.hashCode}');
+
+      // Create LiveCameraInput for processing and rendering
+      final liveCameraInput = LiveCameraInput(imageBytes);
+      debugPrint('📍 Created LiveCameraInput with hashCode: ${liveCameraInput.frameBytes.hashCode}');
+
+      // Prepare input using model's preprocessor
+      final tensorInputs = await _selectedModel!.prepareInput(liveCameraInput);
+      debugPrint('🔧 Prepared ${tensorInputs.length} tensor inputs');
+
+      // Run inference
+      final inferenceResult =
+          await _loadedExecuTorchModel!.runInference(inputs: tensorInputs);
+      debugPrint('✅ Inference complete: ${inferenceResult.executionTimeMs}ms');
+
+      // Process result using model's postprocessor
+      final result = await _selectedModel!.processResult(
+        input: liveCameraInput,
+        inferenceResult: inferenceResult,
+      );
+      debugPrint('✅ Result processed');
+
+      // Update UI with result - LiveCameraInput contains both processing and display data
+      if (mounted) {
+        final oldInputHash = _input is LiveCameraInput ? (_input as LiveCameraInput).frameBytes.hashCode : null;
+        setState(() {
+          _input = liveCameraInput;
+          _result = result;
+          _inferenceTime = inferenceResult.executionTimeMs;
+        });
+        final processingTime = DateTime.now().difference(startTime).inMilliseconds;
+        debugPrint('✅ UI updated! Old hash: $oldInputHash, New hash: ${liveCameraInput.frameBytes.hashCode}, Total time: ${processingTime}ms');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Camera frame processing error: $e');
+      debugPrint('Stack trace: $stackTrace');
+    } finally {
+      _isProcessingFrame = false;
+      debugPrint('🔓 Frame processing unlocked');
+    }
   }
 
   @override
   void dispose() {
+    _frameSubscription?.cancel();
     _loadedExecuTorchModel?.dispose();
+    // Don't dispose the controller - it's managed by GetIt
     super.dispose();
   }
 
@@ -196,39 +291,6 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       appBar: AppBar(
         title: const Text('Model Playground'),
         elevation: 0,
-        actions: [
-          // Processor toggle
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _useOpenCVProcessor ? 'OpenCV' : 'Dart',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              Switch(
-                value: _useOpenCVProcessor,
-                onChanged: (value) async {
-                  await ProcessorPreferences.setUseOpenCV(value);
-                  setState(() {
-                    _useOpenCVProcessor = value;
-                  });
-                  // Show feedback
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Switched to ${value ? "OpenCV" : "Dart"} processor',
-                        ),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-        ],
       ),
       body: _isLoadingModels
           ? const Center(child: CircularProgressIndicator())
@@ -410,13 +472,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           _selectedModel!.buildInputWidget(
             context: context,
             onInputSelected: _processInput,
-            onCameraModeToggle: () {
-              setState(() {
-                _isCameraMode = !_isCameraMode;
-                _input = null;
-                _result = null;
-              });
-            },
+            onCameraModeToggle: _toggleCameraMode,
             isCameraMode: _isCameraMode,
           ),
         ],
@@ -526,63 +582,32 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Widget _buildCameraSection() {
-    final converter = _useOpenCVProcessor
-        ? OpenCVCameraConverter()
-        : ImageLibCameraConverter();
-
-    return Stack(
-      children: [
-        // Camera stream with processing overlay
-        CameraStreamProcessor(
-          converter: converter,
-          onFrameProcessed: (imageBytes) async {
-            if (_selectedModel == null || _loadedExecuTorchModel == null) {
-              return;
-            }
-
-            try {
-              // Create temporary file from bytes to match File input type
-              final tempDir = await getTemporaryDirectory();
-              final tempFile = File('${tempDir.path}/camera_frame.jpg');
-              await tempFile.writeAsBytes(imageBytes);
-
-              // Prepare input using model's preprocessor
-              final tensorInputs = await _selectedModel!.prepareInput(tempFile);
-
-              // Run inference
-              final inferenceResult = await _loadedExecuTorchModel!
-                  .runInference(inputs: tensorInputs);
-
-              // Process result using model's postprocessor
-              final result = await _selectedModel!.processResult(
-                input: tempFile,
-                inferenceResult: inferenceResult,
-              );
-
-              // Update UI with result
-              if (mounted) {
-                setState(() {
-                  _input = tempFile;
-                  _result = result;
-                  _inferenceTime = inferenceResult.executionTimeMs;
-                });
-              }
-            } catch (e) {
-              debugPrint('Camera frame processing error: $e');
-            }
-          },
+    // For camera mode, show the result renderer with the latest processed frame
+    // LiveCameraInput contains the frame bytes for Image.memory rendering
+    if (_result != null && _input != null) {
+      return RepaintBoundary(
+        child: _selectedModel!.buildResultRenderer(
+          context: context,
+          input: _input!,
+          result: _result,
         ),
+      );
+    }
 
-        // Result overlay (bounding boxes, etc.)
-        if (_result != null && _input != null)
-          Positioned.fill(
-            child: _selectedModel!.buildResultRenderer(
-              context: context,
-              input: _input!,
-              result: _result,
-            ),
-          ),
-      ],
+    // Camera mode with no results yet - show loading indicator
+    if (_input == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    // Camera has provided input - render it (with or without inference results)
+    return RepaintBoundary(
+      child: _selectedModel!.buildResultRenderer(
+        context: context,
+        input: _input!,
+        result: _result,
+      ),
     );
   }
 

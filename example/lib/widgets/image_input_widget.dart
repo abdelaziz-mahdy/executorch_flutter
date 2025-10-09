@@ -41,12 +41,14 @@ class ImageInputWidget extends StatelessWidget {
         ),
         if (onCameraModeToggle != null) ...[
           const SizedBox(width: 8),
-          _buildActionButton(
-            context: context,
-            icon: isCameraMode ? Icons.photo : Icons.videocam,
-            label: isCameraMode ? 'Image' : 'Camera',
-            onTap: onCameraModeToggle!,
-            isActive: isCameraMode,
+          Expanded(
+            child: _buildActionButton(
+              context: context,
+              icon: isCameraMode ? Icons.photo : Icons.videocam,
+              label: isCameraMode ? 'Image' : 'Camera',
+              onTap: onCameraModeToggle!,
+              isActive: isCameraMode,
+            ),
           ),
         ],
       ],

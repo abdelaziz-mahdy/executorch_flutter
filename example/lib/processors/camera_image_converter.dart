@@ -7,7 +7,11 @@ import 'package:opencv_dart/opencv_dart.dart' as cv;
 /// Abstract interface for converting CameraImage to JPEG bytes
 /// Supports different implementation strategies (image lib, OpenCV)
 abstract class CameraImageConverter {
-  Future<Uint8List> convertToJpeg(CameraImage cameraImage, {int quality = 85});
+  Future<Uint8List> convertToJpeg(
+    CameraImage cameraImage, {
+    int quality = 85,
+    int? sensorOrientation,
+  });
 }
 
 /// Image library implementation for camera image conversion
@@ -17,11 +21,16 @@ class ImageLibCameraConverter implements CameraImageConverter {
   Future<Uint8List> convertToJpeg(
     CameraImage cameraImage, {
     int quality = 85,
+    int? sensorOrientation,
   }) async {
     img.Image? convertedImage;
 
     if (Platform.isAndroid) {
       convertedImage = _convertYUV420ToImage(cameraImage);
+      // Apply rotation based on sensor orientation
+      if (convertedImage != null && sensorOrientation != null && sensorOrientation != 0) {
+        convertedImage = img.copyRotate(convertedImage, angle: sensorOrientation);
+      }
     } else {
       // iOS and macOS both use BGRA8888
       convertedImage = _convertBGRA8888ToImage(cameraImage);
@@ -39,26 +48,29 @@ class ImageLibCameraConverter implements CameraImageConverter {
     final int width = cameraImage.width;
     final int height = cameraImage.height;
 
-    final int uvRowStride = cameraImage.planes[1].bytesPerRow;
-    final int uvPixelStride = cameraImage.planes[1].bytesPerPixel ?? 0;
+    final yPlane = cameraImage.planes[0];
+    final uPlane = cameraImage.planes[1];
+    final vPlane = cameraImage.planes[2];
 
     final image = img.Image(width: width, height: height);
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        final int uvIndex =
-            uvPixelStride * (x / 2).floor() + uvRowStride * (y / 2).floor();
-        final int index = y * width + x;
+        final int yIndex = y * yPlane.bytesPerRow + x;
+        final int uvRow = (y / 2).floor();
+        final int uvCol = (x / 2).floor();
+        final int uvIndex = uvRow * uPlane.bytesPerRow + uvCol * uPlane.bytesPerPixel!;
 
-        final yp = cameraImage.planes[0].bytes[index];
-        final up = cameraImage.planes[1].bytes[uvIndex];
-        final vp = cameraImage.planes[2].bytes[uvIndex];
+        final int yValue = yPlane.bytes[yIndex];
+        final int uValue = uPlane.bytes[uvIndex];
+        final int vValue = vPlane.bytes[uvIndex];
 
-        int r = (yp + vp * 1436 / 1024 - 179).round().clamp(0, 255);
-        int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91)
+        // YUV to RGB conversion
+        int r = (yValue + 1.370705 * (vValue - 128)).round().clamp(0, 255);
+        int g = (yValue - 0.337633 * (uValue - 128) - 0.698001 * (vValue - 128))
             .round()
             .clamp(0, 255);
-        int b = (yp + up * 1814 / 1024 - 227).round().clamp(0, 255);
+        int b = (yValue + 1.732446 * (uValue - 128)).round().clamp(0, 255);
 
         image.setPixelRgb(x, y, r, g, b);
       }
@@ -98,11 +110,21 @@ class OpenCVCameraConverter implements CameraImageConverter {
   Future<Uint8List> convertToJpeg(
     CameraImage cameraImage, {
     int quality = 85,
+    int? sensorOrientation,
   }) async {
-    final cv.Mat mat;
+    cv.Mat mat;
 
     if (Platform.isAndroid) {
       mat = await _convertYUV420ToMat(cameraImage);
+      // Apply rotation based on sensor orientation
+      if (sensorOrientation != null && sensorOrientation != 0) {
+        final rotateCode = _getRotateCode(sensorOrientation);
+        if (rotateCode != null) {
+          final rotatedMat = cv.rotate(mat, rotateCode);
+          mat.dispose();
+          mat = rotatedMat;
+        }
+      }
     } else {
       // iOS and macOS both use BGRA8888
       mat = await _convertBGRA8888ToMat(cameraImage);
@@ -126,48 +148,95 @@ class OpenCVCameraConverter implements CameraImageConverter {
     return encoded;
   }
 
+  /// Convert sensor orientation to OpenCV rotate code
+  int? _getRotateCode(int sensorOrientation) {
+    switch (sensorOrientation) {
+      case 90:
+        return cv.ROTATE_90_CLOCKWISE;
+      case 180:
+        return cv.ROTATE_180;
+      case 270:
+        return cv.ROTATE_90_COUNTERCLOCKWISE;
+      default:
+        return null;
+    }
+  }
+
   /// Convert YUV420 (Android) to OpenCV Mat
   /// Uses native OpenCV YUV420 to BGR conversion
   Future<cv.Mat> _convertYUV420ToMat(CameraImage cameraImage) async {
     final int width = cameraImage.width;
     final int height = cameraImage.height;
 
-    // YUV420 format: Y plane (full resolution) + U/V planes (quarter resolution each)
-    // We need to create a single-channel Mat with height * 1.5
     final yPlane = cameraImage.planes[0];
     final uPlane = cameraImage.planes[1];
     final vPlane = cameraImage.planes[2];
 
-    // Combine all planes into a single buffer
-    final int ySize = yPlane.bytes.length;
-    final int uvSize = uPlane.bytes.length + vPlane.bytes.length;
-    final yuvBuffer = Uint8List(ySize + uvSize);
+    // Check if UV planes are interleaved (NV21/NV12) or planar (I420)
+    final uvPixelStride = uPlane.bytesPerPixel ?? 1;
 
-    // Copy Y plane
-    yuvBuffer.setRange(0, ySize, yPlane.bytes);
+    if (uvPixelStride == 2) {
+      // NV21 format (semi-planar, interleaved VU)
+      // Create Y plane mat
+      final yMat = cv.Mat.create(
+        rows: height,
+        cols: width,
+        type: cv.MatType.CV_8UC1,
+      );
+      yMat.data.setAll(0, yPlane.bytes);
 
-    // Copy U and V planes
-    yuvBuffer.setRange(ySize, ySize + uPlane.bytes.length, uPlane.bytes);
-    yuvBuffer.setRange(
-      ySize + uPlane.bytes.length,
-      yuvBuffer.length,
-      vPlane.bytes,
-    );
+      // Create UV plane mat (interleaved)
+      final uvHeight = height ~/ 2;
+      final uvWidth = width ~/ 2;
+      final uvMat = cv.Mat.create(
+        rows: uvHeight,
+        cols: uvWidth,
+        type: cv.MatType.CV_8UC2,
+      );
+      uvMat.data.setAll(0, uPlane.bytes);
 
-    // Create Mat from YUV buffer (single channel, height * 1.5)
-    final yuvMat = cv.Mat.create(
-      rows: height + height ~/ 2,
-      cols: width,
-      type: cv.MatType.CV_8UC1,
-    );
-    yuvMat.data.setAll(0, yuvBuffer);
+      // Combine Y and UV into YUV Mat
+      final yuvMat = cv.Mat.create(
+        rows: height + height ~/ 2,
+        cols: width,
+        type: cv.MatType.CV_8UC1,
+      );
+      yuvMat.data.setRange(0, yPlane.bytes.length, yPlane.bytes);
+      yuvMat.data.setRange(yPlane.bytes.length, yuvMat.data.length, uPlane.bytes);
 
-    // Convert YUV420 to BGR using OpenCV
-    // COLOR_YUV2BGR_I420 is for planar YUV420 (I420/IYUV format)
-    final bgrMat = await cv.cvtColorAsync(yuvMat, cv.COLOR_YUV2BGR_I420);
+      // Convert NV21 to BGR
+      final bgrMat = await cv.cvtColorAsync(yuvMat, cv.COLOR_YUV2BGR_NV21);
 
-    yuvMat.dispose();
-    return bgrMat;
+      yMat.dispose();
+      uvMat.dispose();
+      yuvMat.dispose();
+      return bgrMat;
+    } else {
+      // I420 format (planar)
+      final int ySize = yPlane.bytes.length;
+      final int uvSize = uPlane.bytes.length + vPlane.bytes.length;
+      final yuvBuffer = Uint8List(ySize + uvSize);
+
+      yuvBuffer.setRange(0, ySize, yPlane.bytes);
+      yuvBuffer.setRange(ySize, ySize + uPlane.bytes.length, uPlane.bytes);
+      yuvBuffer.setRange(
+        ySize + uPlane.bytes.length,
+        yuvBuffer.length,
+        vPlane.bytes,
+      );
+
+      final yuvMat = cv.Mat.create(
+        rows: height + height ~/ 2,
+        cols: width,
+        type: cv.MatType.CV_8UC1,
+      );
+      yuvMat.data.setAll(0, yuvBuffer);
+
+      final bgrMat = await cv.cvtColorAsync(yuvMat, cv.COLOR_YUV2BGR_I420);
+
+      yuvMat.dispose();
+      return bgrMat;
+    }
   }
 
   /// Convert BGRA8888 (iOS) to OpenCV Mat

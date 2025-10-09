@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
+import 'model_input.dart';
 
 /// Base class for model definitions
 /// Each model type (YOLO, MobileNet, etc.) will extend this to define:
 /// - How to get input (camera, gallery, text field, etc.)
 /// - How to process the model output
 /// - How to render the results
-abstract class ModelDefinition<TInput, TResult> {
+abstract class ModelDefinition<TInput extends ModelInput, TResult> {
   const ModelDefinition({
     required this.name,
     required this.displayName,
@@ -42,6 +43,7 @@ abstract class ModelDefinition<TInput, TResult> {
   });
 
   /// Build the result renderer widget
+  /// The input type (ImageFileInput, LiveCameraInput, etc.) determines rendering strategy
   Widget buildResultRenderer({
     required BuildContext context,
     required TInput input,
