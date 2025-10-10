@@ -1,13 +1,14 @@
 import 'dart:io';
-import 'package:executorch_flutter_example/processors/opencv/opencv_imagenet_preprocessor.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
+import '../processors/base_processor.dart';
 import '../processors/image_processor.dart';
+import '../processors/mobilenet_input_processor.dart';
+import '../processors/mobilenet_output_processor.dart';
 import '../renderers/screens/classification_renderer.dart';
 import '../widgets/image_input_widget.dart';
-import '../services/service_locator.dart';
 import 'model_definition.dart';
 import 'model_input.dart';
 import 'model_settings.dart';
@@ -45,6 +46,23 @@ class MobileNetModelDefinition
     return labels;
   }
 
+  // Helper to load labels synchronously from cache
+  List<String> _loadLabelsSync() {
+    if (_labelsCache.containsKey(labelsAssetPath)) {
+      return _labelsCache[labelsAssetPath]!;
+    }
+    // Labels should be preloaded by controller before creating processor
+    throw StateError('Labels not loaded. Call loadLabels() first.');
+  }
+
+  // Make _loadLabels public so controller can preload
+  Future<List<String>> loadLabels() => _loadLabels();
+
+  @override
+  ModelSettings createDefaultSettings() {
+    return ClassificationModelSettings();
+  }
+
   @override
   Widget buildInputWidget({
     required BuildContext context,
@@ -60,54 +78,24 @@ class MobileNetModelDefinition
   }
 
   @override
-  Future<List<TensorData>> prepareInput(ModelInput input) async {
-    // Extract bytes from input (works for both ImageFileInput and LiveCameraInput)
-    final Uint8List bytes;
-    if (input is ImageFileInput) {
-      bytes = await input.file.readAsBytes();
-    } else if (input is LiveCameraInput) {
-      bytes = input.frameBytes;
-    } else {
-      throw UnsupportedError('Unsupported input type: ${input.runtimeType}');
-    }
-
-    // Get preprocessing preference from GetIt settings
-    // Default to OpenCV if no settings are registered yet
-    final useOpenCV = getIt.isRegistered<ModelSettings>()
-        ? getIt<ModelSettings>().preprocessingProvider == PreprocessingProvider.opencv
-        : true; // Default to OpenCV
-
-    // Dynamically select preprocessor based on user preference
-    if (useOpenCV) {
-      final preprocessor = OpenCVImageNetPreprocessor(
-        config: ImagePreprocessConfig(
-          targetWidth: inputSize,
-          targetHeight: inputSize,
-          normalizeToFloat: true,
-        ),
-      );
-      return await preprocessor.preprocess(bytes);
-    } else {
-      final preprocessor = ImageNetPreprocessor(
-        config: ImagePreprocessConfig(
-          targetWidth: inputSize,
-          targetHeight: inputSize,
-          normalizeToFloat: true,
-        ),
-      );
-      return await preprocessor.preprocess(bytes);
-    }
+  InputProcessor<ModelInput> createInputProcessor(ModelSettings settings) {
+    return MobileNetInputProcessor(
+      config: ImagePreprocessConfig(
+        targetWidth: inputSize,
+        targetHeight: inputSize,
+        normalizeToFloat: true,
+      ),
+      useOpenCV: settings.preprocessingProvider == PreprocessingProvider.opencv,
+    );
   }
 
   @override
-  Future<ClassificationResult> processResult({
-    required ModelInput input,
-    required List<TensorData> outputs,
-  }) async {
-    final labels = await _loadLabels();
-    final postprocessor = ImageNetPostprocessor(classLabels: labels);
-
-    return await postprocessor.postprocess(outputs);
+  OutputProcessor<ClassificationResult> createOutputProcessor(ModelSettings settings) {
+    final classificationSettings = settings as ClassificationModelSettings;
+    return MobileNetOutputProcessor(
+      classLabels: _loadLabelsSync(),
+      topK: classificationSettings.topK,
+    );
   }
 
   @override
@@ -192,12 +180,12 @@ class MobileNetModelDefinition
   }
 
   @override
-  Widget? buildSettingsWidget({
+  Widget buildSettingsWidget({
     required BuildContext context,
-    required ModelSettings? settings,
+    required ModelSettings settings,
     required Function(ModelSettings) onSettingsChanged,
   }) {
-    // Create default settings if none provided
+    // Use provided settings or create default if wrong type
     final classificationSettings = settings is ClassificationModelSettings
         ? settings
         : ClassificationModelSettings();
