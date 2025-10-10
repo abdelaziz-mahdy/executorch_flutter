@@ -112,12 +112,12 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
 
     // MARK: - Pigeon ExecutorchHostApi Implementation
 
-    public func loadModel(filePath: String, completion: @escaping (Result<ModelLoadResult, Error>) -> Void) {
+    public func load(filePath: String, completion: @escaping (Result<ModelLoadResult, Error>) -> Void) {
         print("[\(Self.TAG)] Loading model from: \(filePath)")
 
         Task {
             do {
-                let result = try await self.modelManager.loadModel(filePath: filePath)
+                let result = try await self.modelManager.load(filePath: filePath)
                 print("[\(Self.TAG)] Model loaded successfully: \(result.modelId)")
                 completion(.success(result))
             } catch let executorchError as ExecutorchError {
@@ -140,33 +140,22 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         }
     }
 
-    public func runInference(request: InferenceRequest, completion: @escaping (Result<InferenceResult, Error>) -> Void) {
-        print("[\(Self.TAG)] Running inference for model: \(request.modelId)")
+    public func forward(modelId: String, inputs: [TensorData?], completion: @escaping (Result<[TensorData?], Error>) -> Void) {
+        print("[\(Self.TAG)] Running inference for model: \(modelId)")
         let startTime = CFAbsoluteTimeGetCurrent()
 
         Task {
             do {
-                let result = try await self.modelManager.runInference(request: request)
+                let outputs = try await self.modelManager.forward(modelId: modelId, inputs: inputs)
 
                 let endTime = CFAbsoluteTimeGetCurrent()
                 let executionTime = (endTime - startTime) * 1000 // Convert to milliseconds
 
-                print("[\(Self.TAG)] Inference completed in \(executionTime)ms for model: \(request.modelId)")
+                print("[\(Self.TAG)] Inference completed in \(executionTime)ms for model: \(modelId)")
 
-                // Override execution time with measured value if not set
-                let finalResult: InferenceResult
-                if result.executionTimeMs == 0.0 {
-                    finalResult = InferenceResult(
-                        outputs: result.outputs,
-                        executionTimeMs: executionTime,
-                        requestId: result.requestId
-                    )
-                } else {
-                    finalResult = result
-                }
-                completion(.success(finalResult))
+                completion(.success(outputs))
             } catch let executorchError as ExecutorchError {
-                print("[\(Self.TAG)] Inference failed for model: \(request.modelId), error: \(executorchError)")
+                print("[\(Self.TAG)] Inference failed for model: \(modelId), error: \(executorchError)")
                 let pigeonError = PigeonError(
                     code: executorchError.errorCode,
                     message: executorchError.localizedDescription,
@@ -174,7 +163,7 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
                 )
                 completion(.failure(pigeonError))
             } catch {
-                print("[\(Self.TAG)] Inference failed for model: \(request.modelId), error: \(error)")
+                print("[\(Self.TAG)] Inference failed for model: \(modelId), error: \(error)")
                 let pigeonError = PigeonError(
                     code: "UNKNOWN_ERROR",
                     message: error.localizedDescription,
@@ -185,14 +174,14 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         }
     }
 
-    public func disposeModel(modelId: String) throws {
+    public func dispose(modelId: String) throws {
         print("[\(Self.TAG)] Disposing model: \(modelId)")
         var thrownError: Error? = nil
 
         let semaphore = DispatchSemaphore(value: 0)
         Task {
             do {
-                try await modelManager.disposeModel(modelId: modelId)
+                try await modelManager.dispose(modelId: modelId)
             } catch {
                 thrownError = error
             }

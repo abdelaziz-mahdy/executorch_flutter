@@ -225,7 +225,7 @@ class DetectionBoxPainter extends CustomPainter {
         );
 
         final backgroundPaint = Paint()
-          ..color = boxColor.withOpacity(0.8)
+          ..color = boxColor.withValues(alpha: 0.8)
           ..style = PaintingStyle.fill;
 
         canvas.drawRect(labelRect, backgroundPaint);

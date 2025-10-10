@@ -9,8 +9,48 @@ import 'generated/executorch_api.dart';
 /// High-level wrapper for an ExecuTorch model instance
 ///
 /// This class provides a convenient interface for loading, managing, and
-/// running inference on ExecuTorch models. It handles model lifecycle
-/// and provides validation and error handling.
+/// running inference on ExecuTorch models. It matches the native ExecuTorch API
+/// pattern used in Kotlin and Swift for consistency.
+///
+/// ## Usage Pattern
+///
+/// ### Loading from Assets (Recommended):
+/// ```dart
+/// import 'dart:io';
+/// import 'package:flutter/services.dart';
+/// import 'package:path_provider/path_provider.dart';
+///
+/// // Load from assets
+/// final byteData = await rootBundle.load('assets/models/model.pte');
+/// final tempDir = await getTemporaryDirectory();
+/// final file = File('${tempDir.path}/model.pte');
+/// await file.writeAsBytes(byteData.buffer.asUint8List());
+/// final model = await ExecuTorchModel.load(file.path);
+///
+/// // Run inference (calls native module.forward())
+/// final outputs = await model.forward(inputs);
+///
+/// // Clean up
+/// await model.dispose();
+/// ```
+///
+/// ### Loading from File System Directly:
+/// ```dart
+/// // Load from file path
+/// final model = await ExecuTorchModel.load('/path/to/model.pte');
+///
+/// // Run inference
+/// final outputs = await model.forward(inputs);
+///
+/// // Clean up
+/// await model.dispose();
+/// ```
+///
+/// ## Native API Mapping
+///
+/// This Dart API directly maps to the native ExecuTorch APIs:
+/// - **Kotlin (Android)**: `Module.load()` → `module.forward()`
+/// - **Swift (iOS/macOS)**: `Module()` + `load("forward")` → `module.forward()`
 ///
 /// Note: ExecuTorch doesn't provide runtime introspection for model metadata.
 /// Input/output specs must be known externally (from model documentation).
@@ -29,15 +69,52 @@ class ExecuTorchModel {
   /// Whether this model has been disposed
   bool _isDisposed = false;
 
-  /// Create and load an ExecuTorch model from a file path
+  /// Load an ExecuTorch model from a file path (static factory)
   ///
-  /// [filePath] must point to a valid ExecuTorch .pte model file.
-  /// Returns the loaded model instance or throws an exception if loading fails.
-  static Future<ExecuTorchModel> loadFromFile(String filePath) async {
+  /// This is the primary way to load models. It matches the native pattern:
+  /// - **Android**: Calls `Module.load(filePath)`
+  /// - **iOS/macOS**: Calls `Module(filePath)` + `module.load("forward")`
+  ///
+  /// ### Loading from Assets:
+  /// ```dart
+  /// import 'dart:io';
+  /// import 'package:flutter/services.dart';
+  /// import 'package:path_provider/path_provider.dart';
+  ///
+  /// // Extract asset to temporary file
+  /// final byteData = await rootBundle.load('assets/models/model.pte');
+  /// final tempDir = await getTemporaryDirectory();
+  /// final file = File('${tempDir.path}/model.pte');
+  /// await file.writeAsBytes(byteData.buffer.asUint8List());
+  ///
+  /// // Load the model
+  /// final model = await ExecuTorchModel.load(file.path);
+  /// ```
+  ///
+  /// ### Loading from File System:
+  /// ```dart
+  /// final model = await ExecuTorchModel.load('/path/to/model.pte');
+  /// ```
+  ///
+  /// ### Parameters:
+  /// - [filePath]: Absolute path to a valid ExecuTorch `.pte` model file
+  ///
+  /// ### Returns:
+  /// A loaded model instance ready for inference
+  ///
+  /// ### Throws:
+  /// - [ExecuTorchException] if the file doesn't exist, is not readable,
+  ///   or the model format is invalid
+  ///
+  /// ### Platform Requirements:
+  /// - **Android**: API 23+, ExecuTorch AAR 1.0.0-rc2
+  /// - **iOS**: iOS 13.0+, arm64 only
+  /// - **macOS**: macOS 11.0+, Apple Silicon (arm64) only
+  static Future<ExecuTorchModel> load(String filePath) async {
     final hostApi = ExecutorchHostApi();
 
     try {
-      final loadResult = await hostApi.loadModel(filePath);
+      final loadResult = await hostApi.load(filePath);
 
       return ExecuTorchModel._(
         modelId: loadResult.modelId,
@@ -50,39 +127,58 @@ class ExecuTorchModel {
     }
   }
 
-  /// Run inference on this model with the provided inputs
+  /// Execute inference on the model (matches native `module.forward()`)
   ///
-  /// [inputs] must match the model's input specifications.
-  /// [options] can provide platform-specific execution options.
-  /// [timeoutMs] sets a maximum execution time (optional).
-  /// [requestId] provides a unique identifier for tracking (optional).
+  /// This is the primary inference method that directly maps to the native
+  /// APIs:
+  /// - **Android**: Calls `module.forward(inputEValues)`
+  /// - **iOS/macOS**: Calls `module.forward(inputValues)`
   ///
-  /// Returns the inference result or throws an exception if inference fails.
-  Future<InferenceResult> runInference({
-    required List<TensorData> inputs,
-    Map<String, Object>? options,
-    int? timeoutMs,
-    String? requestId,
-  }) async {
+  /// ### Example:
+  /// ```dart
+  /// // Prepare input tensor
+  /// final input = TensorData(
+  ///   shape: [1, 3, 224, 224],
+  ///   dataType: TensorType.float32,
+  ///   data: imageBytes,
+  /// );
+  ///
+  /// // Run forward pass
+  /// final outputs = await model.forward([input]);
+  ///
+  /// // Process output tensors
+  /// for (var output in outputs) {
+  ///   print('Shape: ${output.shape}, Type: ${output.dataType}');
+  /// }
+  /// ```
+  ///
+  /// ### Parameters:
+  /// - [inputs]: List of input tensors matching the model's input specification
+  ///
+  /// ### Returns:
+  /// List of output tensors from the model
+  ///
+  /// ### Throws:
+  /// - [ExecuTorchException] if the model has been disposed
+  /// - [ExecuTorchInferenceException] if inference fails (invalid inputs,
+  ///   runtime error, etc.)
+  ///
+  /// ### Performance Tips:
+  /// - Pre-allocate and reuse input tensors when possible
+  /// - Ensure input shapes match model expectations exactly
+  /// - Call [dispose] when done to free native resources immediately
+  Future<List<TensorData>> forward(List<TensorData> inputs) async {
     if (_isDisposed) {
       throw const ExecuTorchException(
           'Model has been disposed and cannot be used');
     }
 
-    final request = InferenceRequest(
-      modelId: modelId,
-      inputs: inputs.cast<TensorData?>(),
-      options: options?.cast<String?, Object?>(),
-      timeoutMs: timeoutMs,
-      requestId: requestId,
-    );
-
     try {
-      final result = await hostApi.runInference(request);
-      return result;
+      final outputs = await hostApi.forward(modelId, inputs);
+      return outputs.whereType<TensorData>().toList();
     } catch (e) {
       throw ExecuTorchInferenceException(
-        'Inference failed: $e',
+        'Forward pass failed: $e',
         e.toString(),
       );
     }
@@ -95,7 +191,7 @@ class ExecuTorchModel {
   Future<void> dispose() async {
     if (_isDisposed) return;
 
-    await hostApi.disposeModel(modelId);
+    await hostApi.dispose(modelId);
     _isDisposed = true;
   }
 

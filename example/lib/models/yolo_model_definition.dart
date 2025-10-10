@@ -1,14 +1,17 @@
 import 'dart:io';
 import 'package:executorch_flutter_example/processors/opencv/opencv_yolo_preprocessor.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../processors/yolo_processor.dart';
 import '../renderers/screens/object_detection_renderer.dart';
 import '../widgets/image_input_widget.dart';
-import '../services/processor_preferences.dart';
+import '../services/service_locator.dart';
 import 'model_definition.dart';
 import 'model_input.dart';
+import 'model_settings.dart';
+import 'yolo_model_settings.dart';
 
 /// YOLO Object Detection Model Definition
 class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionResult> {
@@ -67,7 +70,11 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
       throw UnsupportedError('Unsupported input type: ${input.runtimeType}');
     }
 
-    final useOpenCV = await ProcessorPreferences.getUseOpenCV();
+    // Get preprocessing preference from GetIt settings
+    // Default to OpenCV if no settings are registered yet
+    final useOpenCV = getIt.isRegistered<ModelSettings>()
+        ? getIt<ModelSettings>().preprocessingProvider == PreprocessingProvider.opencv
+        : true; // Default to OpenCV
 
     // Dynamically select preprocessor based on user preference
     if (useOpenCV) {
@@ -92,7 +99,7 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
   @override
   Future<ObjectDetectionResult> processResult({
     required ModelInput input,
-    required InferenceResult inferenceResult,
+    required List<TensorData> outputs,
   }) async {
     final labels = await _loadLabels();
     final postprocessor = YoloPostprocessor(
@@ -101,9 +108,7 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
       inputHeight: inputSize,
     );
 
-    return await postprocessor.postprocess(
-      inferenceResult.outputs.whereType<TensorData>().toList(),
-    );
+    return await postprocessor.postprocess(outputs);
   }
 
   @override
@@ -167,6 +172,202 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget? buildSettingsWidget({
+    required BuildContext context,
+    required ModelSettings? settings,
+    required Function(ModelSettings) onSettingsChanged,
+  }) {
+    // Create default settings if none provided
+    final yoloSettings = settings is YoloModelSettings
+        ? settings
+        : YoloModelSettings();
+
+    // Check if we're on a platform that supports multiple camera providers
+    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Performance Overlay Section
+        _buildSettingsSection(
+          context: context,
+          title: 'Display',
+          children: [
+            SwitchListTile(
+              title: const Text('Show Performance Overlay'),
+              subtitle: const Text('Display FPS and timing metrics'),
+              value: yoloSettings.showPerformanceOverlay,
+              onChanged: (value) {
+                yoloSettings.showPerformanceOverlay = value;
+                onSettingsChanged(yoloSettings);
+              },
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Camera Provider Section (only on mobile platforms)
+        if (isMobile) ...[
+          _buildSettingsSection(
+            context: context,
+            title: 'Camera Provider',
+            children: [
+              RadioListTile<CameraProvider>(
+                title: Text(CameraProvider.platform.displayName),
+                subtitle: Text(CameraProvider.platform.description),
+                value: CameraProvider.platform,
+                groupValue: yoloSettings.cameraProvider,
+                onChanged: (value) {
+                  if (value != null) {
+                    yoloSettings.cameraProvider = value;
+                    onSettingsChanged(yoloSettings);
+                  }
+                },
+              ),
+              RadioListTile<CameraProvider>(
+                title: Text(CameraProvider.opencv.displayName),
+                subtitle: Text(CameraProvider.opencv.description),
+                value: CameraProvider.opencv,
+                groupValue: yoloSettings.cameraProvider,
+                onChanged: (value) {
+                  if (value != null) {
+                    yoloSettings.cameraProvider = value;
+                    onSettingsChanged(yoloSettings);
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Preprocessing Provider Section (all platforms)
+        _buildSettingsSection(
+          context: context,
+          title: 'Preprocessing',
+          children: [
+            RadioListTile<PreprocessingProvider>(
+              title: Text(PreprocessingProvider.imageLib.displayName),
+              subtitle: Text(PreprocessingProvider.imageLib.description),
+              value: PreprocessingProvider.imageLib,
+              groupValue: yoloSettings.preprocessingProvider,
+              onChanged: (value) {
+                if (value != null) {
+                  yoloSettings.preprocessingProvider = value;
+                  onSettingsChanged(yoloSettings);
+                }
+              },
+            ),
+            RadioListTile<PreprocessingProvider>(
+              title: Text(PreprocessingProvider.opencv.displayName),
+              subtitle: Text(PreprocessingProvider.opencv.description),
+              value: PreprocessingProvider.opencv,
+              groupValue: yoloSettings.preprocessingProvider,
+              onChanged: (value) {
+                if (value != null) {
+                  yoloSettings.preprocessingProvider = value;
+                  onSettingsChanged(yoloSettings);
+                }
+              },
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Detection Settings Section
+        _buildSettingsSection(
+          context: context,
+          title: 'Detection',
+          children: [
+            ListTile(
+              title: const Text('Confidence Threshold'),
+              subtitle: Text('${(yoloSettings.confidenceThreshold * 100).toStringAsFixed(0)}%'),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Slider(
+                value: yoloSettings.confidenceThreshold,
+                min: 0.0,
+                max: 1.0,
+                divisions: 20,
+                label: '${(yoloSettings.confidenceThreshold * 100).toStringAsFixed(0)}%',
+                onChanged: (value) {
+                  yoloSettings.confidenceThreshold = value;
+                  onSettingsChanged(yoloSettings);
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              title: const Text('NMS Threshold'),
+              subtitle: Text('${(yoloSettings.nmsThreshold * 100).toStringAsFixed(0)}%'),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Slider(
+                value: yoloSettings.nmsThreshold,
+                min: 0.0,
+                max: 1.0,
+                divisions: 20,
+                label: '${(yoloSettings.nmsThreshold * 100).toStringAsFixed(0)}%',
+                onChanged: (value) {
+                  yoloSettings.nmsThreshold = value;
+                  onSettingsChanged(yoloSettings);
+                },
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Reset button
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: () {
+              yoloSettings.reset();
+              onSettingsChanged(yoloSettings);
+            },
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reset to Defaults'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsSection({
+    required BuildContext context,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(children: children),
         ),
       ],
     );

@@ -11,11 +11,11 @@
 
 ## Current Development Status
 
-- **Phase**: Package implementation complete, ready for publishing
+- **Phase**: Package implementation complete, API simplified and finalized
+- **API**: Minimal surface with only `load()` and `forward()` - asset bundle loading supported
 - **Code Quality**: 0 lint errors in `lib/`, all dart fixes applied
 - **Build Status**: ✅ Android APK, ✅ macOS app, ✅ iOS (device only)
-- **Package Size**: ~13 MB compressed for pub.dev
-- **Next Step**: Commit changes and publish to pub.dev
+- **Next Step**: Publish to pub.dev
 
 ## Core Architecture
 
@@ -29,11 +29,13 @@
 
 ### Design Principles
 
-1. **Type Safety**: All platform communication via Pigeon-generated code (no manual method channels)
-2. **Async/Await**: All model operations are non-blocking
-3. **User-Controlled Resources**: Developers explicitly manage model lifecycle (no automatic cleanup)
-4. **Structured Errors**: Exception hierarchy with clear error categories
-5. **Platform Parity**: Identical behavior across Android, iOS, and macOS
+1. **Minimal API Surface**: Just `load()`, `forward()`, and `dispose()` - nothing more
+2. **Type Safety**: All platform communication via Pigeon-generated code (no manual method channels)
+3. **Async/Await**: All model operations are non-blocking
+4. **User-Controlled Resources**: Developers explicitly manage model lifecycle (no automatic cleanup, no singleton)
+5. **Structured Errors**: Exception hierarchy with clear error categories
+6. **Platform Parity**: Identical behavior across Android, iOS, and macOS
+7. **Asset-First**: Models loaded from `Uint8List` bytes, enabling Flutter asset bundle loading
 
 ## Platform Support
 
@@ -73,8 +75,7 @@ executorch_flutter/
 ├── lib/
 │   ├── executorch_flutter.dart              # Main library export
 │   └── src/
-│       ├── executorch_model.dart            # ExecuTorchModel wrapper
-│       ├── executorch_inference.dart        # ExecutorchManager API
+│       ├── executorch_model.dart            # ExecuTorchModel - main API (load/forward/dispose)
 │       ├── executorch_errors.dart           # Exception hierarchy
 │       ├── processors/
 │       │   ├── base_processor.dart          # BaseInputProcessor/BaseOutputProcessor
@@ -124,64 +125,41 @@ executorch_flutter/
 
 ## Key APIs
 
-### ExecutorchManager (Singleton)
-
-Primary interface for model management:
-
-```dart
-// Initialize (call once at app startup)
-await ExecutorchManager.instance.initialize();
-
-// Enable debug logging
-await ExecutorchManager.instance.setDebugLogging(true);
-
-// Load a model
-final model = await ExecutorchManager.instance.loadModel('/path/to/model.pte');
-
-// Get loaded model by ID
-final model = ExecutorchManager.instance.getLoadedModel('model_id');
-
-// Run inference (convenience method)
-final result = await ExecutorchManager.instance.runInference(
-  modelId: 'model_id',
-  inputs: [tensorData],
-);
-
-// Dispose model when done
-await ExecutorchManager.instance.disposeModel('model_id');
-
-// Cleanup all models
-await ExecutorchManager.instance.disposeAllModels();
-
-// Shutdown on app exit
-await ExecutorchManager.instance.shutdown();
-```
-
 ### ExecuTorchModel
 
-Represents a loaded model instance:
+The primary API for loading models and running inference. Simple, minimal, and direct.
 
 ```dart
-// Load from file
-final model = await ExecuTorchModel.loadFromFile('/path/to/model.pte');
+// Load a model from asset bundle
+import 'package:flutter/services.dart' show rootBundle;
+
+final modelBytes = await rootBundle.load('assets/models/model.pte');
+final model = await ExecuTorchModel.load(
+  modelBytes.buffer.asUint8List(),
+);
+
+// Or load from file path (if model is stored externally)
+final model = await ExecuTorchModel.load(
+  File('/path/to/model.pte').readAsBytesSync(),
+);
 
 // Model properties
-print(model.modelId);        // Unique identifier
-print(model.filePath);       // Original file path
+print(model.modelId);        // Unique identifier (auto-generated)
 print(model.inputShapes);    // Expected input tensor shapes
 print(model.outputShapes);   // Expected output tensor shapes
 
 // Run inference
-final result = await model.runInference(
-  inputs: [tensorData],
-  options: {'key': 'value'},
-  timeoutMs: 5000,
-  requestId: 'unique_request_id',
-);
+final outputs = await model.forward([tensorData]);
 
 // Dispose when done
 await model.dispose();
 ```
+
+**Key Design Points**:
+- **No file paths**: Models are loaded from `Uint8List` bytes, enabling asset bundle loading
+- **No options/timeouts**: Simplified API with just input tensors
+- **Direct outputs**: Returns `List<TensorData>` directly (no wrapper object)
+- **Asset-first**: Recommended pattern is to bundle models in `assets/` and load via `rootBundle`
 
 ### TensorData (Pigeon-generated)
 
@@ -196,15 +174,43 @@ final tensor = TensorData(
 );
 ```
 
-### InferenceResult (Pigeon-generated)
+### Model Loading Pattern
 
-Result of inference execution:
+**Recommended: Load from Asset Bundle**
 
 ```dart
-result.status;          // InferenceStatus.success / error / timeout
-result.outputs;         // List<TensorData>
-result.errorMessage;    // String? (if error)
-result.durationMs;      // int? (execution time)
+import 'package:flutter/services.dart' show rootBundle;
+
+// 1. Add model to pubspec.yaml assets:
+//    flutter:
+//      assets:
+//        - assets/models/
+
+// 2. Load model bytes from asset bundle
+final modelBytes = await rootBundle.load('assets/models/model.pte');
+
+// 3. Create model instance
+final model = await ExecuTorchModel.load(
+  modelBytes.buffer.asUint8List(),
+);
+
+// 4. Run inference
+final outputs = await model.forward([inputTensor]);
+
+// 5. Clean up
+await model.dispose();
+```
+
+**Alternative: Load from File System**
+
+```dart
+import 'dart:io';
+
+// Load from downloaded/cached file
+final modelFile = File('/path/to/downloaded/model.pte');
+final model = await ExecuTorchModel.load(
+  modelFile.readAsBytesSync(),
+);
 ```
 
 ### Exception Hierarchy
@@ -223,17 +229,18 @@ ExecuTorchException              // Base exception
 
 **User-Controlled Lifecycle**: This package does NOT automatically manage model memory. Developers must explicitly:
 
-1. **Load models**: Call `loadModel()` when needed
-2. **Dispose models**: Call `dispose()` when done
+1. **Load models**: Call `ExecuTorchModel.load()` when needed
+2. **Dispose models**: Call `model.dispose()` when done
 3. **Handle errors**: Catch exceptions and clean up resources
 4. **Monitor memory**: Use OS tools to track memory usage
 
-**No Automatic Cleanup**: There is no lifecycle manager, no memory pressure monitoring, no automatic disposal. This design gives developers full control over when models are loaded/unloaded.
+**No Automatic Cleanup**: There is no singleton manager, no lifecycle manager, no memory pressure monitoring, no automatic disposal. This design gives developers full control over when models are loaded/unloaded.
 
 **Why User-Controlled?**
 - Predictable behavior (no surprise disposals mid-inference)
 - Explicit resource management (developers know when models are in memory)
 - Platform parity (same behavior on Android, iOS, macOS)
+- Simple API (just `load()` and `dispose()`, no manager required)
 
 ## Pigeon Code Generation
 
@@ -319,19 +326,18 @@ cd example
 ```dart
 // Host API: Dart → Native
 abstract class ExecutorchHostApi {
-  ModelLoadResult loadModel(String filePath, String modelId);
-  InferenceResult forward(String modelId, List<TensorData> inputs, String requestId);
-  void disposeModel(String modelId);
-  List<String> getLoadedModels();
-  void setDebugLogging(bool enabled);
-}
-
-// Flutter API: Native → Dart (unused, reserved for callbacks)
-abstract class ExecutorchFlutterApi {
-  void onModelLoadProgress(String modelId, double progress);
-  void onInferenceProgress(String requestId, String status);
+  ModelLoadResult load(Uint8List modelData, String modelId);
+  List<TensorData> forward(String modelId, List<TensorData> inputs);
+  void dispose(String modelId);
 }
 ```
+
+**Key Changes from Earlier Iterations**:
+- `loadModel(String filePath)` → `load(Uint8List modelData)` - Models loaded from bytes, not file paths
+- `runInference()` removed → Use `forward()` directly (returns `List<TensorData>`)
+- No `InferenceResult` wrapper - `forward()` returns tensors directly
+- No `options`, `timeoutMs`, `requestId` parameters - Simplified to just inputs
+- Removed `getLoadedModels()` and `setDebugLogging()` - Minimal API surface
 
 ## Platform Implementation Details
 
@@ -347,13 +353,14 @@ abstract class ExecutorchFlutterApi {
 
 **Threading Model**:
 ```kotlin
-suspend fun loadModel(filePath: String, modelId: String): ModelLoadResult =
+suspend fun load(modelData: ByteArray, modelId: String): ModelLoadResult =
   withContext(Dispatchers.Default) {
     // ExecuTorch Module.load() on background thread
+    // Writes bytes to temp file, loads with MMAP, deletes temp file
   }
 ```
 
-**Memory Mapping**: Uses `Module.load(path, LoadMode.MMAP)` for large models
+**Memory Loading**: Writes model bytes to temporary file, loads with `Module.load(path, LoadMode.MMAP)`, then deletes temp file. This enables asset bundle loading while still using ExecuTorch's memory mapping.
 
 ### iOS/macOS (Swift)
 
@@ -370,12 +377,15 @@ suspend fun loadModel(filePath: String, modelId: String): ModelLoadResult =
 
 **Threading Model**:
 ```swift
-func loadModel(filePath: String, modelId: String) async throws -> ModelLoadResult {
+func load(modelData: FlutterStandardTypedData, modelId: String) async throws -> ModelLoadResult {
   return try await Task.detached {
     // ExecuTorchModule initialization on background task
+    // Writes bytes to temp file, loads module, deletes temp file
   }.value
 }
 ```
+
+**Memory Loading**: Writes model bytes to temporary file, initializes `ExecuTorchModule`, then deletes temp file. This enables asset bundle loading while working with ExecuTorch's file-based API.
 
 **Shared Sources**: iOS and macOS share the same Swift implementation via symlinks to avoid code duplication.
 
@@ -462,18 +472,19 @@ abstract class BaseOutputProcessor<T, R> {
 - **Solution**: Use Apple Silicon Mac, or rebuild XCFrameworks with x86_64 support
 
 **3. Model Loading Fails**
-- **Issue**: File not found, invalid .pte format, or corrupted model
+- **Issue**: Invalid .pte format, corrupted model, or asset not found
 - **Solution**:
-  - Verify file path with `File(path).existsSync()`
-  - Check .pte format with `file` command (should be "data")
+  - Verify asset is listed in `pubspec.yaml` under `flutter.assets`
+  - Check model bytes are loaded correctly: `modelBytes.lengthInBytes > 0`
+  - Verify .pte format (should be valid ExecuTorch binary)
   - Re-export model from PyTorch with correct ExecuTorch version
 
 **4. Inference Returns Error**
 - **Issue**: Wrong tensor shapes, data types, or model compatibility
 - **Solution**:
-  - Enable debug logging: `setDebugLogging(true)`
-  - Check `model.inputShapes` and `model.outputShapes`
-  - Verify tensor data types match model expectations
+  - Check `model.inputShapes` and `model.outputShapes` to verify expected formats
+  - Verify tensor data types match model expectations (Float32, Int32, Int8, UInt8)
+  - Ensure tensor shapes match exactly (including batch dimension)
   - Check ExecuTorch version compatibility (Android: 1.0.0-rc2, iOS/macOS: SPM 1.0.0)
 
 **5. Memory Issues**
@@ -489,7 +500,7 @@ abstract class BaseOutputProcessor<T, R> {
 - **Flutter DevTools**: Memory profiler, performance view
 - **Android Studio**: Logcat with "ExecuTorch" filter
 - **Xcode**: Console with "ExecuTorch" filter
-- **ExecuTorch Logging**: `setDebugLogging(true)` for detailed logs
+- **Platform Logs**: Check native logs for detailed error messages
 
 ### Getting Help
 
@@ -522,11 +533,14 @@ abstract class BaseOutputProcessor<T, R> {
 - User-controlled memory management
 - Example app with YOLO and MobileNet demos
 - Reference processors for common model types
+- Asset bundle loading support
 
-**Breaking Changes from Earlier Iterations**:
-- Removed automatic lifecycle management
-- Removed `ExecutorchLifecycleManager` (Android/iOS/macOS)
-- Users must explicitly call `dispose()` on models
+**API Design**:
+- Minimal API surface: Just `load()` and `forward()`
+- No singleton manager, no lifecycle manager
+- Models loaded from `Uint8List` bytes (enables asset bundle loading)
+- Direct tensor return (no wrapper objects)
+- User explicitly manages model lifecycle with `dispose()`
 
 ## Known Limitations
 
@@ -545,8 +559,8 @@ abstract class BaseOutputProcessor<T, R> {
 - Streaming inference for large outputs
 - Model quantization utilities
 - Comprehensive unit/integration test suite
-- Asset bundle loading (currently file path only)
 - Model caching and version management
+- Optional debugging/profiling APIs
 
 ## Contact and Support
 
@@ -558,6 +572,7 @@ abstract class BaseOutputProcessor<T, R> {
 
 ---
 
-**Last Updated**: 2025-10-07
+**Last Updated**: 2025-10-09
 **Package Version**: 0.0.1 (pre-release)
 **ExecuTorch Version**: 1.0.0-rc2 (Android AAR) / 1.0.0 (iOS/macOS SPM)
+**API**: Simplified to `load()` + `forward()` + `dispose()` only

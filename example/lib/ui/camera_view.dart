@@ -82,7 +82,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
       await file.writeAsBytes(byteData.buffer.asUint8List());
 
       // Load model
-      _model = await ExecutorchManager.instance.loadModel(file.path);
+      _model = await ExecuTorchModel.load(file.path);
 
       // Load class labels
       final labelsData = await rootBundle.loadString(widget.labelsAssetPath);

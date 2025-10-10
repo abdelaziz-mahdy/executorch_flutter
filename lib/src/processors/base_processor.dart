@@ -243,14 +243,10 @@ abstract class ExecuTorchProcessor<T, R> {
       }
 
       // Run inference (throws exception on failure)
-      final inferenceResult = await model.runInference(inputs: inputs);
+      final outputs = await model.forward(inputs);
 
       // Validate outputs - filter out null values
-      final validOutputs = inferenceResult.outputs
-              .where((output) => output != null)
-              .cast<TensorData>()
-              .toList() ??
-          [];
+      final validOutputs = outputs.where((output) => output != null).toList();
       if (!postprocessor.validateOutputs(validOutputs)) {
         throw InvalidOutputException(
             'Model outputs validation failed for ${postprocessor.outputTypeName}');

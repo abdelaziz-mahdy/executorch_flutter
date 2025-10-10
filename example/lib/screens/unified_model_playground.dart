@@ -7,8 +7,13 @@ import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_definition.dart';
 import '../models/model_input.dart';
 import '../models/model_registry.dart';
+import '../models/model_settings.dart';
 import '../services/service_locator.dart';
 import '../controllers/camera_controller.dart';
+import '../controllers/opencv_camera_controller.dart';
+import '../controllers/platform_camera_controller.dart';
+import '../processors/camera_image_converter.dart';
+import '../ui/widgets/performance_monitor.dart';
 
 /// Unified Model Playground - works with any model type through ModelDefinition
 class UnifiedModelPlayground extends StatefulWidget {
@@ -23,13 +28,13 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   List<ModelDefinition>? _availableModels;
   ModelDefinition? _selectedModel;
   ExecuTorchModel? _loadedExecuTorchModel;
+  ModelSettings? _modelSettings;
 
   // Processing state
   bool _isLoadingModels = true;
   bool _isLoadingModel = false;
   bool _isProcessing = false;
   bool _isProcessingFrame = false; // Prevent frame processing queue buildup
-  int _frameCounter = 0; // Incremental counter to force Image widget rebuild
 
   // UI state
   bool _isInputExpanded = true;
@@ -48,6 +53,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   CameraController? _cameraController;
   StreamSubscription<Uint8List>? _frameSubscription;
 
+  // Performance tracking for camera mode
+  final PerformanceTracker _performanceTracker = PerformanceTracker();
+
   @override
   void initState() {
     super.initState();
@@ -60,13 +68,43 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       _isCameraMode = !_isCameraMode;
       _input = null;
       _result = null;
+
+      // Reset performance tracking when entering camera mode
+      if (_isCameraMode) {
+        _performanceTracker.reset();
+      }
     });
 
     if (_isCameraMode) {
-      // Get fresh camera controller from GetIt
-      if (_cameraController == null) {
-        _cameraController = getIt<CameraController>();
+      // Re-register camera controller if it was unregistered
+      if (!getIt.isRegistered<CameraController>()) {
+        // Determine camera provider from settings, or fall back to platform default
+        final cameraProvider = _modelSettings?.cameraProvider ??
+            (Platform.isMacOS || Platform.isWindows || Platform.isLinux
+                ? CameraProvider.opencv
+                : CameraProvider.platform);
+
+        getIt.registerLazySingleton<CameraController>(() {
+          switch (cameraProvider) {
+            case CameraProvider.opencv:
+              debugPrint('📷 Using OpenCV camera');
+              return OpenCVCameraController(
+                deviceId: 0,
+                processingInterval: const Duration(milliseconds: 100),
+              );
+            case CameraProvider.platform:
+              debugPrint('📷 Using platform camera');
+              return PlatformCameraController(
+                converter: ImageLibCameraConverter(),
+                processingInterval: const Duration(milliseconds: 100),
+              );
+          }
+        });
+        debugPrint('📝 Re-registered CameraController in GetIt');
       }
+
+      // Get fresh camera controller from GetIt
+      _cameraController ??= getIt<CameraController>();
 
       // Start camera and subscribe to frames
       try {
@@ -110,41 +148,72 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     }
 
     _isProcessingFrame = true;
-    final startTime = DateTime.now();
 
     try {
       debugPrint('📦 Processing camera frame: ${imageBytes.length} bytes, hashCode: ${imageBytes.hashCode}');
+
+      // Start total time measurement
+      final totalStopwatch = Stopwatch()..start();
 
       // Create LiveCameraInput for processing and rendering
       final liveCameraInput = LiveCameraInput(imageBytes);
       debugPrint('📍 Created LiveCameraInput with hashCode: ${liveCameraInput.frameBytes.hashCode}');
 
-      // Prepare input using model's preprocessor
+      // Step 1: Prepare input (preprocessing)
+      // Model will read settings from GetIt if needed
+      debugPrint('⏱️  Starting preprocessing...');
+      final preprocessStopwatch = Stopwatch()..start();
       final tensorInputs = await _selectedModel!.prepareInput(liveCameraInput);
-      debugPrint('🔧 Prepared ${tensorInputs.length} tensor inputs');
+      preprocessStopwatch.stop();
+      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds.toDouble();
+      debugPrint('⏱️  Preprocessing completed: ${preprocessingTime.toStringAsFixed(0)}ms (${tensorInputs.length} tensors)');
 
-      // Run inference
-      final inferenceResult =
-          await _loadedExecuTorchModel!.runInference(inputs: tensorInputs);
-      debugPrint('✅ Inference complete: ${inferenceResult.executionTimeMs}ms');
+      // Step 2: Run inference
+      debugPrint('⏱️  Starting inference...');
+      final inferenceStopwatch = Stopwatch()..start();
+      final outputs = await _loadedExecuTorchModel!.forward(tensorInputs);
+      inferenceStopwatch.stop();
+      final inferenceTime = inferenceStopwatch.elapsedMilliseconds.toDouble();
+      debugPrint('⏱️  Inference completed: ${inferenceTime.toStringAsFixed(0)}ms');
 
-      // Process result using model's postprocessor
+      // Step 3: Process result (postprocessing)
+      debugPrint('⏱️  Starting postprocessing...');
+      final postprocessStopwatch = Stopwatch()..start();
       final result = await _selectedModel!.processResult(
         input: liveCameraInput,
-        inferenceResult: inferenceResult,
+        outputs: outputs,
       );
-      debugPrint('✅ Result processed');
+      postprocessStopwatch.stop();
+      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds.toDouble();
+      debugPrint('⏱️  Postprocessing completed: ${postprocessingTime.toStringAsFixed(0)}ms');
+
+      totalStopwatch.stop();
+      final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();
+      debugPrint('⏱️  Total time: ${totalTime.toStringAsFixed(0)}ms');
 
       // Update UI with result - LiveCameraInput contains both processing and display data
       if (mounted) {
         final oldInputHash = _input is LiveCameraInput ? (_input as LiveCameraInput).frameBytes.hashCode : null;
+
+        // Update performance tracker with new frame metrics
+        _performanceTracker.update(
+          preprocessingTime: preprocessingTime,
+          inferenceTime: inferenceTime,
+          postprocessingTime: postprocessingTime,
+          totalTime: totalTime,
+        );
+
         setState(() {
           _input = liveCameraInput;
           _result = result;
-          _inferenceTime = inferenceResult.executionTimeMs;
+          _preprocessingTime = preprocessingTime;
+          _inferenceTime = inferenceTime;
+          _postprocessingTime = postprocessingTime;
+          _totalTime = totalTime;
         });
-        final processingTime = DateTime.now().difference(startTime).inMilliseconds;
-        debugPrint('✅ UI updated! Old hash: $oldInputHash, New hash: ${liveCameraInput.frameBytes.hashCode}, Total time: ${processingTime}ms');
+
+        debugPrint('✅ UI updated! Old hash: $oldInputHash, New hash: ${liveCameraInput.frameBytes.hashCode}');
+        debugPrint('📊 Frame #${_performanceTracker.frameCount} | Avg Total: ${_performanceTracker.toMetrics().totalTime!.toStringAsFixed(1)}ms | FPS: ${_performanceTracker.fps.toStringAsFixed(1)}');
       }
     } catch (e, stackTrace) {
       debugPrint('❌ Camera frame processing error: $e');
@@ -202,13 +271,21 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       final modelPath = await _loadAssetModel(model.assetPath);
 
       // Load ExecuTorch model
-      final execuTorchModel = await ExecutorchManager.instance.loadModel(
-        modelPath,
-      );
+      final execuTorchModel = await ExecuTorchModel.load(modelPath);
+
+      // Initialize default settings for this model and register in GetIt
+      // Models will read their settings from GetIt
+      if (getIt.isRegistered<ModelSettings>()) {
+        getIt.unregister<ModelSettings>();
+      }
+      // Create default settings based on model type
+      // For now, we'll let the model's buildSettingsWidget create defaults
+      // So we don't register anything here - it will be registered when settings dialog opens
 
       setState(() {
         _selectedModel = model;
         _loadedExecuTorchModel = execuTorchModel;
+        _modelSettings = null; // Reset settings when switching models
         _isLoadingModel = false;
       });
     } catch (e) {
@@ -241,6 +318,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       final totalStopwatch = Stopwatch()..start();
 
       // Step 1: Prepare input (convert to TensorData)
+      // Model will read settings from GetIt if needed
       debugPrint('⏱️  Starting preprocessing...');
       final preprocessStopwatch = Stopwatch()..start();
       final tensorInputs = await _selectedModel!.prepareInput(input);
@@ -254,9 +332,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       // Step 2: Run inference
       debugPrint('⏱️  Starting inference...');
       final inferenceStopwatch = Stopwatch()..start();
-      final inferenceResult = await _loadedExecuTorchModel!.runInference(
-        inputs: tensorInputs,
-      );
+      final outputs = await _loadedExecuTorchModel!.forward(tensorInputs);
       inferenceStopwatch.stop();
       final inferenceTime = inferenceStopwatch.elapsedMilliseconds.toDouble();
       debugPrint(
@@ -268,7 +344,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       final postprocessStopwatch = Stopwatch()..start();
       final result = await _selectedModel!.processResult(
         input: input,
-        inferenceResult: inferenceResult,
+        outputs: outputs,
       );
       postprocessStopwatch.stop();
       final postprocessingTime = postprocessStopwatch.elapsedMilliseconds
@@ -299,12 +375,162 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     }
   }
 
+  void _showSettingsDialog() {
+    if (_selectedModel == null) return;
+
+    // Show settings in a modal bottom sheet with StatefulBuilder
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          // Initialize default settings if none exist yet
+          // This also registers them in GetIt for models to access
+          if (_modelSettings == null && getIt.isRegistered<ModelSettings>()) {
+            _modelSettings = getIt<ModelSettings>();
+          }
+
+          // Get the settings widget from the model
+          final settingsWidget = _selectedModel!.buildSettingsWidget(
+            context: context,
+            settings: _modelSettings,
+            onSettingsChanged: (newSettings) async {
+              // Check if camera provider changed while camera is active
+              final oldCameraProvider = _modelSettings?.cameraProvider;
+              final newCameraProvider = newSettings.cameraProvider;
+              final cameraProviderChanged = oldCameraProvider != newCameraProvider;
+
+              // Update both modal state and main state
+              setModalState(() {
+                _modelSettings = newSettings;
+              });
+              setState(() {
+                _modelSettings = newSettings;
+              });
+
+              // Register settings in GetIt for models to access
+              if (getIt.isRegistered<ModelSettings>()) {
+                getIt.unregister<ModelSettings>();
+              }
+              getIt.registerSingleton<ModelSettings>(_modelSettings!);
+
+              // Restart camera if provider changed and camera is active
+              if (cameraProviderChanged && _isCameraMode) {
+                debugPrint('📷 Camera provider changed, restarting camera...');
+
+                // Stop current camera
+                await _frameSubscription?.cancel();
+                _frameSubscription = null;
+                await _cameraController?.dispose();
+                _cameraController = null;
+
+                // Unregister old controller
+                if (getIt.isRegistered<CameraController>()) {
+                  getIt.unregister<CameraController>();
+                }
+
+                // Re-toggle camera mode to start with new provider
+                // Turn off first
+                setState(() {
+                  _isCameraMode = false;
+                });
+
+                // Turn back on with new provider
+                await Future.delayed(const Duration(milliseconds: 100));
+                await _toggleCameraMode();
+              }
+            },
+          );
+
+          // If the model has no settings, show a message
+          if (settingsWidget == null) {
+            // Use mounted check pattern for async context usage
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('This model has no configurable settings'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            });
+            return const SizedBox.shrink();
+          }
+
+          return DraggableScrollableSheet(
+            initialChildSize: 0.6,
+            minChildSize: 0.3,
+            maxChildSize: 0.9,
+            expand: false,
+            builder: (context, scrollController) => Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.settings,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Model Settings',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Settings content
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    child: settingsWidget,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Model Playground'),
         elevation: 0,
+        actions: [
+          // Settings button - only shown when a model is selected
+          if (_selectedModel != null)
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: _showSettingsDialog,
+              tooltip: 'Model Settings',
+            ),
+        ],
       ),
       body: _isLoadingModels
           ? const Center(child: CircularProgressIndicator())
@@ -423,7 +649,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           Icon(
             Icons.model_training,
             size: 64,
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(
@@ -444,7 +670,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -596,10 +822,17 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Widget _buildCameraSection() {
-    // For camera mode, show the result renderer with the latest processed frame
-    // LiveCameraInput contains the frame bytes for Image.memory rendering
-    if (_result != null && _input != null) {
-      return RepaintBoundary(
+    // For camera mode, show the result renderer with performance overlay
+    Widget cameraContent;
+
+    if (_input == null) {
+      // Camera mode with no results yet - show loading indicator
+      cameraContent = const Center(
+        child: CircularProgressIndicator(),
+      );
+    } else {
+      // Camera has provided input - render it (with or without inference results)
+      cameraContent = RepaintBoundary(
         child: _selectedModel!.buildResultRenderer(
           context: context,
           input: _input!,
@@ -608,121 +841,93 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
     }
 
-    // Camera mode with no results yet - show loading indicator
-    if (_input == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+    // Wrap with performance overlay if enabled for this model
+    final showPerformance = _selectedModel?.showPerformanceOverlay ?? true;
+    final performanceMetrics = _performanceTracker.toMetrics();
 
-    // Camera has provided input - render it (with or without inference results)
-    return RepaintBoundary(
-      child: _selectedModel!.buildResultRenderer(
-        context: context,
-        input: _input!,
-        result: _result,
-      ),
+    return Stack(
+      children: [
+        cameraContent,
+
+        // Performance overlay (top-right corner) - uses model-specific implementation
+        if (showPerformance && performanceMetrics.hasData)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: _selectedModel!.buildPerformanceMonitor(
+              context: context,
+              metrics: performanceMetrics,
+              displayMode: PerformanceDisplayMode.overlay,
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildDetailsSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    // Don't show performance in camera mode - it's already shown as an overlay
+    final showPerformance = !_isCameraMode &&
+                           (_selectedModel?.showPerformanceOverlay ?? true);
+    final performanceMetrics = PerformanceMetrics(
+      preprocessingTime: _preprocessingTime,
+      inferenceTime: _inferenceTime,
+      postprocessingTime: _postprocessingTime,
+      totalTime: _totalTime,
+    );
+
+    return Column(
+      children: [
+        // Performance section - uses model-specific implementation
+        // Only shown for static images, not camera mode (which uses overlay)
+        if (showPerformance && performanceMetrics.hasData)
+          _selectedModel!.buildPerformanceMonitor(
+            context: context,
+            metrics: performanceMetrics,
+            displayMode: PerformanceDisplayMode.section,
+          ),
+
+        // Divider if performance is shown
+        if (showPerformance && performanceMetrics.hasData)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: const Divider(),
+          ),
+
+        // Model-specific results details
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.check_circle,
-                color: Theme.of(context).colorScheme.primary,
+              Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Results',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Text(
-                'Results',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              const SizedBox(height: 16),
+              _selectedModel!.buildResultsDetailsSection(
+                context: context,
+                result: _result!,
+                processingTime: _totalTime,
               ),
-              const Spacer(),
-              if (_totalTime != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${_totalTime!.toStringAsFixed(0)}ms',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // Timing breakdown
-          if (_preprocessingTime != null &&
-              _inferenceTime != null &&
-              _postprocessingTime != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Performance',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                _buildTimingRow(
-                  context,
-                  'Preprocessing',
-                  _preprocessingTime!,
-                  _totalTime!,
-                  Colors.blue,
-                ),
-                const SizedBox(height: 8),
-                _buildTimingRow(
-                  context,
-                  'Inference',
-                  _inferenceTime!,
-                  _totalTime!,
-                  Colors.green,
-                ),
-                const SizedBox(height: 8),
-                _buildTimingRow(
-                  context,
-                  'Postprocessing',
-                  _postprocessingTime!,
-                  _totalTime!,
-                  Colors.orange,
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 16),
-              ],
-            ),
-
-          _selectedModel!.buildResultsDetailsSection(
-            context: context,
-            result: _result!,
-            processingTime: _totalTime,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -777,159 +982,10 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
 
             // Results details section
             if (_result != null)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Results',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const Spacer(),
-                        if (_totalTime != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${_totalTime!.toStringAsFixed(0)}ms',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimaryContainer,
-                                  ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Timing breakdown
-                    if (_preprocessingTime != null &&
-                        _inferenceTime != null &&
-                        _postprocessingTime != null)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Performance',
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTimingRow(
-                            context,
-                            'Preprocessing',
-                            _preprocessingTime!,
-                            _totalTime!,
-                            Colors.blue,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildTimingRow(
-                            context,
-                            'Inference',
-                            _inferenceTime!,
-                            _totalTime!,
-                            Colors.green,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildTimingRow(
-                            context,
-                            'Postprocessing',
-                            _postprocessingTime!,
-                            _totalTime!,
-                            Colors.orange,
-                          ),
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-
-                    _selectedModel!.buildResultsDetailsSection(
-                      context: context,
-                      result: _result!,
-                      processingTime: _totalTime,
-                    ),
-                  ],
-                ),
-              ),
+              _buildDetailsSection(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTimingRow(
-    BuildContext context,
-    String label,
-    double time,
-    double totalTime,
-    Color color,
-  ) {
-    final percentage = (time / totalTime * 100).toStringAsFixed(1);
-    final ratio = time / totalTime;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
-            ),
-            Text(
-              '${time.toStringAsFixed(0)}ms',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '($percentage%)',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: ratio,
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
-          ),
-        ),
-      ],
     );
   }
 }

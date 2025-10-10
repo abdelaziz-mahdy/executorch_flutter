@@ -175,86 +175,6 @@ public struct TensorData: Hashable {
   }
 }
 
-/// Inference request parameters
-///
-/// Generated class from Pigeon that represents data sent in messages.
-public struct InferenceRequest: Hashable {
-  var modelId: String
-  var inputs: [TensorData?]
-  var options: [String?: Any?]? = nil
-  var timeoutMs: Int64? = nil
-  var requestId: String? = nil
-
-
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  static func fromList(_ pigeonVar_list: [Any?]) -> InferenceRequest? {
-    let modelId = pigeonVar_list[0] as! String
-    let inputs = pigeonVar_list[1] as! [TensorData?]
-    let options: [String?: Any?]? = nilOrValue(pigeonVar_list[2])
-    let timeoutMs: Int64? = nilOrValue(pigeonVar_list[3])
-    let requestId: String? = nilOrValue(pigeonVar_list[4])
-
-    return InferenceRequest(
-      modelId: modelId,
-      inputs: inputs,
-      options: options,
-      timeoutMs: timeoutMs,
-      requestId: requestId
-    )
-  }
-  func toList() -> [Any?] {
-    return [
-      modelId,
-      inputs,
-      options,
-      timeoutMs,
-      requestId,
-    ]
-  }
-  public static func == (lhs: InferenceRequest, rhs: InferenceRequest) -> Bool {
-    return deepEqualsExecutorchApi(lhs.toList(), rhs.toList())  }
-  public func hash(into hasher: inout Hasher) {
-    deepHashExecutorchApi(value: toList(), hasher: &hasher)
-  }
-}
-
-/// Inference execution result
-/// On success: contains outputs and timing info
-/// On failure: platform throws exception
-///
-/// Generated class from Pigeon that represents data sent in messages.
-public struct InferenceResult: Hashable {
-  var outputs: [TensorData?]
-  var executionTimeMs: Double
-  var requestId: String? = nil
-
-
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  static func fromList(_ pigeonVar_list: [Any?]) -> InferenceResult? {
-    let outputs = pigeonVar_list[0] as! [TensorData?]
-    let executionTimeMs = pigeonVar_list[1] as! Double
-    let requestId: String? = nilOrValue(pigeonVar_list[2])
-
-    return InferenceResult(
-      outputs: outputs,
-      executionTimeMs: executionTimeMs,
-      requestId: requestId
-    )
-  }
-  func toList() -> [Any?] {
-    return [
-      outputs,
-      executionTimeMs,
-      requestId,
-    ]
-  }
-  public static func == (lhs: InferenceResult, rhs: InferenceResult) -> Bool {
-    return deepEqualsExecutorchApi(lhs.toList(), rhs.toList())  }
-  public func hash(into hasher: inout Hasher) {
-    deepHashExecutorchApi(value: toList(), hasher: &hasher)
-  }
-}
-
 /// Model loading result
 /// On success: returns unique model ID
 /// On failure: platform throws exception
@@ -296,10 +216,6 @@ private class ExecutorchApiPigeonCodecReader: FlutterStandardReader {
     case 130:
       return TensorData.fromList(self.readValue() as! [Any?])
     case 131:
-      return InferenceRequest.fromList(self.readValue() as! [Any?])
-    case 132:
-      return InferenceResult.fromList(self.readValue() as! [Any?])
-    case 133:
       return ModelLoadResult.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -315,14 +231,8 @@ private class ExecutorchApiPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? TensorData {
       super.writeByte(130)
       super.writeValue(value.toList())
-    } else if let value = value as? InferenceRequest {
-      super.writeByte(131)
-      super.writeValue(value.toList())
-    } else if let value = value as? InferenceResult {
-      super.writeByte(132)
-      super.writeValue(value.toList())
     } else if let value = value as? ModelLoadResult {
-      super.writeByte(133)
+      super.writeByte(131)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -346,6 +256,8 @@ class ExecutorchApiPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable
 
 
 /// Host API - Called from Dart to native platforms
+/// Minimal interface matching native ExecuTorch: load → forward → dispose
+/// Plus utility methods: getLoadedModels, setDebugLogging
 /// All methods throw PlatformException on error
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
@@ -353,15 +265,15 @@ public protocol ExecutorchHostApi {
   /// Load a model from the specified file path
   /// Returns a unique model ID for subsequent operations
   /// Throws: PlatformException if file not found or model loading fails
-  func loadModel(filePath: String, completion: @escaping (Result<ModelLoadResult, Error>) -> Void)
-  /// Run inference on a loaded model
-  /// Returns inference results with outputs and timing
+  func load(filePath: String, completion: @escaping (Result<ModelLoadResult, Error>) -> Void)
+  /// Run forward pass (inference) on a loaded model
+  /// Returns output tensors directly (no wrapper object)
   /// Throws: PlatformException if model not found or inference fails
-  func runInference(request: InferenceRequest, completion: @escaping (Result<InferenceResult, Error>) -> Void)
+  func forward(modelId: String, inputs: [TensorData?], completion: @escaping (Result<[TensorData?], Error>) -> Void)
   /// Dispose a loaded model and free its resources
   /// User has full control over memory management
   /// Throws: PlatformException if model not found
-  func disposeModel(modelId: String) throws
+  func dispose(modelId: String) throws
   /// Get list of currently loaded model IDs
   /// Returns empty list if no models loaded
   func getLoadedModels() throws -> [String?]
@@ -379,12 +291,12 @@ class ExecutorchHostApiSetup {
     /// Load a model from the specified file path
     /// Returns a unique model ID for subsequent operations
     /// Throws: PlatformException if file not found or model loading fails
-    let loadModelChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.loadModel\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    let loadChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.load\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
-      loadModelChannel.setMessageHandler { message, reply in
+      loadChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let filePathArg = args[0] as! String
-        api.loadModel(filePath: filePathArg) { result in
+        api.load(filePath: filePathArg) { result in
           switch result {
           case .success(let res):
             reply(wrapResult(res))
@@ -394,17 +306,18 @@ class ExecutorchHostApiSetup {
         }
       }
     } else {
-      loadModelChannel.setMessageHandler(nil)
+      loadChannel.setMessageHandler(nil)
     }
-    /// Run inference on a loaded model
-    /// Returns inference results with outputs and timing
+    /// Run forward pass (inference) on a loaded model
+    /// Returns output tensors directly (no wrapper object)
     /// Throws: PlatformException if model not found or inference fails
-    let runInferenceChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.runInference\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    let forwardChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.forward\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
-      runInferenceChannel.setMessageHandler { message, reply in
+      forwardChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
-        let requestArg = args[0] as! InferenceRequest
-        api.runInference(request: requestArg) { result in
+        let modelIdArg = args[0] as! String
+        let inputsArg = args[1] as! [TensorData?]
+        api.forward(modelId: modelIdArg, inputs: inputsArg) { result in
           switch result {
           case .success(let res):
             reply(wrapResult(res))
@@ -414,25 +327,25 @@ class ExecutorchHostApiSetup {
         }
       }
     } else {
-      runInferenceChannel.setMessageHandler(nil)
+      forwardChannel.setMessageHandler(nil)
     }
     /// Dispose a loaded model and free its resources
     /// User has full control over memory management
     /// Throws: PlatformException if model not found
-    let disposeModelChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.disposeModel\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    let disposeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.dispose\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
-      disposeModelChannel.setMessageHandler { message, reply in
+      disposeChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let modelIdArg = args[0] as! String
         do {
-          try api.disposeModel(modelId: modelIdArg)
+          try api.dispose(modelId: modelIdArg)
           reply(wrapResult(nil))
         } catch {
           reply(wrapError(error))
         }
       }
     } else {
-      disposeModelChannel.setMessageHandler(nil)
+      disposeChannel.setMessageHandler(nil)
     }
     /// Get list of currently loaded model IDs
     /// Returns empty list if no models loaded

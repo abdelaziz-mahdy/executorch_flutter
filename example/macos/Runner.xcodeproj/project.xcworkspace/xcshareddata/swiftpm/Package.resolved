@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pytorch/executorch.git",
       "state" : {
-        "branch" : "swiftpm-1.0.0",
-        "revision" : "0c891c612ce65b95d7589650d8af51b475f89aab"
+        "branch" : "swiftpm-0.7.0",
+        "revision" : "2da89130e5e791959f2a3b2a796a54ecac9c545f"
       }
     }
   ],
