@@ -32,12 +32,6 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# ExecuTorch model files (generated locally)
-*.pte
-example/assets/models/*.pte
-example/assets/models/*.json
-example/assets/models/*.txt
-
 # Python virtual environment and cache
 python/executorch_env/
 python/__pycache__/

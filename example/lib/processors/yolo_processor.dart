@@ -257,13 +257,14 @@ class YoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
 
 /// YOLO-specific postprocessor
 ///
-/// Supports multiple YOLO versions:
-/// - YOLOv5: Output [1, 85, 8400] - 4 bbox + 1 objectness + 80 classes
-/// - YOLOv8: Output [1, 84, 8400] - 4 bbox + 80 classes (objectness integrated)
-/// - YOLO11: Output [1, 84, 8400] - same format as YOLOv8
-/// - YOLO12: Output [1, 84, 8400] - same format as YOLOv8
+/// Supports multiple YOLO versions with any number of classes:
+/// - YOLOv5: Output [1, N+5, 8400] - 4 bbox + 1 objectness + N classes
+/// - YOLOv8+: Output [1, N+4, 8400] - 4 bbox + N classes (objectness integrated)
 ///
-/// The processor automatically detects the format based on tensor shape.
+/// Where N is the number of classes (e.g., 80 for COCO, 1 for single-class, etc.)
+///
+/// The processor automatically detects the format based on tensor shape and
+/// the number of labels provided.
 class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
   YoloPostprocessor({
     required this.classLabels,
@@ -362,10 +363,15 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
       '🔍 Shape: $shape, isTransposed: $isTransposed, outputRow: $outputRow, outputColumn: $outputColumn',
     );
 
-    // Detect YOLO version: 85 = YOLOv5 (with objectness), 84 = YOLOv8+ (without)
-    final isYolov5 =
-        outputColumn == 85 || outputColumn == (classLabels.length + 5);
+    // Detect YOLO version based on output column count:
+    // YOLOv5: outputColumn = 4 bbox + 1 objectness + N classes = (N + 5)
+    // YOLOv8+: outputColumn = 4 bbox + N classes = (N + 4)
+    final isYolov5 = outputColumn == (classLabels.length + 5);
     final numClasses = isYolov5 ? (outputColumn - 5) : (outputColumn - 4);
+
+    debugPrint(
+      '🔍 Detected ${isYolov5 ? "YOLOv5" : "YOLOv8+"} format with $numClasses classes',
+    );
 
     return isTransposed
         ? _parseYoloV8Transposed(outputs, outputRow, outputColumn, numClasses)
@@ -604,7 +610,8 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
 
 /// Complete YOLO processor for object detection
 ///
-/// Supports all YOLO versions (v5, v8, v11, v12) with automatic format detection.
+/// Supports all YOLO versions (v5, v8, v11, v12+) with automatic format detection.
+/// Works with any number of classes - just provide the correct labels list.
 ///
 /// Example usage:
 /// ```dart
@@ -613,7 +620,7 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
 ///     targetWidth: 640,
 ///     targetHeight: 640,
 ///   ),
-///   classLabels: cocoLabels,
+///   classLabels: yourLabels, // Any number of classes
 ///   confidenceThreshold: 0.25,
 ///   iouThreshold: 0.45,
 /// );

@@ -1,0 +1,86 @@
+# Model Licenses
+
+This directory contains pre-trained machine learning models for demonstration purposes. Each model has its own license as specified below.
+
+## MobileNet V3
+
+**File**: `mobilenet_v3_small_xnnpack.pte`
+
+**Source**: PyTorch torchvision models
+**Original Model**: https://pytorch.org/vision/stable/models.html
+
+**License**: BSD 3-Clause License
+
+Copyright (c) Soumith Chintala 2016
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## YOLO Models
+
+**Files**:
+- `yolov5n_xnnpack.pte`
+- `yolov8n_xnnpack.pte`
+- `yolo11n_xnnpack.pte`
+
+**Source**: Ultralytics YOLO models
+**Original Repository**: https://github.com/ultralytics/ultralytics
+
+**License**: GNU Affero General Public License v3.0 (AGPL-3.0)
+
+Copyright (C) 2023 Ultralytics
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+**Important AGPL-3.0 Notice**:
+- If you modify and distribute these YOLO models, you must make the source code available under AGPL-3.0
+- If you use these models in a network service, you must provide source code to users
+- For commercial use without AGPL-3.0 restrictions, contact Ultralytics for an enterprise license
+
+For more information on Ultralytics licensing:
+- AGPL-3.0 License: https://github.com/ultralytics/ultralytics/blob/main/LICENSE
+- Enterprise License: https://ultralytics.com/license
+
+## ImageNet Class Labels
+
+**File**: `imagenet_classes.txt`
+
+**Source**: ImageNet class labels
+**Dataset**: ImageNet Large Scale Visual Recognition Challenge (ILSVRC)
+
+**Note**: The class labels are factual data and are provided for reference purposes. The ImageNet dataset itself has specific terms of use. For more information, visit: http://www.image-net.org/
+
+## Model Formats
+
+All models in this directory are in ExecuTorch format (`.pte` files), which are optimized versions of the original PyTorch models. The conversion to ExecuTorch format does not change the underlying model weights or architecture - only the serialization format for efficient on-device inference.
+
+## Usage Guidelines
+
+These models are provided for **demonstration and development purposes** in the executorch_flutter example application.
+
+- **MobileNet V3**: Free to use for commercial and non-commercial purposes under BSD-3-Clause
+- **YOLO Models**: Require AGPL-3.0 compliance OR an Ultralytics enterprise license for commercial use
+- Always verify license compatibility with your intended use case before deployment
+
+## Disclaimer
+
+These pre-trained models are provided "as is" without warranty of any kind. The models are included solely for demonstration purposes to help developers understand how to use the executorch_flutter package. Users are responsible for ensuring their use of these models complies with all applicable licenses and regulations.
+
+---
+
+For questions about model licensing:
+- MobileNet: Contact PyTorch team or review torchvision license
+- YOLO: Contact Ultralytics (https://ultralytics.com/license)
+- ImageNet labels: Review ImageNet terms of use

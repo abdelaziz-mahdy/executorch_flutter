@@ -14,6 +14,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 - ✅ **Multiple Models**: Support for concurrent model instances
 - ✅ **Error Handling**: Structured exception handling with clear error messages
 - ✅ **Backend Support**: XNNPACK, CoreML, MPS backends
+- ✅ **Live Camera**: Real-time inference with camera stream support
 
 ## Installation
 
@@ -77,9 +78,7 @@ See the `example/` directory for full working applications:
 - **Input Types**: float32, int8, int32, uint8 tensors
 - **Model Size**: Tested with models up to 500MB
 
-> 📖 **Need to export your PyTorch models?** See our comprehensive **[Model Export Guide](MODEL_EXPORT_GUIDE.md)** for step-by-step instructions on converting PyTorch models to ExecuTorch format with platform-specific optimizations.
->
-> 📱 **For example app setup:** See [Example App Model Guide](example/MODEL_EXPORT_GUIDE.md) for complete integration examples.
+> 📖 **Need to export your PyTorch models?** See the [Official ExecuTorch Export Guide](https://pytorch.org/executorch/stable/tutorials/export-to-executorch-tutorial.html) for converting PyTorch models to ExecuTorch format with platform-specific optimizations.
 
 ## Platform Requirements
 
@@ -134,11 +133,16 @@ The `example/` directory contains complete working demos:
 
 To use your PyTorch models with this package, convert them to ExecuTorch format (`.pte` files).
 
-**📖 Complete guide**: [Model Export Guide](MODEL_EXPORT_GUIDE.md)
+**📖 Official ExecuTorch Export Guide**: [PyTorch ExecuTorch Documentation](https://pytorch.org/executorch/stable/getting-started-architecture.html)
 
-**Quick reference**: [ExecuTorch Documentation](https://pytorch.org/executorch/)
+**Key Resources:**
+- [ExecuTorch Export Tutorial](https://pytorch.org/executorch/stable/tutorials/export-to-executorch-tutorial.html)
+- [XNNPACK Backend Delegation](https://pytorch.org/executorch/stable/tutorial-xnnpack-delegate-lowering.html)
+- [Supported Operators](https://pytorch.org/executorch/stable/ir-ops-set-definition.html)
 
-**Quick Setup for Example App:**
+**Example App Models:**
+
+The example app includes scripts for exporting reference models (MobileNet, YOLO):
 
 ```bash
 # One-command setup: installs dependencies and exports all models
@@ -152,13 +156,6 @@ This will:
 - ✅ Export YOLO11n for object detection
 - ✅ Generate COCO labels file
 - ✅ Verify all models are ready
-
-**Manual export:**
-```bash
-cd python
-python3 export_models.py  # MobileNet V3 + COCO labels
-python3 export_yolo.py     # YOLO models (v5, v8, v11)
-```
 
 ## Development Status
 
@@ -179,42 +176,6 @@ Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) 
 - Code standards and PR process
 - Platform-specific guidelines
 
-## Architecture
-
-```
-Flutter App (Dart)
-       ↓
-ExecutorchManager (High-level API)
-       ↓
-Pigeon Generated APIs (Type-safe communication)
-       ↓
-Platform Channel Layer
-   ↓              ↓              ↓
-Android         iOS           macOS
-(Kotlin)      (Swift)        (Swift)
-   ↓              ↓              ↓
-ExecuTorch    ExecuTorch    ExecuTorch
-1.0.0-rc2     SPM 1.0.0     SPM 1.0.0
-   ↓              ↓              ↓
-XNNPACK       CoreML/MPS    CoreML/MPS
-Backends      Backends      Backends
-```
-
-### Key Components
-
-- **ExecutorchManager**: Main entry point for all operations, singleton pattern
-- **ExecuTorchModel**: Represents a loaded model with lifecycle management
-- **TensorDataWrapper**: High-level tensor abstraction with validation
-- **Pigeon Interface**: Type-safe method channel communication
-- **Native Model Managers**: Platform-specific model lifecycle and inference handling
-- **Backend Integration**: Optimized ExecuTorch backends for each platform
-
-### Thread Safety
-
-- **iOS & macOS**: Actor-based concurrency with Swift async/await
-- **Android**: Kotlin coroutines with structured concurrency
-- **Flutter**: All operations return Futures for non-blocking UI
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
@@ -222,16 +183,16 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Support
 
 For issues and questions:
-- 📖 Check the [Model Export Guide](MODEL_EXPORT_GUIDE.md)
+- 📖 Check the [Official ExecuTorch Documentation](https://pytorch.org/executorch/stable/getting-started-architecture.html)
 - 🐛 [Report issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) on GitHub
 - 💬 [Discussions](https://github.com/abdelaziz-mahdy/executorch_flutter/discussions) for questions and feature requests
 
 ## Roadmap
 
 See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
-- Live camera integration example
-- Additional preprocessing/postprocessing options for different model types
-- Platform expansion and more
+- Additional model type examples (segmentation, pose estimation)
+- Windows and Linux platform support
+- Performance optimizations and more
 
 ---
 
