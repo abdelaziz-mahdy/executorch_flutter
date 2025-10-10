@@ -79,11 +79,11 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
 
     // Pigeon ExecutorchHostApi implementation
 
-    override fun loadModel(filePath: String, callback: (Result<ModelLoadResult>) -> Unit) {
+    override fun load(filePath: String, callback: (Result<ModelLoadResult>) -> Unit) {
         pluginScope.launch {
             try {
                 Log.d(TAG, "Loading model from: $filePath")
-                val result = modelManager.loadModel(filePath)
+                val result = modelManager.load(filePath)
                 Log.d(TAG, "Model loaded successfully: ${result.modelId}")
                 callback(Result.success(result))
             } catch (e: Exception) {
@@ -93,42 +93,32 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
         }
     }
 
-    override fun runInference(request: InferenceRequest, callback: (Result<InferenceResult>) -> Unit) {
+    override fun forward(modelId: String, inputs: List<TensorData?>, callback: (Result<List<TensorData?>>) -> Unit) {
         pluginScope.launch {
             try {
-                Log.d(TAG, "Running inference for model: ${request.modelId}")
+                Log.d(TAG, "Running inference for model: $modelId")
                 val startTime = System.currentTimeMillis()
 
-                val result = modelManager.runInference(request)
+                val outputs = modelManager.forward(modelId, inputs)
 
                 val endTime = System.currentTimeMillis()
-                val executionTime = (endTime - startTime).toDouble()
+                val executionTime = endTime - startTime
 
-                Log.d(TAG, "Inference completed in ${executionTime}ms for model: ${request.modelId}")
+                Log.d(TAG, "Inference completed in ${executionTime}ms for model: $modelId")
 
-                // Override execution time with measured value if not set
-                val finalResult = if (result.executionTimeMs == 0.0) {
-                    InferenceResult(
-                        outputs = result.outputs,
-                        executionTimeMs = executionTime,
-                        requestId = result.requestId
-                    )
-                } else {
-                    result
-                }
-                callback(Result.success(finalResult))
+                callback(Result.success(outputs))
             } catch (e: Exception) {
-                Log.e(TAG, "Inference failed for model: ${request.modelId}", e)
+                Log.e(TAG, "Inference failed for model: $modelId", e)
                 callback(Result.failure(Exception("Inference failed: ${e.message}", e)))
             }
         }
     }
 
-    override fun disposeModel(modelId: String) {
+    override fun dispose(modelId: String) {
         runBlocking {
             try {
                 Log.d(TAG, "Disposing model: $modelId")
-                modelManager.disposeModel(modelId)
+                modelManager.dispose(modelId)
                 Log.d(TAG, "Model disposed successfully: $modelId")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to dispose model: $modelId", e)

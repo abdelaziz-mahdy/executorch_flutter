@@ -70,7 +70,7 @@ void main() {
       final modelPath = modelPaths['mobilenet']!;
 
       // Load the model
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       expect(
         model.modelId,
@@ -88,7 +88,7 @@ void main() {
       final modelPath = modelPaths['yolo11n']!;
 
       // Load the model
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       expect(
         model.modelId,
@@ -106,7 +106,7 @@ void main() {
       final modelPath = modelPaths['yolov5n']!;
 
       // Load the model
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       expect(
         model.modelId,
@@ -124,7 +124,7 @@ void main() {
       final modelPath = modelPaths['yolov8n']!;
 
       // Load the model
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       expect(
         model.modelId,
@@ -140,7 +140,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final modelPath = modelPaths['mobilenet']!;
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       // Create dummy input tensor for MobileNet (1, 3, 224, 224)
       final inputData = List.filled(1 * 3 * 224 * 224, 0.5);
@@ -151,22 +151,17 @@ void main() {
       );
 
       // Run inference
-      final result = await model.runInference(inputs: [inputTensor]);
+      final outputs = await model.forward([inputTensor]);
 
       expect(
-        result.outputs,
+        outputs,
         isNotNull,
         reason: 'Inference should return output tensors',
       );
       expect(
-        result.outputs.isNotEmpty,
+        outputs.isNotEmpty,
         true,
         reason: 'Output tensors should not be empty',
-      );
-      expect(
-        result.executionTimeMs,
-        greaterThan(0),
-        reason: 'Execution time should be recorded',
       );
 
       // Cleanup
@@ -177,7 +172,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final modelPath = modelPaths['yolo11n']!;
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       // Create dummy input tensor for YOLO (1, 3, 640, 640)
       final inputData = List.filled(1 * 3 * 640 * 640, 0.5);
@@ -188,17 +183,17 @@ void main() {
       );
 
       // Run inference
-      final result = await model.runInference(inputs: [inputTensor]);
+      final outputs = await model.forward([inputTensor]);
 
       expect(
-        result.outputs,
+        outputs,
         isNotNull,
         reason: 'Inference should return output tensors',
       );
       expect(
-        result.executionTimeMs,
-        greaterThan(0),
-        reason: 'Execution time should be recorded',
+        outputs.isNotEmpty,
+        true,
+        reason: 'Output tensors should not be empty',
       );
 
       // Cleanup
@@ -209,7 +204,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final modelPath = modelPaths['yolov5n']!;
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       // Create dummy input tensor for YOLO (1, 3, 640, 640)
       final inputData = List.filled(1 * 3 * 640 * 640, 0.5);
@@ -220,17 +215,17 @@ void main() {
       );
 
       // Run inference
-      final result = await model.runInference(inputs: [inputTensor]);
+      final outputs = await model.forward([inputTensor]);
 
       expect(
-        result.outputs,
+        outputs,
         isNotNull,
         reason: 'Inference should return output tensors',
       );
       expect(
-        result.executionTimeMs,
-        greaterThan(0),
-        reason: 'Execution time should be recorded',
+        outputs.isNotEmpty,
+        true,
+        reason: 'Output tensors should not be empty',
       );
 
       // Cleanup
@@ -241,7 +236,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final modelPath = modelPaths['yolov8n']!;
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       // Create dummy input tensor for YOLO (1, 3, 640, 640)
       final inputData = List.filled(1 * 3 * 640 * 640, 0.5);
@@ -252,17 +247,17 @@ void main() {
       );
 
       // Run inference
-      final result = await model.runInference(inputs: [inputTensor]);
+      final outputs = await model.forward([inputTensor]);
 
       expect(
-        result.outputs,
+        outputs,
         isNotNull,
         reason: 'Inference should return output tensors',
       );
       expect(
-        result.executionTimeMs,
-        greaterThan(0),
-        reason: 'Execution time should be recorded',
+        outputs.isNotEmpty,
+        true,
+        reason: 'Output tensors should not be empty',
       );
 
       // Cleanup
@@ -276,25 +271,19 @@ void main() {
       final yoloPath = modelPaths['yolo11n']!;
 
       // Load both models
-      final mobilenet = await manager.loadModel(mobilenetPath);
-      final yolo = await manager.loadModel(yoloPath);
+      final mobilenet = await ExecuTorchModel.load(mobilenetPath);
+      final yolo = await ExecuTorchModel.load(yoloPath);
 
-      // Verify both models are loaded
-      final loadedModelIds = await manager.getLoadedModelIds();
+      // Verify both models are loaded (both have valid model IDs)
       expect(
-        loadedModelIds.length,
-        greaterThanOrEqualTo(2),
-        reason: 'Should have at least 2 models loaded',
+        mobilenet.modelId,
+        isNotEmpty,
+        reason: 'MobileNet should have a valid model ID',
       );
       expect(
-        loadedModelIds.contains(mobilenet.modelId),
-        true,
-        reason: 'MobileNet should be in loaded models',
-      );
-      expect(
-        loadedModelIds.contains(yolo.modelId),
-        true,
-        reason: 'YOLO should be in loaded models',
+        yolo.modelId,
+        isNotEmpty,
+        reason: 'YOLO should have a valid model ID',
       );
 
       // Cleanup
@@ -306,26 +295,23 @@ void main() {
       WidgetTester tester,
     ) async {
       final modelPath = modelPaths['mobilenet']!;
-      final model = await manager.loadModel(modelPath);
-      final modelId = model.modelId;
+      final model = await ExecuTorchModel.load(modelPath);
 
-      // Verify model is loaded
-      var loadedIds = await manager.getLoadedModelIds();
+      // Verify model is not disposed initially
       expect(
-        loadedIds.contains(modelId),
-        true,
-        reason: 'Model should be in loaded models list',
+        model.isDisposed,
+        false,
+        reason: 'Model should not be disposed initially',
       );
 
       // Dispose the model
       await model.dispose();
 
-      // Verify model is no longer loaded
-      loadedIds = await manager.getLoadedModelIds();
+      // Verify model is disposed
       expect(
-        loadedIds.contains(modelId),
-        false,
-        reason: 'Model should not be in loaded models list after disposal',
+        model.isDisposed,
+        true,
+        reason: 'Model should be disposed after calling dispose',
       );
     });
 
@@ -335,14 +321,14 @@ void main() {
       final modelPath = modelPaths['mobilenet']!;
 
       // Load model first time
-      final model1 = await manager.loadModel(modelPath);
+      final model1 = await ExecuTorchModel.load(modelPath);
       final modelId1 = model1.modelId;
 
       // Dispose it
       await model1.dispose();
 
       // Load the same model again
-      final model2 = await manager.loadModel(modelPath);
+      final model2 = await ExecuTorchModel.load(modelPath);
       final modelId2 = model2.modelId;
 
       // Model IDs should be different (new instance)
@@ -364,7 +350,7 @@ void main() {
 
       // Attempt to load non-existent model
       expect(
-        () async => await manager.loadModel(invalidPath),
+        () async => await ExecuTorchModel.load(invalidPath),
         throwsA(isA<ExecuTorchException>()),
         reason: 'Loading non-existent model should throw exception',
       );
@@ -374,7 +360,7 @@ void main() {
       'Should throw exception when running inference on disposed model',
       (WidgetTester tester) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         // Dispose the model
         await model.dispose();
@@ -389,7 +375,7 @@ void main() {
 
         // Attempt to run inference on disposed model
         expect(
-          () async => await model.runInference(inputs: [inputTensor]),
+          () async => await model.forward([inputTensor]),
           throwsA(isA<ExecuTorchException>()),
           reason: 'Running inference on disposed model should throw exception',
         );
@@ -406,7 +392,7 @@ void main() {
 
       // Attempt to load invalid model
       expect(
-        () async => await manager.loadModel(invalidFile.path),
+        () async => await ExecuTorchModel.load(invalidFile.path),
         throwsA(isA<ExecuTorchException>()),
         reason: 'Loading invalid model file should throw exception',
       );
@@ -419,7 +405,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final modelPath = modelPaths['mobilenet']!;
-      final model = await manager.loadModel(modelPath);
+      final model = await ExecuTorchModel.load(modelPath);
 
       // First dispose should succeed
       await model.dispose();
@@ -440,7 +426,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         // Test various 1D shapes
         final shapes = [
@@ -473,7 +459,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         // Test various 2D shapes
         final shapes = [
@@ -506,7 +492,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         // Test various 3D shapes
         final shapes = [
@@ -538,7 +524,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         // Test various 4D shapes (typical image tensor shapes)
         final shapes = [
@@ -571,7 +557,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         final shape = [1, 3, 224, 224];
         final size = shape.reduce((a, b) => a * b);
@@ -593,7 +579,7 @@ void main() {
 
       testWidgets('Should handle int32 data type', (WidgetTester tester) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         final shape = [1, 10];
         final size = shape.reduce((a, b) => a * b);
@@ -615,7 +601,7 @@ void main() {
 
       testWidgets('Should handle uint8 data type', (WidgetTester tester) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         final shape = [1, 224, 224];
         final size = shape.reduce((a, b) => a * b);
@@ -637,7 +623,7 @@ void main() {
 
       testWidgets('Should handle int8 data type', (WidgetTester tester) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         final shape = [1, 100];
         final size = shape.reduce((a, b) => a * b);
@@ -661,7 +647,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         final shape = [1];
         final inputData = [1.0];
@@ -684,7 +670,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         // Test with a reasonably large tensor (not too large to cause OOM)
         final shape = [1, 3, 512, 512];
@@ -709,7 +695,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         // Test various batch sizes
         final batchSizes = [1, 2, 4];
@@ -738,7 +724,7 @@ void main() {
         WidgetTester tester,
       ) async {
         final modelPath = modelPaths['mobilenet']!;
-        final model = await manager.loadModel(modelPath);
+        final model = await ExecuTorchModel.load(modelPath);
 
         final shape = [2, 3, 4, 5];
         final expectedSize = shape.reduce((a, b) => a * b); // 120

@@ -51,6 +51,7 @@ class ExecutorchModelManager(
     // Model storage
     private val loadedModels = ConcurrentHashMap<String, LoadedModel>()
     private val modelCounter = java.util.concurrent.atomic.AtomicInteger(0)
+    private var isDebugLoggingEnabled = false
 
     /**
      * Represents a loaded ExecuTorch model
@@ -65,8 +66,10 @@ class ExecutorchModelManager(
      * Load an ExecuTorch model from a file path
      * Throws ModelLoadException on failure
      */
-    suspend fun loadModel(filePath: String): ModelLoadResult = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Loading ExecuTorch model from: $filePath")
+    suspend fun load(filePath: String): ModelLoadResult = withContext(Dispatchers.IO) {
+        if (isDebugLoggingEnabled) {
+            Log.d(TAG, "Loading ExecuTorch model from: $filePath")
+        }
 
         // Validate file exists and is readable
         val file = File(filePath)
@@ -83,7 +86,9 @@ class ExecutorchModelManager(
 
         try {
             // Load model using ExecuTorch Module.load() API
-            Log.d(TAG, "Loading ExecuTorch module with Module.load()")
+            if (isDebugLoggingEnabled) {
+                Log.d(TAG, "Loading ExecuTorch module with Module.load()")
+            }
             val module = Module.load(filePath)
 
             // Store loaded model
@@ -94,7 +99,9 @@ class ExecutorchModelManager(
 
             loadedModels[modelId] = loadedModel
 
-            Log.d(TAG, "Successfully loaded model: $modelId from $filePath")
+            if (isDebugLoggingEnabled) {
+                Log.d(TAG, "Successfully loaded model: $modelId from $filePath")
+            }
 
             ModelLoadResult(modelId = modelId)
 
@@ -108,19 +115,21 @@ class ExecutorchModelManager(
     }
 
     /**
-     * Run inference on a loaded model
+     * Run forward pass (inference) on a loaded model
+     * Returns output tensors directly
      * Throws InferenceException on failure
      */
-    suspend fun runInference(request: InferenceRequest): InferenceResult = withContext(Dispatchers.Default) {
-        val modelId = request.modelId
+    suspend fun forward(modelId: String, inputs: List<TensorData?>): List<TensorData?> = withContext(Dispatchers.Default) {
         val loadedModel = loadedModels[modelId]
             ?: throw ModelNotFoundException("Model not found: $modelId")
 
-        Log.d(TAG, "Running inference on model: $modelId")
+        if (isDebugLoggingEnabled) {
+            Log.d(TAG, "Running inference on model: $modelId")
+        }
 
         try {
             // Filter out null inputs
-            val validInputs = request.inputs.filterNotNull()
+            val validInputs = inputs.filterNotNull()
 
             // Convert Flutter tensors to ExecuTorch EValues
             val inputEValues = convertTensorsToEValues(validInputs)
@@ -136,16 +145,14 @@ class ExecutorchModelManager(
             // Convert outputs back to Flutter tensors
             val outputTensors = convertEValuesToTensors(outputs)
 
-            Log.d(TAG, "Inference completed in ${executionTimeMs}ms for model: $modelId")
+            if (isDebugLoggingEnabled) {
+                Log.d(TAG, "Inference completed in ${executionTimeMs}ms for model: $modelId")
+            }
 
-            InferenceResult(
-                outputs = outputTensors,
-                executionTimeMs = executionTimeMs,
-                requestId = request.requestId
-            )
+            outputTensors
 
         } catch (e: Exception) {
-            Log.e(TAG, "Inference failed for model: ${request.modelId}", e)
+            Log.e(TAG, "Inference failed for model: $modelId", e)
             throw InferenceException("Inference failed: ${e.message}", e)
         }
     }
@@ -154,12 +161,14 @@ class ExecutorchModelManager(
      * Dispose a loaded model and free its resources
      * Throws ModelNotFoundException if model not found
      */
-    suspend fun disposeModel(modelId: String) = withContext(Dispatchers.IO) {
+    suspend fun dispose(modelId: String) = withContext(Dispatchers.IO) {
         val loadedModel = loadedModels.remove(modelId)
             ?: throw ModelNotFoundException("Model not found: $modelId")
 
         // Note: ExecuTorch Module cleanup handled by garbage collection
-        Log.d(TAG, "Disposed model: $modelId")
+        if (isDebugLoggingEnabled) {
+            Log.d(TAG, "Disposed model: $modelId")
+        }
     }
 
     /**
@@ -175,18 +184,21 @@ class ExecutorchModelManager(
     suspend fun disposeAllModels() = withContext(Dispatchers.IO) {
         val modelIds = loadedModels.keys.toList()
         modelIds.forEach { modelId ->
-            disposeModel(modelId)
+            dispose(modelId)
         }
-        Log.d(TAG, "Disposed all models (${modelIds.size} total)")
+        if (isDebugLoggingEnabled) {
+            Log.d(TAG, "Disposed all models (${modelIds.size} total)")
+        }
     }
 
     /**
      * Enable or disable debug logging
      */
     fun setDebugLogging(enabled: Boolean) {
-        // ExecuTorch doesn't expose a global logging API
-        // Logging is controlled at compile time or via environment variables
-        Log.d(TAG, "Debug logging setting: $enabled (note: may require rebuild)")
+        isDebugLoggingEnabled = enabled
+        if (isDebugLoggingEnabled) {
+            Log.d(TAG, "Debug logging enabled")
+        }
     }
 
     // Private helper methods
@@ -236,7 +248,7 @@ class ExecutorchModelManager(
         }
     }
 
-    private fun convertEValuesToTensors(eValues: Array<EValue>): List<TensorData> {
+    private fun convertEValuesToTensors(eValues: Array<EValue>): List<TensorData?> {
         return eValues.mapIndexed { index, eValue ->
             val tensor = eValue.toTensor()
             val shape = tensor.shape().map { it.toInt() }

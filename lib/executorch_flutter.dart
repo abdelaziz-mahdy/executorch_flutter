@@ -32,11 +32,11 @@
 /// );
 ///
 /// // Run inference
-/// final result = await model.runInference(inputs: [inputTensor]);
+/// final outputs = await model.forward([inputTensor]);
 ///
-/// if (result.status == InferenceStatus.success) {
-///   print('Inference completed in ${result.executionTimeMs}ms');
-///   // Process result.outputs
+/// // Process outputs (List<TensorData>)
+/// for (var output in outputs) {
+///   print('Output shape: ${output.shape}');
 /// }
 ///
 /// // Clean up
@@ -48,7 +48,6 @@
 /// - [ExecutorchManager]: Main entry point for ExecuTorch operations
 /// - [ExecuTorchModel]: Represents a loaded model instance
 /// - [TensorData]: Tensor data representation
-/// - [InferenceResult]: Inference execution results
 /// - [ModelMetadata]: Model information and specifications
 ///
 /// ## Processors
@@ -74,7 +73,6 @@ import 'package:executorch_flutter/executorch_flutter.dart'
         ExecutorchManager,
         ExecuTorchModel,
         TensorData,
-        InferenceResult,
         ExecuTorchPreprocessor,
         ExecuTorchPostprocessor,
         ExecuTorchProcessor;

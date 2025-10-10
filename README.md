@@ -26,18 +26,15 @@ dependencies:
 
 ## Basic Usage
 
-The package provides a simple workflow:
+The package provides a simple, intuitive API that matches native ExecuTorch patterns:
 
-### 1. Initialize and Load a Model
+### 1. Load a Model
 
 ```dart
 import 'package:executorch_flutter/executorch_flutter.dart';
 
-// Initialize the manager (call once)
-await ExecutorchManager.instance.initialize();
-
 // Load a model from file path
-final model = await ExecutorchManager.instance.loadModel('/path/to/model.pte');
+final model = await ExecuTorchModel.load('/path/to/model.pte');
 ```
 
 ### 2. Run Inference
@@ -47,19 +44,40 @@ final model = await ExecutorchManager.instance.loadModel('/path/to/model.pte');
 final inputTensor = TensorData(
   shape: [1, 3, 224, 224],
   dataType: TensorType.float32,
-  data: yourImageBytes, // FlutterStandardTypedData
+  data: yourImageBytes,
 );
 
 // Run inference
-final result = await model.runInference(inputs: [inputTensor]);
+final outputs = await model.forward([inputTensor]);
 
-// Access outputs
-if (result.status == InferenceStatus.success) {
-  final output = result.outputs?.first;
-  print('Inference time: ${result.executionTimeMs}ms');
+// Process outputs
+for (var output in outputs) {
+  print('Output shape: ${output.shape}');
+  print('Output type: ${output.dataType}');
 }
 
 // Clean up when done
+await model.dispose();
+```
+
+### 3. Loading Models from Assets
+
+```dart
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+
+// Load model from assets
+final byteData = await rootBundle.load('assets/models/model.pte');
+final tempDir = await getTemporaryDirectory();
+final file = File('${tempDir.path}/model.pte');
+await file.writeAsBytes(byteData.buffer.asUint8List());
+
+// Load and run inference
+final model = await ExecuTorchModel.load(file.path);
+final outputs = await model.forward([inputTensor]);
+
+// Dispose when done
 await model.dispose();
 ```
 
@@ -169,6 +187,57 @@ This project is actively developed following these principles:
 - **Performance-First**: Optimized for mobile device constraints
 - **Documentation-Driven**: Clear examples and API documentation
 
+## API Reference
+
+### Core Classes
+
+#### ExecuTorchModel
+
+The primary class for model management and inference.
+
+```dart
+// Static factory method to load a model
+static Future<ExecuTorchModel> load(String filePath)
+
+// Execute inference (matches native module.forward())
+Future<List<TensorData>> forward(List<TensorData> inputs)
+
+// Release model resources
+Future<void> dispose()
+
+// Check if model is disposed
+bool get isDisposed
+```
+
+**Native API Mapping:**
+- **Android (Kotlin)**: `Module.load()` → `module.forward()`
+- **iOS/macOS (Swift)**: `Module()` + `load("forward")` → `module.forward()`
+
+#### TensorData
+
+Input/output tensor representation:
+
+```dart
+final tensor = TensorData(
+  shape: [1, 3, 224, 224],           // Tensor dimensions
+  dataType: TensorType.float32,      // Data type (float32, int32, int8, uint8)
+  data: Uint8List(...),              // Raw bytes
+  name: 'input_0',                   // Optional tensor name
+);
+```
+
+### Exception Hierarchy
+
+```dart
+ExecuTorchException              // Base exception
+├── ExecuTorchModelException     // Model loading/lifecycle errors
+├── ExecuTorchInferenceException // Inference execution errors
+├── ExecuTorchValidationException // Tensor validation errors
+├── ExecuTorchMemoryException    // Memory/resource errors
+├── ExecuTorchIOException        // File I/O errors
+└── ExecuTorchPlatformException  // Platform communication errors
+```
+
 ## Contributing
 
 Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for:
@@ -184,7 +253,7 @@ Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) 
 ```
 Flutter App (Dart)
        ↓
-ExecutorchManager (High-level API)
+ExecuTorchModel (Simple wrapper over native API)
        ↓
 Pigeon Generated APIs (Type-safe communication)
        ↓
@@ -202,12 +271,21 @@ Backends      Backends      Backends
 
 ### Key Components
 
-- **ExecutorchManager**: Main entry point for all operations, singleton pattern
-- **ExecuTorchModel**: Represents a loaded model with lifecycle management
-- **TensorDataWrapper**: High-level tensor abstraction with validation
-- **Pigeon Interface**: Type-safe method channel communication
+- **ExecuTorchModel**: Primary class for model loading and inference (matches native APIs)
+  - `load()` → Native `Module.load()` / `Module()`
+  - `forward()` → Native `module.forward()`
+- **TensorData**: Input/output tensor representation with shape, type, and raw data
+- **Pigeon Interface**: Type-safe method channel communication (no manual platform channels)
 - **Native Model Managers**: Platform-specific model lifecycle and inference handling
 - **Backend Integration**: Optimized ExecuTorch backends for each platform
+
+### Design Philosophy
+
+This package follows a **thin wrapper** philosophy:
+- Dart API directly mirrors native ExecuTorch APIs
+- Minimal abstractions for predictable behavior
+- User controls model lifecycle explicitly (load/dispose)
+- No hidden state or automatic memory management
 
 ### Thread Safety
 

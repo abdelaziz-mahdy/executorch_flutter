@@ -89,6 +89,7 @@ class ClassificationResult {
     required this.classIndex,
     required this.allProbabilities,
     this.classLabels = const [],
+    this.topKCount = 5,
   });
 
   /// The predicted class name/label
@@ -106,9 +107,12 @@ class ClassificationResult {
   /// All class labels for mapping indices to names
   final List<String> classLabels;
 
+  /// Number of top predictions to return
+  final int topKCount;
+
   /// Get top K classification results (including this one as the first result)
   List<({String className, double confidence, int classIndex})> get topK {
-    // Return top 5 results from allProbabilities
+    // Return top K results from allProbabilities
     final indexed = <({int index, double probability})>[];
     for (int i = 0; i < allProbabilities.length; i++) {
       indexed.add((index: i, probability: allProbabilities[i]));
@@ -117,8 +121,8 @@ class ClassificationResult {
     // Sort by probability descending
     indexed.sort((a, b) => b.probability.compareTo(a.probability));
 
-    // Take top 5 and return with actual class names
-    return indexed.take(5).map((item) {
+    // Take top K and return with actual class names
+    return indexed.take(topKCount).map((item) {
       String label;
       if (classLabels.isNotEmpty && item.index < classLabels.length) {
         label = classLabels[item.index];
@@ -415,9 +419,13 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
 /// Postprocessor for classification results
 class ImageNetPostprocessor
     extends ExecuTorchPostprocessor<ClassificationResult> {
-  ImageNetPostprocessor({required this.classLabels});
+  ImageNetPostprocessor({
+    required this.classLabels,
+    this.topK = 5,
+  });
 
   final List<String> classLabels;
+  final int topK;
 
   @override
   String get outputTypeName => 'Classification Result';
@@ -430,7 +438,7 @@ class ImageNetPostprocessor
     if (output.dataType != TensorType.float32) return false;
 
     // Check if shape represents logits/probabilities
-    final shape = output.shape.where((dim) => dim != null).toList() ?? [];
+    final shape = output.shape.where((dim) => dim != null).toList();
     if (shape.isEmpty) return false;
 
     // Should have reasonable number of outputs (at least 100 classes, max 100k)
@@ -487,6 +495,7 @@ class ImageNetPostprocessor
           classIndex: maxIndex,
           allProbabilities: probabilities,
           classLabels: classLabels,
+          topKCount: topK,
         );
       }
 
@@ -522,12 +531,19 @@ class ImageNetPostprocessor
 /// Complete ImageNet classification processor
 class ImageNetProcessor
     extends ExecuTorchProcessor<Uint8List, ClassificationResult> {
-  ImageNetProcessor({required this.preprocessConfig, required this.classLabels})
-    : _preprocessor = ImageNetPreprocessor(config: preprocessConfig),
-      _postprocessor = ImageNetPostprocessor(classLabels: classLabels);
+  ImageNetProcessor({
+    required this.preprocessConfig,
+    required this.classLabels,
+    this.topK = 5,
+  })  : _preprocessor = ImageNetPreprocessor(config: preprocessConfig),
+        _postprocessor = ImageNetPostprocessor(
+          classLabels: classLabels,
+          topK: topK,
+        );
 
   final ImagePreprocessConfig preprocessConfig;
   final List<String> classLabels;
+  final int topK;
   final ImageNetPreprocessor _preprocessor;
   final ImageNetPostprocessor _postprocessor;
 

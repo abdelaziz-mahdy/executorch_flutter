@@ -184,15 +184,19 @@ flutter:
 ### 2. Load and Use Model
 
 ```dart
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 
-// Initialize manager
-await ExecutorchManager.instance.initialize();
+// Load model from assets (copy to temporary directory first)
+final byteData = await rootBundle.load('assets/models/your_model.pte');
+final tempDir = await getTemporaryDirectory();
+final file = File('${tempDir.path}/your_model.pte');
+await file.writeAsBytes(byteData.buffer.asUint8List());
 
 // Load model
-final model = await ExecutorchManager.instance.loadModel(
-  'assets/models/your_model.pte'
-);
+final model = await ExecuTorchModel.load(file.path);
 
 // Prepare input tensor
 final inputTensor = TensorData(
@@ -202,20 +206,18 @@ final inputTensor = TensorData(
   name: 'input',
 );
 
-// Run inference
-final result = await model.runInference(
-  inputs: [inputTensor],
-  timeoutMs: 5000,
-);
+// Run inference (returns List<TensorData> directly)
+final outputs = await model.forward([inputTensor]);
 
-// Process results
-if (result.isSuccess) {
-  final outputs = result.outputs;
-  // Handle outputs
+// Process outputs
+for (var output in outputs) {
+  print('Output shape: ${output.shape}');
+  print('Data type: ${output.dataType}');
+  // Process tensor data...
 }
 
 // Clean up
-model.dispose();
+await model.dispose();
 ```
 
 ## Model Requirements
