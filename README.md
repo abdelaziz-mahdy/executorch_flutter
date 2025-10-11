@@ -218,7 +218,7 @@ The example app includes scripts for exporting reference models (MobileNet, YOLO
 
 ```bash
 # One-command setup: installs dependencies and exports all models
-cd python
+cd example/python
 python3 setup_models.py
 ```
 

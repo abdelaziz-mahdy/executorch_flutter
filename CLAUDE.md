@@ -562,166 +562,20 @@ abstract class BaseOutputProcessor<T, R> {
 - Model caching and version management
 - Optional debugging/profiling APIs
 
-## Settings Provider Architecture (Example App Only)
+## Example App Architecture
 
-The example app demonstrates a clean, atomic architecture for decoupling models from dependency injection frameworks.
+The example app (`example/`) demonstrates a complete implementation with multiple model types (YOLO, MobileNet) in a unified playground.
 
-### Design Principles
+**For detailed example app architecture and adding new models, see: `example/CLAUDE.md`**
 
-1. **Generic Interface**: Models don't depend on GetIt, Provider, Riverpod, or any specific DI framework
-2. **Atomic Structure**: Clear separation between settings storage (GetIt) and settings access (SettingsProvider)
-3. **Testable**: Easy to mock settings provider for unit tests
-4. **Swappable**: Can replace GetIt with any other DI solution without changing model code
+Key features:
+- Strategy pattern for model definitions
+- Unified playground supporting all model types
+- Camera integration (platform and OpenCV)
+- Model-specific settings and processors
+- Python export scripts for PyTorch → ExecuTorch conversion
 
-### Architecture Layers
-
-```
-┌─────────────────────────────────────────┐
-│          Model Definitions              │
-│  (yolo_model_definition.dart, etc.)     │
-│                                         │
-│  Uses: ModelSettingsUtil.getYoloThresh │
-│        ModelSettingsUtil.shouldUseOpenCV│
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│       ModelSettingsUtil (Utility)       │
-│     (utils/model_settings_util.dart)    │
-│                                         │
-│  Static methods for atomic access:      │
-│  - getYoloThresholds()                  │
-│  - getClassificationTopK()              │
-│  - shouldUseOpenCVPreprocessing()       │
-│  - shouldShowPerformanceOverlay()       │
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│       SettingsProvider (Interface)      │
-│     (utils/settings_provider.dart)      │
-│                                         │
-│  abstract class SettingsProvider {      │
-│    T? getSettings<T>();                 │
-│    bool hasSettings<T>();               │
-│  }                                      │
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│    GetItSettingsProvider (Impl)         │
-│     (utils/settings_provider.dart)      │
-│                                         │
-│  Bridges GetIt to models                │
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│             GetIt (DI)                  │
-│    (services/service_locator.dart)      │
-│                                         │
-│  Actual settings storage                │
-└─────────────────────────────────────────┘
-```
-
-### Implementation Example
-
-**Step 1: Initialize in main.dart**
-```dart
-import 'utils/settings_provider.dart';
-import 'utils/model_settings_util.dart';
-
-void main() async {
-  // Initialize GetIt
-  await setupServiceLocator();
-
-  // Bridge GetIt to models via SettingsProvider
-  initializeSettingsProvider(GetItSettingsProvider(getIt));
-
-  runApp(MyApp());
-}
-```
-
-**Step 2: Models use utility methods (not GetIt directly)**
-```dart
-// yolo_model_definition.dart
-import '../utils/model_settings_util.dart';
-
-class YoloModelDefinition extends ModelDefinition {
-  @override
-  Future<ObjectDetectionResult> processResult({
-    required ModelInput input,
-    required List<TensorData> outputs,
-  }) async {
-    // Get thresholds from settings provider (not GetIt!)
-    final thresholds = ModelSettingsUtil.getYoloThresholds();
-
-    final postprocessor = YoloPostprocessor(
-      classLabels: labels,
-      confidenceThreshold: thresholds.confidence, // From settings
-      iouThreshold: thresholds.nms,               // From settings
-    );
-
-    return await postprocessor.postprocess(outputs);
-  }
-}
-```
-
-**Step 3: UI updates settings in GetIt**
-```dart
-// unified_model_playground.dart
-void _onSettingsChanged(ModelSettings newSettings) {
-  // Update GetIt (actual storage)
-  if (getIt.isRegistered<ModelSettings>()) {
-    getIt.unregister<ModelSettings>();
-  }
-  getIt.registerSingleton<ModelSettings>(newSettings);
-
-  // Models will read from SettingsProvider -> GetIt on next inference
-}
-```
-
-### Benefits
-
-1. **No Coupling**: Models never import `get_it` package
-2. **Easy Testing**: Mock `SettingsProvider` instead of mocking GetIt
-3. **Framework Agnostic**: Swap GetIt for Riverpod/Provider without touching models
-4. **Atomic Access**: Each setting has a dedicated utility method with clear defaults
-5. **Type Safe**: Compile-time checks for settings types (YOLO vs Classification)
-
-### File Structure
-
-```
-example/lib/
-├── utils/
-│   ├── settings_provider.dart          # Abstract interface + GetIt impl
-│   └── model_settings_util.dart        # Atomic utility methods
-├── models/
-│   ├── yolo_model_definition.dart      # Uses ModelSettingsUtil
-│   └── mobilenet_model_definition.dart # Uses ModelSettingsUtil
-└── main.dart                           # Initialize provider
-```
-
-### Adding New Settings
-
-1. **Add to settings class**: `yolo_model_settings.dart` or `classification_model_settings.dart`
-2. **Add utility method**: `model_settings_util.dart`
-```dart
-static double getNewSetting({double defaultValue = 0.5}) {
-  final provider = _settingsProvider;
-  if (provider == null || !provider.hasSettings<ModelSettings>()) {
-    return defaultValue;
-  }
-  final settings = provider.getSettings<ModelSettings>();
-  return settings?.newSetting ?? defaultValue;
-}
-```
-3. **Use in model**: `model_definition.dart`
-```dart
-final value = ModelSettingsUtil.getNewSetting();
-```
-
-**Key Insight**: Settings are stored in GetIt, but accessed atomically via utilities. Models don't know about GetIt.
+**Important**: When making changes to the example app, always refer to `example/CLAUDE.md` for architecture guidelines and step-by-step instructions for adding new model support.
 
 ## Contact and Support
 
