@@ -7,10 +7,7 @@ import 'opencv/opencv_yolo_preprocessor.dart';
 
 /// YOLO input processor with settings baked in
 class YoloInputProcessor extends InputProcessor<ModelInput> {
-  const YoloInputProcessor({
-    required this.config,
-    required this.useOpenCV,
-  });
+  const YoloInputProcessor({required this.config, required this.useOpenCV});
 
   final YoloPreprocessConfig config;
   final bool useOpenCV;

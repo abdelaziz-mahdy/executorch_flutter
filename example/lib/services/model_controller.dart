@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_definition.dart';
 import '../models/model_input.dart';
@@ -70,13 +69,14 @@ class ModelController extends ChangeNotifier {
   double? get inferenceTime => _inferenceTime;
   double? get postprocessingTime => _postprocessingTime;
   double? get totalTime => _totalTime;
-  PerformanceMetrics get performanceMetrics =>
-      _isCameraMode ? _performanceTracker.toMetrics() : PerformanceMetrics(
-        preprocessingTime: _preprocessingTime,
-        inferenceTime: _inferenceTime,
-        postprocessingTime: _postprocessingTime,
-        totalTime: _totalTime,
-      );
+  PerformanceMetrics get performanceMetrics => _isCameraMode
+      ? _performanceTracker.toMetrics()
+      : PerformanceMetrics(
+          preprocessingTime: _preprocessingTime,
+          inferenceTime: _inferenceTime,
+          postprocessingTime: _postprocessingTime,
+          totalTime: _totalTime,
+        );
 
   /// Create controller with preloaded resources
   static Future<ModelController> create({
@@ -176,7 +176,9 @@ class ModelController extends ChangeNotifier {
       _cameraController = _createCamera(provider);
       await _cameraController?.start();
 
-      _frameSubscription = _cameraController?.frameStream.listen(_processFrameBytes);
+      _frameSubscription = _cameraController?.frameStream.listen(
+        _processFrameBytes,
+      );
       _isCameraMode = true;
 
       debugPrint('✅ Camera enabled');
@@ -232,7 +234,8 @@ class ModelController extends ChangeNotifier {
       final inputProcessor = definition.createInputProcessor(_settings);
       final tensors = await inputProcessor.process(liveCameraInput);
       preprocessStopwatch.stop();
-      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds.toDouble();
+      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds
+          .toDouble();
 
       // Inference
       final inferenceStopwatch = Stopwatch()..start();
@@ -245,7 +248,8 @@ class ModelController extends ChangeNotifier {
       final outputProcessor = definition.createOutputProcessor(_settings);
       final result = await outputProcessor.process(outputs);
       postprocessStopwatch.stop();
-      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds.toDouble();
+      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds
+          .toDouble();
 
       totalStopwatch.stop();
       final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();

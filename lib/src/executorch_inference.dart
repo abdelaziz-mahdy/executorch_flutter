@@ -150,7 +150,6 @@ class ExecutorchManager {
     }
   }
 
-
   /// Dispose a loaded model and free its resources
   ///
   /// After calling this method, the model cannot be used for inference via [ExecuTorchModel.forward].

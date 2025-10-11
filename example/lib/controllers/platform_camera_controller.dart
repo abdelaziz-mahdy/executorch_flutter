@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:camera/camera.dart' as camera_pkg;
 import 'package:flutter/foundation.dart';
 import 'camera_controller.dart';

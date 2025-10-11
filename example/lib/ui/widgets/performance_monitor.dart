@@ -107,11 +107,7 @@ class PerformanceMonitor extends StatelessWidget {
 
           // Frames processed (camera mode only)
           if (metrics.frameCount != null) ...[
-            _buildMetricRow(
-              'Frames',
-              '${metrics.frameCount}',
-              Colors.blue,
-            ),
+            _buildMetricRow('Frames', '${metrics.frameCount}', Colors.blue),
             const SizedBox(height: 4),
           ],
 
@@ -127,10 +123,7 @@ class PerformanceMonitor extends StatelessWidget {
 
           // Current frame metrics (camera mode only)
           if (metrics.isCameraMode && metrics.currentTotalTime != null) ...[
-            Container(
-              height: 1,
-              color: Colors.white.withValues(alpha: 0.2),
-            ),
+            Container(height: 1, color: Colors.white.withValues(alpha: 0.2)),
             const SizedBox(height: 8),
             Text(
               'Current Frame',
@@ -170,10 +163,7 @@ class PerformanceMonitor extends StatelessWidget {
 
           // Divider
           if (metrics.isCameraMode) ...[
-            Container(
-              height: 1,
-              color: Colors.white.withValues(alpha: 0.2),
-            ),
+            Container(height: 1, color: Colors.white.withValues(alpha: 0.2)),
             const SizedBox(height: 8),
             Text(
               'Average',
@@ -240,10 +230,9 @@ class PerformanceMonitor extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 'Performance',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               Container(
@@ -258,10 +247,9 @@ class PerformanceMonitor extends StatelessWidget {
                 child: Text(
                   '${metrics.totalTime!.toStringAsFixed(0)}ms',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color:
-                            Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                 ),
               ),
             ],
@@ -311,10 +299,7 @@ class PerformanceMonitor extends StatelessWidget {
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
         Text(
@@ -363,17 +348,16 @@ class PerformanceMonitor extends StatelessWidget {
             ),
             Text(
               '${time.toStringAsFixed(0)}ms',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 8),
             Text(
               '($percentage%)',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -382,8 +366,9 @@ class PerformanceMonitor extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: ratio,
-            backgroundColor:
-                Theme.of(context).colorScheme.surfaceContainerHighest,
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 6,
           ),
@@ -437,13 +422,13 @@ class PerformanceTracker {
     _currentTotalTime = totalTime;
 
     // Update running averages
-    _avgPreprocessingTime = (_avgPreprocessingTime * (_frameCount - 1) +
-            preprocessingTime) /
+    _avgPreprocessingTime =
+        (_avgPreprocessingTime * (_frameCount - 1) + preprocessingTime) /
         _frameCount;
     _avgInferenceTime =
         (_avgInferenceTime * (_frameCount - 1) + inferenceTime) / _frameCount;
-    _avgPostprocessingTime = (_avgPostprocessingTime * (_frameCount - 1) +
-            postprocessingTime) /
+    _avgPostprocessingTime =
+        (_avgPostprocessingTime * (_frameCount - 1) + postprocessingTime) /
         _frameCount;
     _avgTotalTime =
         (_avgTotalTime * (_frameCount - 1) + totalTime) / _frameCount;

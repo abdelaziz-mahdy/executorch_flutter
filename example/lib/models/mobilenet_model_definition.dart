@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:executorch_flutter/executorch_flutter.dart';
 import '../processors/base_processor.dart';
 import '../processors/image_processor.dart';
 import '../processors/mobilenet_input_processor.dart';
@@ -90,7 +89,9 @@ class MobileNetModelDefinition
   }
 
   @override
-  OutputProcessor<ClassificationResult> createOutputProcessor(ModelSettings settings) {
+  OutputProcessor<ClassificationResult> createOutputProcessor(
+    ModelSettings settings,
+  ) {
     final classificationSettings = settings as ClassificationModelSettings;
     return MobileNetOutputProcessor(
       classLabels: _loadLabelsSync(),
@@ -104,10 +105,7 @@ class MobileNetModelDefinition
     required ModelInput input,
     required ClassificationResult? result,
   }) {
-    return ClassificationRenderer(
-      input: input,
-      result: result,
-    );
+    return ClassificationRenderer(input: input, result: result);
   }
 
   @override

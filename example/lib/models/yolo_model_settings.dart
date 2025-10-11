@@ -40,9 +40,11 @@ class YoloModelSettings extends ModelSettings {
     double? nmsThreshold,
   }) {
     return YoloModelSettings(
-      showPerformanceOverlay: showPerformanceOverlay ?? this.showPerformanceOverlay,
+      showPerformanceOverlay:
+          showPerformanceOverlay ?? this.showPerformanceOverlay,
       cameraProvider: cameraProvider ?? this.cameraProvider,
-      preprocessingProvider: preprocessingProvider ?? this.preprocessingProvider,
+      preprocessingProvider:
+          preprocessingProvider ?? this.preprocessingProvider,
       confidenceThreshold: confidenceThreshold ?? _confidenceThreshold,
       nmsThreshold: nmsThreshold ?? _nmsThreshold,
     );

@@ -419,10 +419,7 @@ class ImageNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
 /// Postprocessor for classification results
 class ImageNetPostprocessor
     extends ExecuTorchPostprocessor<ClassificationResult> {
-  ImageNetPostprocessor({
-    required this.classLabels,
-    this.topK = 5,
-  });
+  ImageNetPostprocessor({required this.classLabels, this.topK = 5});
 
   final List<String> classLabels;
   final int topK;
@@ -535,11 +532,11 @@ class ImageNetProcessor
     required this.preprocessConfig,
     required this.classLabels,
     this.topK = 5,
-  })  : _preprocessor = ImageNetPreprocessor(config: preprocessConfig),
-        _postprocessor = ImageNetPostprocessor(
-          classLabels: classLabels,
-          topK: topK,
-        );
+  }) : _preprocessor = ImageNetPreprocessor(config: preprocessConfig),
+       _postprocessor = ImageNetPostprocessor(
+         classLabels: classLabels,
+         topK: topK,
+       );
 
   final ImagePreprocessConfig preprocessConfig;
   final List<String> classLabels;

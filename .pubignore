@@ -1,6 +1,17 @@
 # Files to exclude from pub.dev publishing
 # Keep package size small and exclude development/example files
 
+# Build artifacts and generated files
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+example/build/
+example/.dart_tool/
+example/.flutter-plugins
+example/.flutter-plugins-dependencies
+
 # Internal development documentation
 specs/
 CLAUDE.md

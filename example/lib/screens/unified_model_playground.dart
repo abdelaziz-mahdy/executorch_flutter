@@ -103,7 +103,6 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     return file.path;
   }
 
-
   void _showSettingsDialog() {
     if (_controller == null) return;
 
@@ -180,8 +179,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                                   ),
 
                                   // Toggle button
-                                  if (!_isInputExpanded &&
-                                      _controller != null)
+                                  if (!_isInputExpanded && _controller != null)
                                     Positioned(
                                       right: 16,
                                       bottom: 16,
@@ -419,7 +417,8 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   Widget _buildCameraSection() {
     final input = _controller?.currentInput;
     final result = _controller?.currentResult;
-    final showPerformance = _controller?.settings.showPerformanceOverlay ?? true;
+    final showPerformance =
+        _controller?.settings.showPerformanceOverlay ?? true;
     final performanceMetrics = _controller?.performanceMetrics;
 
     Widget cameraContent;
@@ -453,8 +452,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Widget _buildDetailsSection() {
-    final showPerformance = !(_controller?.isCameraMode ?? false) &&
-                           (_controller?.settings.showPerformanceOverlay ?? true);
+    final showPerformance =
+        !(_controller?.isCameraMode ?? false) &&
+        (_controller?.settings.showPerformanceOverlay ?? true);
     final performanceMetrics = _controller?.performanceMetrics;
     final result = _controller?.currentResult;
 
@@ -492,10 +492,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                   const SizedBox(width: 12),
                   Text(
                     'Results',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -547,15 +546,15 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                   const SizedBox(height: 12),
                   _controller!.buildInputWidget(
                     context: context,
-                    onInputSelected: (input) => _controller?.processInput(input),
+                    onInputSelected: (input) =>
+                        _controller?.processInput(input),
                   ),
                 ],
               ),
             ),
 
             // Results details section
-            if (_controller?.currentResult != null)
-              _buildDetailsSection(),
+            if (_controller?.currentResult != null) _buildDetailsSection(),
           ],
         ),
       ),

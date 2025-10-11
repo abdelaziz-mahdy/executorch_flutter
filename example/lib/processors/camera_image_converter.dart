@@ -28,8 +28,13 @@ class ImageLibCameraConverter implements CameraImageConverter {
     if (Platform.isAndroid) {
       convertedImage = _convertYUV420ToImage(cameraImage);
       // Apply rotation based on sensor orientation
-      if (convertedImage != null && sensorOrientation != null && sensorOrientation != 0) {
-        convertedImage = img.copyRotate(convertedImage, angle: sensorOrientation);
+      if (convertedImage != null &&
+          sensorOrientation != null &&
+          sensorOrientation != 0) {
+        convertedImage = img.copyRotate(
+          convertedImage,
+          angle: sensorOrientation,
+        );
       }
     } else {
       // iOS and macOS both use BGRA8888
@@ -59,7 +64,8 @@ class ImageLibCameraConverter implements CameraImageConverter {
         final int yIndex = y * yPlane.bytesPerRow + x;
         final int uvRow = (y / 2).floor();
         final int uvCol = (x / 2).floor();
-        final int uvIndex = uvRow * uPlane.bytesPerRow + uvCol * uPlane.bytesPerPixel!;
+        final int uvIndex =
+            uvRow * uPlane.bytesPerRow + uvCol * uPlane.bytesPerPixel!;
 
         final int yValue = yPlane.bytes[yIndex];
         final int uValue = uPlane.bytes[uvIndex];
@@ -202,7 +208,11 @@ class OpenCVCameraConverter implements CameraImageConverter {
         type: cv.MatType.CV_8UC1,
       );
       yuvMat.data.setRange(0, yPlane.bytes.length, yPlane.bytes);
-      yuvMat.data.setRange(yPlane.bytes.length, yuvMat.data.length, uPlane.bytes);
+      yuvMat.data.setRange(
+        yPlane.bytes.length,
+        yuvMat.data.length,
+        uPlane.bytes,
+      );
 
       // Convert NV21 to BGR
       final bgrMat = await cv.cvtColorAsync(yuvMat, cv.COLOR_YUV2BGR_NV21);

@@ -27,9 +27,11 @@ class ClassificationModelSettings extends ModelSettings {
     int? topK,
   }) {
     return ClassificationModelSettings(
-      showPerformanceOverlay: showPerformanceOverlay ?? this.showPerformanceOverlay,
+      showPerformanceOverlay:
+          showPerformanceOverlay ?? this.showPerformanceOverlay,
       cameraProvider: cameraProvider ?? this.cameraProvider,
-      preprocessingProvider: preprocessingProvider ?? this.preprocessingProvider,
+      preprocessingProvider:
+          preprocessingProvider ?? this.preprocessingProvider,
       topK: topK ?? _topK,
     );
   }

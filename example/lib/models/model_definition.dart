@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:executorch_flutter/executorch_flutter.dart';
 import 'model_input.dart';
 import 'model_settings.dart';
 import '../processors/base_processor.dart';
@@ -75,10 +74,7 @@ abstract class ModelDefinition<TInput extends ModelInput, TResult> {
     required PerformanceDisplayMode displayMode,
   }) {
     // Default implementation uses generic PerformanceMonitor
-    return PerformanceMonitor(
-      metrics: metrics,
-      displayMode: displayMode,
-    );
+    return PerformanceMonitor(metrics: metrics, displayMode: displayMode);
   }
 
   /// Build the settings widget for this model

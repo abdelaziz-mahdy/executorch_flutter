@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../models/model_input.dart';
 import '../../processors/yolo_processor.dart';
 import '../object_detection/image_with_detections.dart';
-import 'base_result_renderer.dart';
 
 /// Renderer for object detection results
 class ObjectDetectionRenderer extends StatefulWidget {
@@ -65,7 +64,9 @@ class _ObjectDetectionRendererState extends State<ObjectDetectionRenderer> {
         fit: BoxFit.contain,
       );
     } else {
-      throw UnsupportedError('Unsupported input type: ${widget.input.runtimeType}');
+      throw UnsupportedError(
+        'Unsupported input type: ${widget.input.runtimeType}',
+      );
     }
 
     if (widget.result == null) {

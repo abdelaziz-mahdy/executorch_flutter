@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'camera_controller.dart';
@@ -52,7 +51,9 @@ class OpenCVCameraController implements CameraController {
       _capture!.set(cv.CAP_PROP_FPS, 30);
 
       // Start frame capture timer
-      debugPrint('⏰ OpenCVCameraController: Starting timer (${processingInterval.inMilliseconds}ms)');
+      debugPrint(
+        '⏰ OpenCVCameraController: Starting timer (${processingInterval.inMilliseconds}ms)',
+      );
       _frameTimer = Timer.periodic(processingInterval, (_) => _captureFrame());
 
       _isActive = true;

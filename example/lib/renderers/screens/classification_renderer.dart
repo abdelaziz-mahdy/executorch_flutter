@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../models/model_input.dart';
 import '../../processors/image_processor.dart';
-import 'base_result_renderer.dart';
 
 /// Renderer for image classification results
 class ClassificationRenderer extends StatefulWidget {
@@ -50,7 +49,9 @@ class _ClassificationRendererState extends State<ClassificationRenderer> {
         fit: BoxFit.contain,
       );
     } else {
-      throw UnsupportedError('Unsupported input type: ${widget.input.runtimeType}');
+      throw UnsupportedError(
+        'Unsupported input type: ${widget.input.runtimeType}',
+      );
     }
 
     // If no result, just show the image
@@ -93,7 +94,9 @@ class _ClassificationRendererState extends State<ClassificationRenderer> {
                       child: LinearProgressIndicator(
                         value: topPrediction.confidence,
                         backgroundColor: Colors.white24,
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.greenAccent),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Colors.greenAccent,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),

@@ -14,7 +14,8 @@ import 'model_settings.dart';
 import 'yolo_model_settings.dart';
 
 /// YOLO Object Detection Model Definition
-class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionResult> {
+class YoloModelDefinition
+    extends ModelDefinition<ModelInput, ObjectDetectionResult> {
   const YoloModelDefinition({
     required super.name,
     required super.displayName,
@@ -82,7 +83,9 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
   }
 
   @override
-  OutputProcessor<ObjectDetectionResult> createOutputProcessor(ModelSettings settings) {
+  OutputProcessor<ObjectDetectionResult> createOutputProcessor(
+    ModelSettings settings,
+  ) {
     final yoloSettings = settings as YoloModelSettings;
 
     return YoloOutputProcessor(
@@ -277,7 +280,9 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
           children: [
             ListTile(
               title: const Text('Confidence Threshold'),
-              subtitle: Text('${(yoloSettings.confidenceThreshold * 100).toStringAsFixed(0)}%'),
+              subtitle: Text(
+                '${(yoloSettings.confidenceThreshold * 100).toStringAsFixed(0)}%',
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -286,7 +291,8 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
                 min: 0.0,
                 max: 1.0,
                 divisions: 20,
-                label: '${(yoloSettings.confidenceThreshold * 100).toStringAsFixed(0)}%',
+                label:
+                    '${(yoloSettings.confidenceThreshold * 100).toStringAsFixed(0)}%',
                 onChanged: (value) {
                   yoloSettings.confidenceThreshold = value;
                   onSettingsChanged(yoloSettings);
@@ -296,7 +302,9 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
             const SizedBox(height: 8),
             ListTile(
               title: const Text('NMS Threshold'),
-              subtitle: Text('${(yoloSettings.nmsThreshold * 100).toStringAsFixed(0)}%'),
+              subtitle: Text(
+                '${(yoloSettings.nmsThreshold * 100).toStringAsFixed(0)}%',
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -305,7 +313,8 @@ class YoloModelDefinition extends ModelDefinition<ModelInput, ObjectDetectionRes
                 min: 0.0,
                 max: 1.0,
                 divisions: 20,
-                label: '${(yoloSettings.nmsThreshold * 100).toStringAsFixed(0)}%',
+                label:
+                    '${(yoloSettings.nmsThreshold * 100).toStringAsFixed(0)}%',
                 onChanged: (value) {
                   yoloSettings.nmsThreshold = value;
                   onSettingsChanged(yoloSettings);

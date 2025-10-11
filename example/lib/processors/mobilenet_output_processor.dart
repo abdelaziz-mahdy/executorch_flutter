@@ -4,10 +4,7 @@ import 'image_processor.dart';
 
 /// MobileNet/ImageNet output processor with settings baked in
 class MobileNetOutputProcessor extends OutputProcessor<ClassificationResult> {
-  const MobileNetOutputProcessor({
-    required this.classLabels,
-    this.topK = 5,
-  });
+  const MobileNetOutputProcessor({required this.classLabels, this.topK = 5});
 
   final List<String> classLabels;
   final int topK;

@@ -111,4 +111,3 @@ class OpenCVYoloPreprocessor {
     return target;
   }
 }
-
