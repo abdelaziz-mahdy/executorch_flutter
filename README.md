@@ -64,13 +64,11 @@ if (result.status == InferenceStatus.success) {
 await model.dispose();
 ```
 
-### Complete Examples
+### Complete Example
 
-See the `example/` directory for full working applications:
+See the `example/` directory for a full working application:
 
-- **[Image Classification](example/lib/screens/image_classification_demo.dart)** - MobileNet V3 image classification
-- **[Object Detection](example/lib/screens/object_detection_demo.dart)** - YOLO object detection with bounding boxes
-- **[Model Management](example/lib/screens/model_manager.dart)** - Loading models from assets, storage, and network
+- **[Unified Model Playground](example/lib/screens/unified_model_playground.dart)** - Complete app with MobileNet classification and YOLO object detection, supporting both static images and live camera
 
 ## Supported Model Formats
 
@@ -113,21 +111,24 @@ See the `example/` directory for full working applications:
 
 ### Processor Interfaces
 
-The package includes high-level processor interfaces that handle preprocessing and postprocessing:
+The example app demonstrates processor strategies for common model types:
 
-- **[ImageNetProcessor](example/lib/processors/imagenet_processor.dart)** - Image classification with MobileNet
-- **[YOLOProcessor](example/lib/processors/yolo_processor.dart)** - Object detection with bounding boxes
-- **[CustomProcessor](example/lib/processors/base_processor.dart)** - Create your own processors
+- **[Image Classification](example/lib/processors/image_processor.dart)** - ImageNet preprocessing and postprocessing for MobileNet
+- **[Object Detection](example/lib/processors/yolo_processor.dart)** - YOLO preprocessing, NMS, and bounding box extraction
+- **[OpenCV Processors](example/lib/processors/opencv_processors.dart)** - High-performance OpenCV-based preprocessing
 
-See the example app for complete implementations of these processors.
+See the [example app](example/) for complete processor implementations using the strategy pattern.
 
-## Example Applications
+## Example Application
 
-The `example/` directory contains complete working demos:
+The `example/` directory contains a comprehensive demo app showcasing:
 
-- **[Image Classification Demo](example/lib/screens/image_classification_demo.dart)** - MobileNet V3 classification
-- **[Object Detection Demo](example/lib/screens/object_detection_demo.dart)** - YOLO object detection
-- **[Model Manager](example/lib/screens/model_manager.dart)** - Load models from different sources
+- **[Unified Model Playground](example/lib/screens/unified_model_playground.dart)** - Main playground supporting multiple model types
+  - MobileNet V3 image classification
+  - YOLO object detection (v5, v8, v11)
+  - Static image and live camera modes
+  - Reactive settings (thresholds, top-K, preprocessing providers)
+  - Performance monitoring and metrics
 
 ## Converting PyTorch Models to ExecuTorch
 
