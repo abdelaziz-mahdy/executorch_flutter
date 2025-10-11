@@ -134,90 +134,6 @@ data class TensorData (
 }
 
 /**
- * Inference request parameters
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
-data class InferenceRequest (
-  val modelId: String,
-  val inputs: List<TensorData?>,
-  val options: Map<String?, Any?>? = null,
-  val timeoutMs: Long? = null,
-  val requestId: String? = null
-)
- {
-  companion object {
-    fun fromList(pigeonVar_list: List<Any?>): InferenceRequest {
-      val modelId = pigeonVar_list[0] as String
-      val inputs = pigeonVar_list[1] as List<TensorData?>
-      val options = pigeonVar_list[2] as Map<String?, Any?>?
-      val timeoutMs = pigeonVar_list[3] as Long?
-      val requestId = pigeonVar_list[4] as String?
-      return InferenceRequest(modelId, inputs, options, timeoutMs, requestId)
-    }
-  }
-  fun toList(): List<Any?> {
-    return listOf(
-      modelId,
-      inputs,
-      options,
-      timeoutMs,
-      requestId,
-    )
-  }
-  override fun equals(other: Any?): Boolean {
-    if (other !is InferenceRequest) {
-      return false
-    }
-    if (this === other) {
-      return true
-    }
-    return ExecutorchApiPigeonUtils.deepEquals(toList(), other.toList())  }
-
-  override fun hashCode(): Int = toList().hashCode()
-}
-
-/**
- * Inference execution result
- * On success: contains outputs and timing info
- * On failure: platform throws exception
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
-data class InferenceResult (
-  val outputs: List<TensorData?>,
-  val executionTimeMs: Double,
-  val requestId: String? = null
-)
- {
-  companion object {
-    fun fromList(pigeonVar_list: List<Any?>): InferenceResult {
-      val outputs = pigeonVar_list[0] as List<TensorData?>
-      val executionTimeMs = pigeonVar_list[1] as Double
-      val requestId = pigeonVar_list[2] as String?
-      return InferenceResult(outputs, executionTimeMs, requestId)
-    }
-  }
-  fun toList(): List<Any?> {
-    return listOf(
-      outputs,
-      executionTimeMs,
-      requestId,
-    )
-  }
-  override fun equals(other: Any?): Boolean {
-    if (other !is InferenceResult) {
-      return false
-    }
-    if (this === other) {
-      return true
-    }
-    return ExecutorchApiPigeonUtils.deepEquals(toList(), other.toList())  }
-
-  override fun hashCode(): Int = toList().hashCode()
-}
-
-/**
  * Model loading result
  * On success: returns unique model ID
  * On failure: platform throws exception
@@ -265,16 +181,6 @@ private open class ExecutorchApiPigeonCodec : StandardMessageCodec() {
       }
       131.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          InferenceRequest.fromList(it)
-        }
-      }
-      132.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          InferenceResult.fromList(it)
-        }
-      }
-      133.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
           ModelLoadResult.fromList(it)
         }
       }
@@ -291,16 +197,8 @@ private open class ExecutorchApiPigeonCodec : StandardMessageCodec() {
         stream.write(130)
         writeValue(stream, value.toList())
       }
-      is InferenceRequest -> {
-        stream.write(131)
-        writeValue(stream, value.toList())
-      }
-      is InferenceResult -> {
-        stream.write(132)
-        writeValue(stream, value.toList())
-      }
       is ModelLoadResult -> {
-        stream.write(133)
+        stream.write(131)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -311,6 +209,8 @@ private open class ExecutorchApiPigeonCodec : StandardMessageCodec() {
 
 /**
  * Host API - Called from Dart to native platforms
+ * Minimal interface matching native ExecuTorch: load → forward → dispose
+ * Plus utility methods: getLoadedModels, setDebugLogging
  * All methods throw PlatformException on error
  *
  * Generated interface from Pigeon that represents a handler of messages from Flutter.
@@ -321,19 +221,19 @@ interface ExecutorchHostApi {
    * Returns a unique model ID for subsequent operations
    * Throws: PlatformException if file not found or model loading fails
    */
-  fun loadModel(filePath: String, callback: (Result<ModelLoadResult>) -> Unit)
+  fun load(filePath: String, callback: (Result<ModelLoadResult>) -> Unit)
   /**
-   * Run inference on a loaded model
-   * Returns inference results with outputs and timing
+   * Run forward pass (inference) on a loaded model
+   * Returns output tensors directly (no wrapper object)
    * Throws: PlatformException if model not found or inference fails
    */
-  fun runInference(request: InferenceRequest, callback: (Result<InferenceResult>) -> Unit)
+  fun forward(modelId: String, inputs: List<TensorData?>, callback: (Result<List<TensorData?>>) -> Unit)
   /**
    * Dispose a loaded model and free its resources
    * User has full control over memory management
    * Throws: PlatformException if model not found
    */
-  fun disposeModel(modelId: String)
+  fun dispose(modelId: String)
   /**
    * Get list of currently loaded model IDs
    * Returns empty list if no models loaded
@@ -355,12 +255,12 @@ interface ExecutorchHostApi {
     fun setUp(binaryMessenger: BinaryMessenger, api: ExecutorchHostApi?, messageChannelSuffix: String = "") {
       val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.loadModel$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.load$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val filePathArg = args[0] as String
-            api.loadModel(filePathArg) { result: Result<ModelLoadResult> ->
+            api.load(filePathArg) { result: Result<ModelLoadResult> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(ExecutorchApiPigeonUtils.wrapError(error))
@@ -375,12 +275,13 @@ interface ExecutorchHostApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.runInference$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.forward$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
-            val requestArg = args[0] as InferenceRequest
-            api.runInference(requestArg) { result: Result<InferenceResult> ->
+            val modelIdArg = args[0] as String
+            val inputsArg = args[1] as List<TensorData?>
+            api.forward(modelIdArg, inputsArg) { result: Result<List<TensorData?>> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(ExecutorchApiPigeonUtils.wrapError(error))
@@ -395,13 +296,13 @@ interface ExecutorchHostApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.disposeModel$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.dispose$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val modelIdArg = args[0] as String
             val wrapped: List<Any?> = try {
-              api.disposeModel(modelIdArg)
+              api.dispose(modelIdArg)
               listOf(null)
             } catch (exception: Throwable) {
               ExecutorchApiPigeonUtils.wrapError(exception)

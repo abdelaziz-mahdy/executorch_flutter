@@ -1,16 +1,16 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../../models/model_input.dart';
 import '../../processors/yolo_processor.dart';
-import '../image_with_detections.dart';
+import '../object_detection/image_with_detections.dart';
 import 'base_result_renderer.dart';
 
 /// Renderer for object detection results
-class ObjectDetectionRenderer
-    extends BaseResultRenderer<File, ObjectDetectionResult> {
+class ObjectDetectionRenderer extends StatefulWidget {
   const ObjectDetectionRenderer({
     super.key,
-    required super.input,
-    required super.result,
+    required this.input,
+    required this.result,
     this.modelInputWidth = 640.0,
     this.modelInputHeight = 640.0,
     this.boxColor = Colors.green,
@@ -19,6 +19,8 @@ class ObjectDetectionRenderer
     this.showConfidence = true,
   });
 
+  final ModelInput input;
+  final ObjectDetectionResult? result;
   final double modelInputWidth;
   final double modelInputHeight;
   final Color boxColor;
@@ -27,22 +29,60 @@ class ObjectDetectionRenderer
   final bool showConfidence;
 
   @override
+  State<ObjectDetectionRenderer> createState() =>
+      _ObjectDetectionRendererState();
+}
+
+class _ObjectDetectionRendererState extends State<ObjectDetectionRenderer> {
+  // Cache the image bytes to enable gapless playback
+  Uint8List? _cachedBytes;
+
+  @override
+  void didUpdateWidget(ObjectDetectionRenderer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update cached bytes when input changes
+    if (widget.input is LiveCameraInput) {
+      _cachedBytes = (widget.input as LiveCameraInput).frameBytes;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (result == null) {
+    // Determine which image widget to use based on input type
+    final Image imageWidget;
+    if (widget.input is LiveCameraInput) {
+      final bytes = (widget.input as LiveCameraInput).frameBytes;
+      // Use gapless playback for smooth video
+      imageWidget = Image.memory(
+        bytes,
+        fit: BoxFit.contain,
+        gaplessPlayback: true, // Critical for smooth video playback
+        excludeFromSemantics: true, // Performance optimization
+      );
+    } else if (widget.input is ImageFileInput) {
+      imageWidget = Image.file(
+        (widget.input as ImageFileInput).file,
+        fit: BoxFit.contain,
+      );
+    } else {
+      throw UnsupportedError('Unsupported input type: ${widget.input.runtimeType}');
+    }
+
+    if (widget.result == null) {
       // No detection result, just show the image
-      return Image.file(input, fit: BoxFit.contain);
+      return imageWidget;
     }
 
     return ImageWithDetections(
-      image: Image.file(input),
-      detections: result!.detectedObjects,
+      image: imageWidget,
+      detections: widget.result!.detectedObjects,
       imageFit: BoxFit.contain,
-      modelInputWidth: modelInputWidth,
-      modelInputHeight: modelInputHeight,
-      boxColor: boxColor,
-      strokeWidth: strokeWidth,
-      showLabels: showLabels,
-      showConfidence: showConfidence,
+      modelInputWidth: widget.modelInputWidth,
+      modelInputHeight: widget.modelInputHeight,
+      boxColor: widget.boxColor,
+      strokeWidth: widget.strokeWidth,
+      showLabels: widget.showLabels,
+      showConfidence: widget.showConfidence,
     );
   }
 }

@@ -49,37 +49,8 @@ class TensorData {
   String? name;
 }
 
-/// Inference request parameters
-class InferenceRequest {
-  InferenceRequest({
-    required this.modelId,
-    required this.inputs,
-    this.options,
-    this.timeoutMs,
-    this.requestId,
-  });
-
-  String modelId;
-  List<TensorData?> inputs; // Pigeon requires nullable generics
-  Map<String?, Object?>? options; // Pigeon requires nullable generics
-  int? timeoutMs;
-  String? requestId;
-}
-
-/// Inference execution result
-/// On success: contains outputs and timing info
-/// On failure: platform throws exception
-class InferenceResult {
-  InferenceResult({
-    required this.outputs,
-    required this.executionTimeMs,
-    this.requestId,
-  });
-
-  List<TensorData?> outputs; // Pigeon requires nullable generics
-  double executionTimeMs;
-  String? requestId;
-}
+// Removed InferenceRequest and InferenceResult - simplified API
+// forward() now takes inputs directly and returns outputs directly
 
 /// Model loading result
 /// On success: returns unique model ID
@@ -93,6 +64,8 @@ class ModelLoadResult {
 }
 
 /// Host API - Called from Dart to native platforms
+/// Minimal interface matching native ExecuTorch: load → forward → dispose
+/// Plus utility methods: getLoadedModels, setDebugLogging
 /// All methods throw PlatformException on error
 @HostApi()
 abstract class ExecutorchHostApi {
@@ -100,18 +73,18 @@ abstract class ExecutorchHostApi {
   /// Returns a unique model ID for subsequent operations
   /// Throws: PlatformException if file not found or model loading fails
   @async
-  ModelLoadResult loadModel(String filePath);
+  ModelLoadResult load(String filePath);
 
-  /// Run inference on a loaded model
-  /// Returns inference results with outputs and timing
+  /// Run forward pass (inference) on a loaded model
+  /// Returns output tensors directly (no wrapper object)
   /// Throws: PlatformException if model not found or inference fails
   @async
-  InferenceResult runInference(InferenceRequest request);
+  List<TensorData?> forward(String modelId, List<TensorData?> inputs);
 
   /// Dispose a loaded model and free its resources
   /// User has full control over memory management
   /// Throws: PlatformException if model not found
-  void disposeModel(String modelId);
+  void dispose(String modelId);
 
   /// Get list of currently loaded model IDs
   /// Returns empty list if no models loaded

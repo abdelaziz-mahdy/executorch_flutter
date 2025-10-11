@@ -5,7 +5,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_definition.dart';
 import '../models/model_registry.dart';
-import '../services/processor_preferences.dart';
+import '../services/model_controller.dart';
+import '../ui/widgets/performance_monitor.dart';
 
 /// Unified Model Playground - works with any model type through ModelDefinition
 class UnifiedModelPlayground extends StatefulWidget {
@@ -18,44 +19,31 @@ class UnifiedModelPlayground extends StatefulWidget {
 class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   // Model state
   List<ModelDefinition>? _availableModels;
-  ModelDefinition? _selectedModel;
-  ExecuTorchModel? _loadedExecuTorchModel;
+  ModelController? _controller;
 
-  // Processing state
+  // Loading state
   bool _isLoadingModels = true;
   bool _isLoadingModel = false;
-  bool _isProcessing = false;
 
   // UI state
   bool _isInputExpanded = true;
-  bool _useOpenCVProcessor = false;
-
-  // Input/Result state (generic)
-  Object? _input;
-  Object? _result;
-  double? _preprocessingTime;
-  double? _inferenceTime;
-  double? _postprocessingTime;
-  double? _totalTime;
-  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _loadAvailableModels();
-    _loadProcessorPreference();
   }
 
-  Future<void> _loadProcessorPreference() async {
-    final useOpenCV = await ProcessorPreferences.getUseOpenCV();
-    setState(() {
-      _useOpenCVProcessor = useOpenCV;
-    });
+  void _onControllerChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
-    _loadedExecuTorchModel?.dispose();
+    _controller?.removeListener(_onControllerChanged);
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -67,41 +55,40 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         _isLoadingModels = false;
       });
     } catch (e) {
+      debugPrint('Failed to load models: $e');
       setState(() {
-        _errorMessage = 'Failed to load models: $e';
         _isLoadingModels = false;
       });
     }
   }
 
   Future<void> _selectModel(ModelDefinition model) async {
+    // Dispose previous controller (handles camera cleanup)
+    await _controller?.dispose();
+
     setState(() {
       _isLoadingModel = true;
-      _errorMessage = null;
-      _input = null;
-      _result = null;
     });
 
     try {
-      // Dispose previous model
-      await _loadedExecuTorchModel?.dispose();
-
-      // Load model asset
       final modelPath = await _loadAssetModel(model.assetPath);
+      final execuTorchModel = await ExecuTorchModel.load(modelPath);
+      final settings = model.createDefaultSettings();
 
-      // Load ExecuTorch model
-      final execuTorchModel = await ExecutorchManager.instance.loadModel(
-        modelPath,
+      final controller = await ModelController.create(
+        definition: model,
+        execuTorchModel: execuTorchModel,
+        settings: settings,
       );
 
       setState(() {
-        _selectedModel = model;
-        _loadedExecuTorchModel = execuTorchModel;
+        _controller = controller;
+        _controller!.addListener(_onControllerChanged);
         _isLoadingModel = false;
       });
     } catch (e) {
+      debugPrint('❌ Failed to load model: $e');
       setState(() {
-        _errorMessage = 'Failed to load model: $e';
         _isLoadingModel = false;
       });
     }
@@ -116,75 +103,18 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     return file.path;
   }
 
-  Future<void> _processInput(dynamic input) async {
-    if (_loadedExecuTorchModel == null || _selectedModel == null) return;
 
-    setState(() {
-      _isProcessing = true;
-      _errorMessage = null;
-      _input = input;
-    });
+  void _showSettingsDialog() {
+    if (_controller == null) return;
 
-    try {
-      final totalStopwatch = Stopwatch()..start();
-
-      // Step 1: Prepare input (convert to TensorData)
-      debugPrint('⏱️  Starting preprocessing...');
-      final preprocessStopwatch = Stopwatch()..start();
-      final tensorInputs = await _selectedModel!.prepareInput(input);
-      preprocessStopwatch.stop();
-      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds
-          .toDouble();
-      debugPrint(
-        '⏱️  Preprocessing completed: ${preprocessingTime.toStringAsFixed(0)}ms',
-      );
-
-      // Step 2: Run inference
-      debugPrint('⏱️  Starting inference...');
-      final inferenceStopwatch = Stopwatch()..start();
-      final inferenceResult = await _loadedExecuTorchModel!.runInference(
-        inputs: tensorInputs,
-      );
-      inferenceStopwatch.stop();
-      final inferenceTime = inferenceStopwatch.elapsedMilliseconds.toDouble();
-      debugPrint(
-        '⏱️  Inference completed: ${inferenceTime.toStringAsFixed(0)}ms',
-      );
-
-      // Step 3: Process result using the model definition
-      debugPrint('⏱️  Starting postprocessing...');
-      final postprocessStopwatch = Stopwatch()..start();
-      final result = await _selectedModel!.processResult(
-        input: input,
-        inferenceResult: inferenceResult,
-      );
-      postprocessStopwatch.stop();
-      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds
-          .toDouble();
-      debugPrint(
-        '⏱️  Postprocessing completed: ${postprocessingTime.toStringAsFixed(0)}ms',
-      );
-
-      totalStopwatch.stop();
-      final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();
-      debugPrint('⏱️  Total time: ${totalTime.toStringAsFixed(0)}ms');
-
-      setState(() {
-        _result = result;
-        _preprocessingTime = preprocessingTime;
-        _inferenceTime = inferenceTime;
-        _postprocessingTime = postprocessingTime;
-        _totalTime = totalTime;
-        _isProcessing = false;
-      });
-    } catch (e, stackTrace) {
-      setState(() {
-        _errorMessage = 'Processing failed: $e';
-        _isProcessing = false;
-      });
-      debugPrint('Error during processing: $e');
-      debugPrint('Stack trace: $stackTrace');
-    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => ListenableBuilder(
+        listenable: _controller!,
+        builder: (context, _) => _controller!.buildSettingsWidget(context),
+      ),
+    );
   }
 
   @override
@@ -194,37 +124,13 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         title: const Text('Model Playground'),
         elevation: 0,
         actions: [
-          // Processor toggle
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _useOpenCVProcessor ? 'OpenCV' : 'Dart',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              Switch(
-                value: _useOpenCVProcessor,
-                onChanged: (value) async {
-                  await ProcessorPreferences.setUseOpenCV(value);
-                  setState(() {
-                    _useOpenCVProcessor = value;
-                  });
-                  // Show feedback
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Switched to ${value ? "OpenCV" : "Dart"} processor',
-                        ),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
+          // Settings button - only shown when a model is selected
+          if (_controller != null)
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: _showSettingsDialog,
+              tooltip: 'Model Settings',
+            ),
         ],
       ),
       body: _isLoadingModels
@@ -236,7 +142,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
 
                 // Main content
                 Expanded(
-                  child: _selectedModel == null
+                  child: _controller == null
                       ? _buildEmptyState()
                       : LayoutBuilder(
                           builder: (context, constraints) {
@@ -275,7 +181,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
 
                                   // Toggle button
                                   if (!_isInputExpanded &&
-                                      _selectedModel != null)
+                                      _controller != null)
                                     Positioned(
                                       right: 16,
                                       bottom: 16,
@@ -303,7 +209,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     return Container(
       padding: const EdgeInsets.all(16),
       child: DropdownButtonFormField<ModelDefinition>(
-        initialValue: _selectedModel,
+        initialValue: _controller?.definition,
         decoration: InputDecoration(
           labelText: 'Select Model',
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -344,7 +250,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           Icon(
             Icons.model_training,
             size: 64,
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(
@@ -357,7 +263,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Widget _buildInputSection() {
-    if (_selectedModel == null || !_isInputExpanded) return const SizedBox();
+    if (_controller == null || !_isInputExpanded) return const SizedBox();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -365,7 +271,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -404,9 +310,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
             ],
           ),
           const SizedBox(height: 8),
-          _selectedModel!.buildInputWidget(
+          _controller!.buildInputWidget(
             context: context,
-            onInputSelected: _processInput,
+            onInputSelected: (input) => _controller?.processInput(input),
           ),
         ],
       ),
@@ -414,7 +320,11 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Widget _buildResultSection({bool isLargeScreen = false}) {
-    if (_isProcessing) {
+    if (_controller?.isCameraMode ?? false) {
+      return _buildCameraSection();
+    }
+
+    if (_controller?.isProcessing ?? false) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -427,7 +337,8 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
     }
 
-    if (_errorMessage != null) {
+    final errorMessage = _controller?.errorMessage;
+    if (errorMessage != null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -444,7 +355,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      _errorMessage!,
+                      errorMessage,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onErrorContainer,
                       ),
@@ -458,7 +369,8 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
     }
 
-    if (_input == null) {
+    final input = _controller?.currentInput;
+    if (input == null) {
       return Center(
         child: Text(
           'Select an input to see results',
@@ -469,142 +381,134 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       );
     }
 
-    // For large screens, just show the image/result
+    final result = _controller?.currentResult;
+
     if (isLargeScreen) {
       return Container(
         padding: const EdgeInsets.all(16),
         child: Center(
-          child: _selectedModel!.buildResultRenderer(
+          child: _controller!.buildResultRenderer(
             context: context,
-            input: _input!,
-            result: _result,
+            input: input,
+            result: result,
           ),
         ),
       );
     }
 
-    // For small screens, show image + details below
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Result renderer (image with boxes, etc.)
           SizedBox(
             height: 400,
-            child: _selectedModel!.buildResultRenderer(
+            child: _controller!.buildResultRenderer(
               context: context,
-              input: _input!,
-              result: _result,
+              input: input,
+              result: result,
             ),
           ),
 
-          // Result details section
-          if (_result != null) _buildDetailsSection(),
+          if (result != null) _buildDetailsSection(),
 
-          // Bottom padding when input panel is visible
           if (_isInputExpanded) const SizedBox(height: 150),
         ],
       ),
     );
   }
 
-  Widget _buildDetailsSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+  Widget _buildCameraSection() {
+    final input = _controller?.currentInput;
+    final result = _controller?.currentResult;
+    final showPerformance = _controller?.settings.showPerformanceOverlay ?? true;
+    final performanceMetrics = _controller?.performanceMetrics;
+
+    Widget cameraContent;
+    if (input == null) {
+      cameraContent = const Center(child: CircularProgressIndicator());
+    } else {
+      cameraContent = RepaintBoundary(
+        child: _controller!.buildResultRenderer(
+          context: context,
+          input: input,
+          result: result,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      );
+    }
+
+    return Stack(
+      children: [
+        cameraContent,
+        if (showPerformance && (performanceMetrics?.hasData ?? false))
+          Positioned(
+            top: 16,
+            right: 16,
+            child: _controller!.definition.buildPerformanceMonitor(
+              context: context,
+              metrics: performanceMetrics!,
+              displayMode: PerformanceDisplayMode.overlay,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsSection() {
+    final showPerformance = !(_controller?.isCameraMode ?? false) &&
+                           (_controller?.settings.showPerformanceOverlay ?? true);
+    final performanceMetrics = _controller?.performanceMetrics;
+    final result = _controller?.currentResult;
+
+    if (result == null) return const SizedBox();
+
+    return Column(
+      children: [
+        if (showPerformance && (performanceMetrics?.hasData ?? false))
+          _controller!.definition.buildPerformanceMonitor(
+            context: context,
+            metrics: performanceMetrics!,
+            displayMode: PerformanceDisplayMode.section,
+          ),
+
+        if (showPerformance && (performanceMetrics?.hasData ?? false))
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: const Divider(),
+          ),
+
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.check_circle,
-                color: Theme.of(context).colorScheme.primary,
+              Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Results',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Text(
-                'Results',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              const SizedBox(height: 16),
+              _controller!.definition.buildResultsDetailsSection(
+                context: context,
+                result: result,
+                processingTime: performanceMetrics?.totalTime,
               ),
-              const Spacer(),
-              if (_totalTime != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${_totalTime!.toStringAsFixed(0)}ms',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // Timing breakdown
-          if (_preprocessingTime != null &&
-              _inferenceTime != null &&
-              _postprocessingTime != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Performance',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                _buildTimingRow(
-                  context,
-                  'Preprocessing',
-                  _preprocessingTime!,
-                  _totalTime!,
-                  Colors.blue,
-                ),
-                const SizedBox(height: 8),
-                _buildTimingRow(
-                  context,
-                  'Inference',
-                  _inferenceTime!,
-                  _totalTime!,
-                  Colors.green,
-                ),
-                const SizedBox(height: 8),
-                _buildTimingRow(
-                  context,
-                  'Postprocessing',
-                  _postprocessingTime!,
-                  _totalTime!,
-                  Colors.orange,
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 16),
-              ],
-            ),
-
-          _selectedModel!.buildResultsDetailsSection(
-            context: context,
-            result: _result!,
-            processingTime: _totalTime,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -641,169 +545,20 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _selectedModel!.buildInputWidget(
+                  _controller!.buildInputWidget(
                     context: context,
-                    onInputSelected: _processInput,
+                    onInputSelected: (input) => _controller?.processInput(input),
                   ),
                 ],
               ),
             ),
 
             // Results details section
-            if (_result != null)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Results',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const Spacer(),
-                        if (_totalTime != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${_totalTime!.toStringAsFixed(0)}ms',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimaryContainer,
-                                  ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Timing breakdown
-                    if (_preprocessingTime != null &&
-                        _inferenceTime != null &&
-                        _postprocessingTime != null)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Performance',
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTimingRow(
-                            context,
-                            'Preprocessing',
-                            _preprocessingTime!,
-                            _totalTime!,
-                            Colors.blue,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildTimingRow(
-                            context,
-                            'Inference',
-                            _inferenceTime!,
-                            _totalTime!,
-                            Colors.green,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildTimingRow(
-                            context,
-                            'Postprocessing',
-                            _postprocessingTime!,
-                            _totalTime!,
-                            Colors.orange,
-                          ),
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-
-                    _selectedModel!.buildResultsDetailsSection(
-                      context: context,
-                      result: _result!,
-                      processingTime: _totalTime,
-                    ),
-                  ],
-                ),
-              ),
+            if (_controller?.currentResult != null)
+              _buildDetailsSection(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTimingRow(
-    BuildContext context,
-    String label,
-    double time,
-    double totalTime,
-    Color color,
-  ) {
-    final percentage = (time / totalTime * 100).toStringAsFixed(1);
-    final ratio = time / totalTime;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
-            ),
-            Text(
-              '${time.toStringAsFixed(0)}ms',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '($percentage%)',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: ratio,
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
-          ),
-        ),
-      ],
     );
   }
 }

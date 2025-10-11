@@ -336,9 +336,10 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
       outputs[i] = byteData.getFloat32(i * 4, Endian.host);
     }
 
-    final shape =
-        output.shape.where((dim) => dim != null).map((dim) => dim!).toList() ??
-        [];
+    final shape = output.shape
+        .where((dim) => dim != null)
+        .map((dim) => dim!)
+        .toList();
     if (shape.length < 2) return [];
 
     // Detect format:

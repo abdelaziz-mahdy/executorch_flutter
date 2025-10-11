@@ -5,9 +5,16 @@ import '../utils/test_images.dart';
 
 /// Generic reusable image input widget for any image-based model
 class ImageInputWidget extends StatelessWidget {
-  const ImageInputWidget({super.key, required this.onImageSelected});
+  const ImageInputWidget({
+    super.key,
+    required this.onImageSelected,
+    this.onCameraModeToggle,
+    this.isCameraMode = false,
+  });
 
   final Function(File) onImageSelected;
+  final VoidCallback? onCameraModeToggle;
+  final bool isCameraMode;
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +26,7 @@ class ImageInputWidget extends StatelessWidget {
             icon: Icons.photo_library,
             label: 'Gallery',
             onTap: () => _pickImage(ImageSource.gallery),
+            isEnabled: !isCameraMode,
           ),
         ),
         const SizedBox(width: 8),
@@ -28,8 +36,21 @@ class ImageInputWidget extends StatelessWidget {
             icon: Icons.image,
             label: 'Test Image',
             onTap: () => _showTestImagePicker(context),
+            isEnabled: !isCameraMode,
           ),
         ),
+        if (onCameraModeToggle != null) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildActionButton(
+              context: context,
+              icon: isCameraMode ? Icons.photo : Icons.videocam,
+              label: isCameraMode ? 'Image' : 'Camera',
+              onTap: onCameraModeToggle!,
+              isActive: isCameraMode,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -97,27 +118,48 @@ class ImageInputWidget extends StatelessWidget {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    bool isEnabled = true,
+    bool isActive = false,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: isEnabled ? onTap : null,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         decoration: BoxDecoration(
+          color: isActive
+              ? Theme.of(context).colorScheme.primaryContainer
+              : null,
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+            color: isActive
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
           ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+            Icon(
+              icon,
+              size: 20,
+              color: isEnabled
+                  ? (isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.primary)
+                  : Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: isEnabled
+                      ? (isActive
+                            ? Theme.of(context).colorScheme.primary
+                            : null)
+                      : Theme.of(context).colorScheme.outline,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

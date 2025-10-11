@@ -56,6 +56,9 @@ actor ExecutorchModelManager {
     private var loadedModels: [String: LoadedModel] = [:]
     private var modelCounter: Int = 0
 
+    // Debug logging control
+    private var isDebugLoggingEnabled = false
+
     /**
      * Represents a loaded ExecuTorch model with metadata
      */
@@ -66,11 +69,16 @@ actor ExecutorchModelManager {
     }
 
     init() {
+        // Note: log() cannot be used here because init is synchronous
+        // and we want to log initialization regardless of debug setting
         print("[\(Self.TAG)] ExecutorchModelManager initialized")
     }
 
     deinit {
-        print("[\(Self.TAG)] ExecutorchModelManager deinitialized")
+        // Note: deinit is synchronous, so we use print directly
+        if isDebugLoggingEnabled {
+            print("[\(Self.TAG)] ExecutorchModelManager deinitialized")
+        }
     }
 
     // MARK: - Public API
@@ -79,15 +87,17 @@ actor ExecutorchModelManager {
      * Load an ExecuTorch model from a file path
      * Throws ExecutorchError on failure
      */
-    func loadModel(filePath: String) async throws -> ModelLoadResult {
-        print("[\(Self.TAG)] Loading ExecuTorch model from: \(filePath)")
+    func load(filePath: String) async throws -> ModelLoadResult {
+        log("Loading ExecuTorch model from: \(filePath)")
 
         // Validate file exists and is readable
         guard FileManager.default.fileExists(atPath: filePath) else {
+            logError("File not found: \(filePath)")
             throw ExecutorchError.fileNotFound(filePath)
         }
 
         guard FileManager.default.isReadableFile(atPath: filePath) else {
+            logError("File not readable: \(filePath)")
             throw ExecutorchError.modelLoadFailed(filePath, nil)
         }
 
@@ -96,15 +106,16 @@ actor ExecutorchModelManager {
 
         do {
             // Load model using ExecuTorch Module API
-            print("[\(Self.TAG)] Creating Module with file path")
+            log("Creating Module with file path")
             let module = Module(filePath: filePath)
 
             // Load the forward method (most common case)
-            print("[\(Self.TAG)] Loading 'forward' method")
+            log("Loading 'forward' method")
             try module.load("forward")
 
             // Verify the module is loaded
             guard module.isLoaded("forward") else {
+                logError("Module.isLoaded('forward') returned false for: \(filePath)")
                 throw ExecutorchError.modelLoadFailed(filePath, nil)
             }
 
@@ -116,7 +127,7 @@ actor ExecutorchModelManager {
 
             loadedModels[modelId] = loadedModel
 
-            print("[\(Self.TAG)] Successfully loaded model: \(modelId) from \(filePath)")
+            log("Successfully loaded model: \(modelId) from \(filePath)")
 
             return ModelLoadResult(modelId: modelId)
 
@@ -124,24 +135,26 @@ actor ExecutorchModelManager {
             // Clean up on failure
             loadedModels.removeValue(forKey: modelId)
 
-            print("[\(Self.TAG)] Failed to load ExecuTorch module: \(filePath), error: \(error)")
+            logError("Failed to load ExecuTorch module: \(filePath), error: \(error)")
             throw ExecutorchError.modelLoadFailed(filePath, error)
         }
     }
 
     /**
-     * Run inference on a loaded model
+     * Run forward pass (inference) on a loaded model
      * Throws ExecutorchError on failure
+     * Returns output tensors directly
      */
-    func runInference(request: InferenceRequest) async throws -> InferenceResult {
-        guard let loadedModel = loadedModels[request.modelId] else {
-            throw ExecutorchError.modelNotFound(request.modelId)
+    func forward(modelId: String, inputs: [TensorData?]) async throws -> [TensorData?] {
+        guard let loadedModel = loadedModels[modelId] else {
+            logError("Model not found: \(modelId)")
+            throw ExecutorchError.modelNotFound(modelId)
         }
 
-        print("[\(Self.TAG)] Running inference on model: \(request.modelId)")
+        log("Running forward pass on model: \(modelId)")
 
         // Convert Flutter tensors to ExecuTorch Values
-        let validInputs = request.inputs.compactMap { $0 }
+        let validInputs = inputs.compactMap { $0 }
         let inputValues = try convertTensorsToValues(validInputs)
 
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -156,17 +169,13 @@ actor ExecutorchModelManager {
             // Convert outputs back to Flutter tensors
             let outputTensors = try convertValuesToTensors(outputs)
 
-            print("[\(Self.TAG)] Inference completed in \(executionTimeMs)ms for model: \(request.modelId)")
+            log("Forward pass completed in \(executionTimeMs)ms for model: \(modelId)")
 
-            return InferenceResult(
-                outputs: outputTensors,
-                executionTimeMs: executionTimeMs,
-                requestId: request.requestId
-            )
+            return outputTensors
 
         } catch {
-            print("[\(Self.TAG)] Inference failed for model: \(request.modelId), error: \(error)")
-            throw ExecutorchError.inferenceFailed(request.modelId, error)
+            logError("Forward pass failed for model: \(modelId), error: \(error)")
+            throw ExecutorchError.inferenceFailed(modelId, error)
         }
     }
 
@@ -174,15 +183,16 @@ actor ExecutorchModelManager {
      * Dispose a loaded model and free its resources
      * Throws ExecutorchError.modelNotFound if model not found
      */
-    func disposeModel(modelId: String) async throws {
+    func dispose(modelId: String) async throws {
         let loadedModel = loadedModels.removeValue(forKey: modelId)
 
         guard loadedModel != nil else {
+            logError("Cannot dispose - model not found: \(modelId)")
             throw ExecutorchError.modelNotFound(modelId)
         }
 
         // Note: ExecuTorchModule cleanup handled by ARC
-        print("[\(Self.TAG)] Disposed model: \(modelId)")
+        log("Disposed model: \(modelId)")
     }
 
     /**
@@ -196,12 +206,27 @@ actor ExecutorchModelManager {
      * Enable or disable debug logging
      */
     func setDebugLogging(enabled: Bool) throws {
-        // ExecuTorch doesn't expose a global logging API
-        // Logging is controlled at compile time or via environment variables
-        print("[\(Self.TAG)] Debug logging setting: \(enabled) (note: may require rebuild)")
+        isDebugLoggingEnabled = enabled
+        log("Debug logging \(enabled ? "enabled" : "disabled")")
     }
 
     // MARK: - Private Helper Methods
+
+    /**
+     * Log a debug message (only if debug logging is enabled)
+     */
+    private func log(_ message: String) {
+        if isDebugLoggingEnabled {
+            print("[\(Self.TAG)] \(message)")
+        }
+    }
+
+    /**
+     * Log an error message (always logged regardless of debug setting)
+     */
+    private func logError(_ message: String) {
+        NSLog("[\(Self.TAG)] ERROR: \(message)")
+    }
 
     private func generateModelId() -> String {
         modelCounter += 1

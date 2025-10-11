@@ -79,7 +79,7 @@ class ExecutorchManager {
   /// Load an ExecuTorch model from a file path
   ///
   /// [filePath] must point to a valid ExecuTorch .pte model file.
-  /// Returns the loaded model instance that can be used for inference.
+  /// Returns the loaded model instance that can be used for inference via [ExecuTorchModel.forward].
   ///
   /// The model will be cached and can be accessed later via [getLoadedModel].
   /// If a model with the same file path is already loaded, returns the cached instance.
@@ -95,7 +95,7 @@ class ExecutorchManager {
     }
 
     try {
-      final model = await ExecuTorchModel.loadFromFile(filePath);
+      final model = await ExecuTorchModel.load(filePath);
       _loadedModels[model.modelId] = model;
       return model;
     } catch (e) {
@@ -129,7 +129,7 @@ class ExecutorchManager {
   /// Get all currently loaded models
   ///
   /// Returns a list of all ExecuTorchModel instances that are currently loaded
-  /// and available for inference.
+  /// and available for inference via [ExecuTorchModel.forward].
   List<ExecuTorchModel> getLoadedModels() =>
       List.unmodifiable(_loadedModels.values);
 
@@ -150,38 +150,10 @@ class ExecutorchManager {
     }
   }
 
-  /// Run inference on a loaded model
-  ///
-  /// This is a convenience method that looks up the model by ID and runs inference.
-  /// For better performance and type safety, prefer using [ExecuTorchModel.runInference] directly.
-  Future<InferenceResult> runInference({
-    required String modelId,
-    required List<TensorData> inputs,
-    Map<String, Object>? options,
-    int? timeoutMs,
-    String? requestId,
-  }) async {
-    _ensureInitialized();
-
-    final model = _loadedModels[modelId];
-    if (model == null) {
-      throw ExecuTorchModelException(
-        'Model $modelId not found. Load the model first using loadModel().',
-        'model_id: $modelId',
-      );
-    }
-
-    return model.runInference(
-      inputs: inputs,
-      options: options,
-      timeoutMs: timeoutMs,
-      requestId: requestId,
-    );
-  }
 
   /// Dispose a loaded model and free its resources
   ///
-  /// After calling this method, the model cannot be used for inference.
+  /// After calling this method, the model cannot be used for inference via [ExecuTorchModel.forward].
   /// The model is removed from the loaded models cache.
   Future<void> disposeModel(String modelId) async {
     _ensureInitialized();
@@ -192,7 +164,7 @@ class ExecutorchManager {
     } else {
       // Try to dispose on platform side even if not in our cache
       try {
-        await _hostApi.disposeModel(modelId);
+        await _hostApi.dispose(modelId);
       } catch (e) {
         // Ignore errors for unknown models
       }
