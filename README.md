@@ -8,7 +8,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 ## Features
 
-- ✅ **Cross-Platform Support**: Android (API 23+), iOS (13.0+), and macOS (12.0+ Apple Silicon)
+- ✅ **Cross-Platform Support**: Android (API 23+), iOS (17.0+), and macOS (12.0+ Apple Silicon)
 - ✅ **Type-Safe API**: Generated with Pigeon for reliable cross-platform communication
 - ✅ **Async Operations**: Non-blocking model loading and inference execution
 - ✅ **Multiple Models**: Support for concurrent model instances
@@ -104,7 +104,7 @@ See the `example/` directory for a full working application:
 - **Supported Backends**: XNNPACK
 
 ### iOS
-- **Minimum Version**: iOS 13.0+
+- **Minimum Version**: iOS 17.0+
 - **Architecture**: arm64 (device only)
   - ⚠️ **iOS Simulator (x86_64) is NOT supported**
 - **Supported Backends**: XNNPACK, CoreML, MPS
@@ -124,6 +124,59 @@ See the `example/` directory for a full working application:
 > macOS release builds are not supported due to Flutter's build system forcing universal binaries (arm64 + x86_64), but ExecuTorch only provides arm64 libraries.
 >
 > 🔗 **Tracking**: [Flutter Issue #176605](https://github.com/flutter/flutter/issues/176605)
+
+## Platform Configuration
+
+When adding `executorch_flutter` to an existing Flutter project, you may need to update the minimum deployment targets. If you see build errors mentioning platform versions, follow these steps:
+
+### iOS Deployment Target (iOS 17.0+)
+
+If you get an error like: `The package product 'executorch-flutter' requires minimum platform version 17.0 for the iOS platform`
+
+**Update using Xcode (Recommended):**
+1. Open your Flutter project in Xcode:
+   - Navigate to your project folder
+   - Open `ios/Runner.xcworkspace` (NOT the `.xcodeproj` file)
+2. In Xcode's left sidebar, click on **Runner** (the blue project icon at the top)
+3. Make sure **Runner** is selected under "TARGETS" (not under "PROJECT")
+4. Click the **Build Settings** tab at the top
+5. In the search bar, type: `iOS Deployment Target`
+6. You'll see "iOS Deployment Target" with a version number (like 13.0)
+7. Click on the version number and change it to **17.0**
+8. Close Xcode
+
+### macOS Deployment Target (macOS 12.0+)
+
+If you get an error like: `The package product 'executorch-flutter' requires minimum platform version 12.0 for the macOS platform`
+
+**Update using Xcode (Recommended):**
+1. Open your Flutter project in Xcode:
+   - Navigate to your project folder
+   - Open `macos/Runner.xcworkspace` (NOT the `.xcodeproj` file)
+2. In Xcode's left sidebar, click on **Runner** (the blue project icon at the top)
+3. Make sure **Runner** is selected under "TARGETS" (not under "PROJECT")
+4. Click the **Build Settings** tab at the top
+5. In the search bar, type: `macOS Deployment Target`
+6. You'll see "macOS Deployment Target" with a version number (like 10.15)
+7. Click on the version number and change it to **12.0**
+8. Close Xcode
+
+### Verification
+
+After updating deployment targets, clean and rebuild:
+
+```bash
+# Clean build artifacts
+flutter clean
+
+# Get dependencies
+flutter pub get
+
+# Build for your target platform
+flutter build ios --debug --no-codesign  # For iOS
+flutter build macos --debug               # For macOS
+flutter build apk --debug                 # For Android
+```
 
 ## Advanced Usage
 

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.0.2 - Swift 6 Compatibility Fix
+
+### Bug Fixes
+
+- **iOS/macOS**: Fixed Swift 6 compilation errors in `ExecutorchModelManager.swift`
+  - Added `try` keyword to `withUnsafeBytes` calls for Swift 6 compatibility
+  - Resolves build failures on Xcode 16+ with Swift 6 language mode
+  - Affects tensor conversion for Float32, Int32, and UInt8 data types
+
+
 ## 0.0.1 - Initial Release
 
 Initial release of ExecuTorch Flutter plugin.

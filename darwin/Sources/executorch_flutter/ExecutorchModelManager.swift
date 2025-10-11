@@ -277,7 +277,7 @@ actor ExecutorchModelManager {
             // Try to get tensor as Float first (most common), then Int32, then Byte
             if let tensor: Tensor<Float> = value.tensor() {
                 let shape = tensor.shape.map { Int64($0) }
-                let floatArray = tensor.withUnsafeBytes { (buffer: UnsafeBufferPointer<Float>) -> [Float] in
+                let floatArray = try tensor.withUnsafeBytes { (buffer: UnsafeBufferPointer<Float>) -> [Float] in
                     Array(buffer)
                 }
                 let data = Data(bytes: floatArray, count: floatArray.count * MemoryLayout<Float>.size)
@@ -289,7 +289,7 @@ actor ExecutorchModelManager {
                 )
             } else if let tensor: Tensor<Int32> = value.tensor() {
                 let shape = tensor.shape.map { Int64($0) }
-                let intArray = tensor.withUnsafeBytes { (buffer: UnsafeBufferPointer<Int32>) -> [Int32] in
+                let intArray = try tensor.withUnsafeBytes { (buffer: UnsafeBufferPointer<Int32>) -> [Int32] in
                     Array(buffer)
                 }
                 let data = Data(bytes: intArray, count: intArray.count * MemoryLayout<Int32>.size)
@@ -301,7 +301,7 @@ actor ExecutorchModelManager {
                 )
             } else if let tensor: Tensor<UInt8> = value.tensor() {
                 let shape = tensor.shape.map { Int64($0) }
-                let byteArray = tensor.withUnsafeBytes { (buffer: UnsafeBufferPointer<UInt8>) -> [UInt8] in
+                let byteArray = try tensor.withUnsafeBytes { (buffer: UnsafeBufferPointer<UInt8>) -> [UInt8] in
                     Array(buffer)
                 }
                 let data = Data(byteArray)
