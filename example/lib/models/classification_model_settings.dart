@@ -4,10 +4,32 @@ import 'model_settings.dart';
 class ClassificationModelSettings extends ModelSettings {
   ClassificationModelSettings({
     super.showPerformanceOverlay,
-    super.cameraProvider,
-    super.preprocessingProvider,
+    CameraProvider cameraProvider = CameraProvider.opencv,
+    PreprocessingProvider preprocessingProvider = PreprocessingProvider.opencv,
     int topK = 5,
-  }) : _topK = topK;
+  })  : _cameraProvider = cameraProvider,
+        _preprocessingProvider = preprocessingProvider,
+        _topK = topK;
+
+  /// Camera provider selection (for live camera input)
+  CameraProvider _cameraProvider;
+  CameraProvider get cameraProvider => _cameraProvider;
+  set cameraProvider(CameraProvider value) {
+    if (_cameraProvider != value) {
+      _cameraProvider = value;
+      notifyListeners();
+    }
+  }
+
+  /// Preprocessing provider selection
+  PreprocessingProvider _preprocessingProvider;
+  PreprocessingProvider get preprocessingProvider => _preprocessingProvider;
+  set preprocessingProvider(PreprocessingProvider value) {
+    if (_preprocessingProvider != value) {
+      _preprocessingProvider = value;
+      notifyListeners();
+    }
+  }
 
   /// Number of top predictions to show (1-10)
   int _topK;
@@ -29,9 +51,8 @@ class ClassificationModelSettings extends ModelSettings {
     return ClassificationModelSettings(
       showPerformanceOverlay:
           showPerformanceOverlay ?? this.showPerformanceOverlay,
-      cameraProvider: cameraProvider ?? this.cameraProvider,
-      preprocessingProvider:
-          preprocessingProvider ?? this.preprocessingProvider,
+      cameraProvider: cameraProvider ?? _cameraProvider,
+      preprocessingProvider: preprocessingProvider ?? _preprocessingProvider,
       topK: topK ?? _topK,
     );
   }

@@ -89,4 +89,13 @@ abstract class ModelDefinition<TInput extends ModelInput, TResult> {
     // Models can override to provide their own settings UI
     return const SizedBox.shrink();
   }
+
+  /// Get export command for this model
+  /// Returns the command string needed to export this model
+  /// Used to display helpful error messages when asset is not found
+  String getExportCommand();
+
+  /// Get a description of any special setup requirements for this model
+  /// Returns null if no special setup is required
+  String? getSpecialSetupRequirements() => null;
 }

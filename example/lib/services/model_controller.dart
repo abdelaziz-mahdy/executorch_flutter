@@ -6,6 +6,8 @@ import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_definition.dart';
 import '../models/model_input.dart';
 import '../models/model_settings.dart';
+import '../models/classification_model_settings.dart';
+import '../models/yolo_model_settings.dart';
 import '../processors/base_processor.dart';
 import '../controllers/camera_controller.dart';
 import '../controllers/opencv_camera_controller.dart';
@@ -110,12 +112,30 @@ class ModelController extends ChangeNotifier {
 
   /// Update settings and recreate processors
   void updateSettings(ModelSettings newSettings) {
-    final oldCameraProvider = _settings.cameraProvider;
+    // Check if camera provider changed (only for models that support camera)
+    CameraProvider? oldCameraProvider;
+    CameraProvider? newCameraProvider;
+
+    if (_settings is ClassificationModelSettings) {
+      oldCameraProvider = (_settings as ClassificationModelSettings).cameraProvider;
+    } else if (_settings is YoloModelSettings) {
+      oldCameraProvider = (_settings as YoloModelSettings).cameraProvider;
+    }
+
+    if (newSettings is ClassificationModelSettings) {
+      newCameraProvider = newSettings.cameraProvider;
+    } else if (newSettings is YoloModelSettings) {
+      newCameraProvider = newSettings.cameraProvider;
+    }
+
     _settings = newSettings;
     _updateProcessors();
 
     // Recreate camera if provider changed
-    if (_isCameraMode && oldCameraProvider != newSettings.cameraProvider) {
+    if (_isCameraMode &&
+        oldCameraProvider != null &&
+        newCameraProvider != null &&
+        oldCameraProvider != newCameraProvider) {
       debugPrint('📷 Camera provider changed, recreating...');
       _recreateCamera();
     }
@@ -172,7 +192,7 @@ class ModelController extends ChangeNotifier {
     _performanceTracker.reset();
 
     try {
-      final provider = _settings.cameraProvider ?? _getDefaultCameraProvider();
+      final provider = _getCameraProvider() ?? _getDefaultCameraProvider();
       _cameraController = _createCamera(provider);
       await _cameraController?.start();
 
@@ -282,9 +302,19 @@ class ModelController extends ChangeNotifier {
     if (!_isCameraMode) return;
 
     await _cameraController?.dispose();
-    final provider = _settings.cameraProvider ?? _getDefaultCameraProvider();
+    final provider = _getCameraProvider() ?? _getDefaultCameraProvider();
     _cameraController = _createCamera(provider);
     await _cameraController?.start();
+  }
+
+  /// Get camera provider from settings (if model supports camera)
+  CameraProvider? _getCameraProvider() {
+    if (_settings is ClassificationModelSettings) {
+      return (_settings as ClassificationModelSettings).cameraProvider;
+    } else if (_settings is YoloModelSettings) {
+      return (_settings as YoloModelSettings).cameraProvider;
+    }
+    return null;
   }
 
   /// Create camera

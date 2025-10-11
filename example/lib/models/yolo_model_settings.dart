@@ -4,12 +4,34 @@ import 'model_settings.dart';
 class YoloModelSettings extends ModelSettings {
   YoloModelSettings({
     super.showPerformanceOverlay,
-    super.cameraProvider,
-    super.preprocessingProvider,
+    CameraProvider cameraProvider = CameraProvider.opencv,
+    PreprocessingProvider preprocessingProvider = PreprocessingProvider.opencv,
     double confidenceThreshold = 0.5,
     double nmsThreshold = 0.45,
-  }) : _confidenceThreshold = confidenceThreshold,
-       _nmsThreshold = nmsThreshold;
+  })  : _cameraProvider = cameraProvider,
+        _preprocessingProvider = preprocessingProvider,
+        _confidenceThreshold = confidenceThreshold,
+        _nmsThreshold = nmsThreshold;
+
+  /// Camera provider selection (for live camera input)
+  CameraProvider _cameraProvider;
+  CameraProvider get cameraProvider => _cameraProvider;
+  set cameraProvider(CameraProvider value) {
+    if (_cameraProvider != value) {
+      _cameraProvider = value;
+      notifyListeners();
+    }
+  }
+
+  /// Preprocessing provider selection
+  PreprocessingProvider _preprocessingProvider;
+  PreprocessingProvider get preprocessingProvider => _preprocessingProvider;
+  set preprocessingProvider(PreprocessingProvider value) {
+    if (_preprocessingProvider != value) {
+      _preprocessingProvider = value;
+      notifyListeners();
+    }
+  }
 
   /// Minimum confidence threshold for detections (0.0 - 1.0)
   double _confidenceThreshold;
@@ -42,9 +64,8 @@ class YoloModelSettings extends ModelSettings {
     return YoloModelSettings(
       showPerformanceOverlay:
           showPerformanceOverlay ?? this.showPerformanceOverlay,
-      cameraProvider: cameraProvider ?? this.cameraProvider,
-      preprocessingProvider:
-          preprocessingProvider ?? this.preprocessingProvider,
+      cameraProvider: cameraProvider ?? _cameraProvider,
+      preprocessingProvider: preprocessingProvider ?? _preprocessingProvider,
       confidenceThreshold: confidenceThreshold ?? _confidenceThreshold,
       nmsThreshold: nmsThreshold ?? _nmsThreshold,
     );

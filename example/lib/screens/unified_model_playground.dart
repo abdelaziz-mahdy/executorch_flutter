@@ -91,16 +91,191 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       setState(() {
         _isLoadingModel = false;
       });
+
+      // Show helpful error dialog only if the asset file is missing
+      if (mounted) {
+        final errorString = e.toString();
+        if (errorString.contains('Asset not found') ||
+            errorString.contains('Unable to load asset')) {
+          _showModelNotFoundError(model);
+        } else {
+          _showModelLoadError(model, errorString);
+        }
+      }
     }
   }
 
+  void _showModelNotFoundError(ModelDefinition model) {
+    // Get export command from model definition
+    final exportCommand = model.getExportCommand();
+    final specialSetup = model.getSpecialSetupRequirements();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            const Text('Model Not Found'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'The ${model.displayName} model file is missing.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Expected file:',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(top: 4, bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  model.assetPath,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              Text(
+                'To export this model, run:',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(top: 4, bottom: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: SelectableText(
+                  'cd example/python\n$exportCommand',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              if (specialSetup != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          specialSetup,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showModelLoadError(ModelDefinition model, String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            const Text('Failed to Load Model'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Failed to load ${model.displayName}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error details:',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: SelectableText(
+                  error,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<String> _loadAssetModel(String assetPath) async {
-    final byteData = await rootBundle.load(assetPath);
-    final directory = await getApplicationCacheDirectory();
-    final fileName = assetPath.split('/').last;
-    final file = File('${directory.path}/$fileName');
-    await file.writeAsBytes(byteData.buffer.asUint8List());
-    return file.path;
+    try {
+      final byteData = await rootBundle.load(assetPath);
+      final directory = await getApplicationCacheDirectory();
+      final fileName = assetPath.split('/').last;
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+      return file.path;
+    } catch (e) {
+      // Re-throw with clearer error message
+      throw Exception('Asset not found: $assetPath');
+    }
   }
 
   void _showSettingsDialog() {

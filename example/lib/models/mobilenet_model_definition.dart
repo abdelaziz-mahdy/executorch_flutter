@@ -78,13 +78,14 @@ class MobileNetModelDefinition
 
   @override
   InputProcessor<ModelInput> createInputProcessor(ModelSettings settings) {
+    final classificationSettings = settings as ClassificationModelSettings;
     return MobileNetInputProcessor(
       config: ImagePreprocessConfig(
         targetWidth: inputSize,
         targetHeight: inputSize,
         normalizeToFloat: true,
       ),
-      useOpenCV: settings.preprocessingProvider == PreprocessingProvider.opencv,
+      useOpenCV: classificationSettings.preprocessingProvider == PreprocessingProvider.opencv,
     );
   }
 
@@ -352,5 +353,10 @@ class MobileNetModelDefinition
         ),
       ],
     );
+  }
+
+  @override
+  String getExportCommand() {
+    return 'python3 main.py export --mobilenet';
   }
 }

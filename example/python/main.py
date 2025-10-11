@@ -24,7 +24,7 @@ import torch
 import torchvision.models as models
 
 
-def export_mobilenet(output_dir="../example/assets/models"):
+def export_mobilenet(output_dir="../assets/models"):
     """Export MobileNet V3 Small using Ultralytics-style ExecuTorch export."""
     print("\n" + "="*70)
     print("  Exporting MobileNet V3 Small")
@@ -65,7 +65,7 @@ def export_mobilenet(output_dir="../example/assets/models"):
         return False
 
 
-def export_yolo(model_name="yolo11n", output_dir="../example/assets/models"):
+def export_yolo(model_name="yolo11n", output_dir="../assets/models"):
     """Export YOLO model using Ultralytics-style ExecuTorch export."""
     print("\n" + "="*70)
     print(f"  Exporting {model_name.upper()}")
@@ -124,7 +124,133 @@ def export_yolo(model_name="yolo11n", output_dir="../example/assets/models"):
         return False
 
 
-def export_labels(output_dir="../example/assets"):
+def export_gemma(model_name="gemma-3-270m", output_dir="../assets/models"):
+    """Export Gemma text generation model using Optimum ExecuTorch.
+
+    Supported models:
+    - gemma-3-270m: 240 MB (text-only, 270M parameters)
+    - gemma-3-1b: 892 MB - 1.5 GB (text-only, 1B parameters)
+
+    IMPORTANT: Gemma models are gated on HuggingFace and require:
+    1. Request access at https://huggingface.co/google/gemma-3-270m-it
+    2. Authenticate with: hf auth login
+    3. Install optimum-executorch from source:
+       git clone https://github.com/huggingface/optimum-executorch.git
+       cd optimum-executorch && pip install '.[dev]' && python install_dev.py
+    """
+    print("\n" + "="*70)
+    print(f"  Exporting {model_name.upper()}")
+    print("="*70 + "\n")
+
+    try:
+        import subprocess
+        from pathlib import Path
+        import json
+        import shutil
+
+        # Map model name to HuggingFace model ID
+        model_id = f"google/{model_name}-it"
+
+        print(f"📦 Exporting {model_name} using Optimum ExecuTorch...")
+        print(f"   Model ID: {model_id}")
+        print(f"   This may take several minutes on first run...")
+
+        # Create temporary output directory (use absolute path for optimum-cli)
+        temp_output = Path(output_dir).resolve() / f"{model_name}_temp"
+        temp_output.mkdir(parents=True, exist_ok=True)
+
+        # Use optimum-cli to export the model
+        # Note: Removed --use_custom_sdpa and --use_custom_kv_cache flags
+        # as they require ExecuTorch features not available in v0.7.0
+        cmd = [
+            "optimum-cli", "export", "executorch",
+            "--model", model_id,
+            "--task", "text-generation",
+            "--recipe", "xnnpack",
+            "--qlinear", "8da4w",
+            "--qembedding", "8w",
+            "--output_dir", str(temp_output)
+        ]
+
+        print(f"\n🔄 Running optimum-cli export...")
+        print(f"   Command: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            print(f"❌ Export failed with exit code {result.returncode}")
+            print(f"   stderr: {result.stderr}")
+            return False
+
+        print(f"✅ Model exported successfully!")
+
+        # Find and rename the .pte file
+        pte_files = list(temp_output.glob("*.pte"))
+        if not pte_files:
+            print(f"❌ No .pte file found in {temp_output}")
+            return False
+
+        pte_file = pte_files[0]
+        output_path = Path(output_dir).resolve()
+        output_path.mkdir(parents=True, exist_ok=True)
+        final_pte = output_path / f"{model_name}_xnnpack.pte"
+
+        shutil.move(str(pte_file), str(final_pte))
+        file_size_mb = final_pte.stat().st_size / (1024 * 1024)
+        print(f"✅ Model file: {final_pte.name} ({file_size_mb:.1f} MB)")
+
+        # Load tokenizer and save vocabulary
+        from transformers import AutoTokenizer
+
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+        # Save simplified vocabulary for Dart
+        vocab = tokenizer.get_vocab()
+        vocab_file = output_path / f"{model_name}_vocab.json"
+        with open(vocab_file, "w") as f:
+            json.dump(vocab, f, indent=2)
+
+        print(f"✅ Vocabulary saved: {vocab_file.name} ({len(vocab)} tokens)")
+
+        # Save tokenizer config
+        tokenizer_config = {
+            "vocab_size": tokenizer.vocab_size,
+            "bos_token": tokenizer.bos_token,
+            "eos_token": tokenizer.eos_token,
+            "pad_token": tokenizer.pad_token if tokenizer.pad_token else tokenizer.eos_token,
+            "model_max_length": 2048,
+            "special_tokens": {
+                "bos_token_id": tokenizer.bos_token_id,
+                "eos_token_id": tokenizer.eos_token_id,
+                "pad_token_id": tokenizer.pad_token_id if tokenizer.pad_token_id else tokenizer.eos_token_id,
+            }
+        }
+
+        tokenizer_config_file = output_path / f"{model_name}_tokenizer_config.json"
+        with open(tokenizer_config_file, "w") as f:
+            json.dump(tokenizer_config, f, indent=2)
+
+        print(f"✅ Tokenizer config saved: {tokenizer_config_file.name}")
+
+        # Clean up temp directory
+        shutil.rmtree(temp_output)
+
+        return True
+
+    except ImportError as e:
+        print(f"❌ Import error: {e}")
+        print(f"\n💡 Please install optimum-executorch from source:")
+        print(f"   git clone https://github.com/huggingface/optimum-executorch.git")
+        print(f"   cd optimum-executorch && pip install '.[dev]' && python install_dev.py")
+        return False
+    except Exception as e:
+        print(f"❌ Export failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def export_labels(output_dir="../assets"):
     """Export COCO and ImageNet labels."""
     print("\n" + "="*70)
     print("  Generating Label Files")
@@ -170,6 +296,9 @@ def cmd_export(args):
     # Determine what to export
     export_mobilenet_flag = args.all or args.mobilenet
     export_yolo_models = []
+    # Note: Gemma is NOT included in --all because it requires HuggingFace authentication
+    # Users must explicitly use --gemma flag
+    export_gemma_flag = args.gemma
 
     if args.all:
         export_yolo_models = ["yolo11n", "yolov8n", "yolov5n"]  # All nano YOLO models
@@ -188,9 +317,15 @@ def cmd_export(args):
         if export_yolo(model_name):
             success_count += 1
 
+    # Export Gemma
+    if export_gemma_flag:
+        total_count += 1
+        if export_gemma("gemma-3-270m", args.output_dir):
+            success_count += 1
+
     # Export labels
     if args.all or args.labels:
-        export_labels("../example/assets")
+        export_labels("../assets")
 
     # Summary
     print("\n" + "="*70)
@@ -262,11 +397,24 @@ Examples:
   python main.py                          # Export all models (default)
   python main.py export --mobilenet       # Export MobileNet only
   python main.py export --yolo yolo11n    # Export YOLO11n
+  python main.py export --gemma           # Export Gemma text generation model
   python main.py export --all             # Export all models
   python main.py validate                 # Validate all models
 
 Supported YOLO models:
   yolo11n, yolo11s, yolov8n, yolov8s, yolov5n, yolov5s
+
+Supported Text Generation models:
+  gemma-3-270m (Google Gemma 3, 270M parameters, text-only, ~240 MB)
+  gemma-3-1b   (Google Gemma 3, 1B parameters, text-only, ~1.5 GB)
+
+Note: Gemma models require additional setup (advanced):
+  1. Install optimum-executorch from source:
+     git clone https://github.com/huggingface/optimum-executorch.git
+     cd optimum-executorch && pip install '.[dev]' && python install_dev.py
+  2. Request access: https://huggingface.co/google/gemma-3-270m-it
+  3. Login: hf auth login
+  4. Export: python main.py export --gemma
         """
     )
 
@@ -277,18 +425,19 @@ Supported YOLO models:
     export_parser.add_argument('--all', action='store_true', help='Export all models')
     export_parser.add_argument('--mobilenet', action='store_true', help='Export MobileNet')
     export_parser.add_argument('--yolo', nargs='+', metavar='MODEL', help='Export YOLO model(s)')
+    export_parser.add_argument('--gemma', action='store_true', help='Export Gemma text generation model')
     export_parser.add_argument('--labels', action='store_true', help='Generate label files')
-    export_parser.add_argument('--output-dir', default='../example/assets/models',
-                                help='Output directory (default: ../example/assets/models)')
+    export_parser.add_argument('--output-dir', default='../assets/models',
+                                help='Output directory (default: ../assets/models)')
 
     # Validate command
     validate_parser = subparsers.add_parser('validate', help='Validate models')
-    validate_parser.add_argument('--models-dir', default='../example/assets/models',
-                                  help='Models directory (default: ../example/assets/models)')
-    validate_parser.add_argument('--images-dir', default='../example/assets/images',
-                                  help='Test images directory (default: ../example/assets/images)')
-    validate_parser.add_argument('--output-file', default='../example/assets/model_test_results.json',
-                                  help='Output file (default: ../example/assets/model_test_results.json)')
+    validate_parser.add_argument('--models-dir', default='../assets/models',
+                                  help='Models directory (default: ../assets/models)')
+    validate_parser.add_argument('--images-dir', default='../assets/images',
+                                  help='Test images directory (default: ../assets/images)')
+    validate_parser.add_argument('--output-file', default='../assets/model_test_results.json',
+                                  help='Output file (default: ../assets/model_test_results.json)')
 
     args = parser.parse_args()
 
@@ -298,8 +447,9 @@ Supported YOLO models:
         args.all = True
         args.mobilenet = False
         args.yolo = None
+        args.gemma = False
         args.labels = True
-        args.output_dir = '../example/assets/models'
+        args.output_dir = '../assets/models'
 
     # Run command
     if args.command == 'export':

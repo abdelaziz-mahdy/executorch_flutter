@@ -601,10 +601,10 @@ class ModelValidator:
 def main():
     """Main validation workflow."""
     # Paths
-    models_dir = "../example/assets/models"
-    images_dir = "../example/assets/images"
-    assets_dir = "../example/assets"
-    output_file = "../example/assets/model_test_results.json"
+    models_dir = "../assets/models"
+    images_dir = "../assets/images"
+    assets_dir = "../assets"
+    output_file = "../assets/model_test_results.json"
 
     # Create validator
     validator = ModelValidator(models_dir, images_dir, assets_dir)
