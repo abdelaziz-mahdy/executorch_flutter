@@ -2,6 +2,8 @@
 
 A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, and macOS platforms.
 
+**📦 [pub.dev](https://pub.dev/packages/executorch_flutter)** | **🔧 [Example App](example/)**
+
 ## Overview
 
 ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch models (`.pte` files) in your Flutter applications. The package handles all native platform integration, providing you with a straightforward interface for on-device machine learning inference.
