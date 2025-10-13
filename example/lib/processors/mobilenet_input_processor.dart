@@ -1,6 +1,8 @@
+import 'package:executorch_flutter_example/processors/shaders/gpu_mobilenet_preprocessor.dart';
 import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_input.dart';
+import '../models/model_settings.dart';
 import 'base_processor.dart';
 import 'image_processor.dart';
 import 'opencv/opencv_imagenet_preprocessor.dart';
@@ -9,11 +11,11 @@ import 'opencv/opencv_imagenet_preprocessor.dart';
 class MobileNetInputProcessor extends InputProcessor<ModelInput> {
   const MobileNetInputProcessor({
     required this.config,
-    required this.useOpenCV,
+    required this.preprocessingProvider,
   });
 
   final ImagePreprocessConfig config;
-  final bool useOpenCV;
+  final PreprocessingProvider preprocessingProvider;
 
   @override
   Future<List<TensorData>> process(ModelInput input) async {
@@ -28,12 +30,16 @@ class MobileNetInputProcessor extends InputProcessor<ModelInput> {
     }
 
     // Select preprocessor based on settings
-    if (useOpenCV) {
-      final preprocessor = OpenCVImageNetPreprocessor(config: config);
-      return await preprocessor.preprocess(bytes);
-    } else {
-      final preprocessor = ImageNetPreprocessor(config: config);
-      return await preprocessor.preprocess(bytes);
+    switch (preprocessingProvider) {
+      case PreprocessingProvider.gpu:
+        final preprocessor = GpuMobileNetPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
+      case PreprocessingProvider.opencv:
+        final preprocessor = OpenCVImageNetPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
+      case PreprocessingProvider.imageLib:
+        final preprocessor = ImageNetPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
     }
   }
 }

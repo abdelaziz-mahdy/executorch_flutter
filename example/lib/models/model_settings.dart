@@ -16,7 +16,8 @@ enum CameraProvider {
 /// Only used by models that need preprocessing (e.g., image models)
 enum PreprocessingProvider {
   imageLib('Image Library', 'Uses Dart image library for preprocessing'),
-  opencv('OpenCV', 'Uses opencv_dart for preprocessing');
+  opencv('OpenCV', 'Uses opencv_dart for preprocessing'),
+  gpu('GPU Shader', 'Uses GPU Fragment Shader for preprocessing');
 
   const PreprocessingProvider(this.displayName, this.description);
 

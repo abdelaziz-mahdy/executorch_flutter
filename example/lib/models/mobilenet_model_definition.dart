@@ -85,7 +85,7 @@ class MobileNetModelDefinition
         targetHeight: inputSize,
         normalizeToFloat: true,
       ),
-      useOpenCV: classificationSettings.preprocessingProvider == PreprocessingProvider.opencv,
+      preprocessingProvider: classificationSettings.preprocessingProvider,
     );
   }
 
@@ -270,6 +270,18 @@ class MobileNetModelDefinition
               title: Text(PreprocessingProvider.opencv.displayName),
               subtitle: Text(PreprocessingProvider.opencv.description),
               value: PreprocessingProvider.opencv,
+              groupValue: classificationSettings.preprocessingProvider,
+              onChanged: (value) {
+                if (value != null) {
+                  classificationSettings.preprocessingProvider = value;
+                  onSettingsChanged(classificationSettings);
+                }
+              },
+            ),
+            RadioListTile<PreprocessingProvider>(
+              title: Text(PreprocessingProvider.gpu.displayName),
+              subtitle: Text(PreprocessingProvider.gpu.description),
+              value: PreprocessingProvider.gpu,
               groupValue: classificationSettings.preprocessingProvider,
               onChanged: (value) {
                 if (value != null) {

@@ -180,13 +180,36 @@ flutter build apk --debug                 # For Android
 
 ## Advanced Usage
 
-### Processor Interfaces
+### Preprocessing Strategies
 
-The example app demonstrates processor strategies for common model types:
+The example app demonstrates three preprocessing approaches for common model types:
 
-- **[Image Classification](example/lib/processors/image_processor.dart)** - ImageNet preprocessing and postprocessing for MobileNet
-- **[Object Detection](example/lib/processors/yolo_processor.dart)** - YOLO preprocessing, NMS, and bounding box extraction
-- **[OpenCV Processors](example/lib/processors/opencv_processors.dart)** - High-performance OpenCV-based preprocessing
+#### 1. GPU Preprocessing (Recommended)
+Hardware-accelerated preprocessing using Flutter Fragment Shaders:
+- **Performance**: Comparable to OpenCV on most platforms
+- **Platform Support**: All platforms (mobile + desktop)
+- **Dependencies**: None (native Flutter APIs)
+- **Use Case**: Real-time camera inference, high frame rates
+
+**📖 [Complete GPU Preprocessing Tutorial](example/GPU_PREPROCESSING.md)** - Step-by-step guide with GLSL shader examples
+
+**Reference implementations:** [example/lib/processors/shaders/](example/lib/processors/shaders/)
+
+#### 2. OpenCV Preprocessing
+High-performance C++ library preprocessing:
+- **Performance**: High-performance (very close to GPU on macOS)
+- **Platform Support**: All platforms (cross-platform)
+- **Dependencies**: opencv_dart package
+- **Use Case**: Advanced image processing, computer vision operations
+
+See **[OpenCV Processors](example/lib/processors/opencv/)** for implementations.
+
+#### 3. CPU Preprocessing (image library)
+Pure Dart image processing:
+- **Performance**: Slower than GPU/OpenCV, suitable for non-realtime use
+- **Platform Support**: All platforms
+- **Dependencies**: image package
+- **Use Case**: Simple preprocessing, debugging
 
 See the [example app](example/) for complete processor implementations using the strategy pattern.
 

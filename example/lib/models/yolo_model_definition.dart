@@ -79,7 +79,7 @@ class YoloModelDefinition
         targetWidth: inputSize,
         targetHeight: inputSize,
       ),
-      useOpenCV: yoloSettings.preprocessingProvider == PreprocessingProvider.opencv,
+      preprocessingProvider: yoloSettings.preprocessingProvider,
     );
   }
 
@@ -261,6 +261,18 @@ class YoloModelDefinition
               title: Text(PreprocessingProvider.opencv.displayName),
               subtitle: Text(PreprocessingProvider.opencv.description),
               value: PreprocessingProvider.opencv,
+              groupValue: yoloSettings.preprocessingProvider,
+              onChanged: (value) {
+                if (value != null) {
+                  yoloSettings.preprocessingProvider = value;
+                  onSettingsChanged(yoloSettings);
+                }
+              },
+            ),
+            RadioListTile<PreprocessingProvider>(
+              title: Text(PreprocessingProvider.gpu.displayName),
+              subtitle: Text(PreprocessingProvider.gpu.description),
+              value: PreprocessingProvider.gpu,
               groupValue: yoloSettings.preprocessingProvider,
               onChanged: (value) {
                 if (value != null) {

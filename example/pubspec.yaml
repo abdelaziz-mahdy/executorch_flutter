@@ -90,6 +90,11 @@ flutter:
     - assets/coco_labels.txt
     - assets/images/
 
+  # GPU shaders for preprocessing
+  shaders:
+    - shaders/yolo_preprocess.frag
+    - shaders/mobilenet_preprocess.frag
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

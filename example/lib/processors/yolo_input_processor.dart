@@ -1,16 +1,21 @@
 import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import '../models/model_input.dart';
+import '../models/model_settings.dart';
 import 'base_processor.dart';
 import 'yolo_processor.dart';
 import 'opencv/opencv_yolo_preprocessor.dart';
+import 'shaders/gpu_yolo_preprocessor.dart';
 
 /// YOLO input processor with settings baked in
 class YoloInputProcessor extends InputProcessor<ModelInput> {
-  const YoloInputProcessor({required this.config, required this.useOpenCV});
+  const YoloInputProcessor({
+    required this.config,
+    required this.preprocessingProvider,
+  });
 
   final YoloPreprocessConfig config;
-  final bool useOpenCV;
+  final PreprocessingProvider preprocessingProvider;
 
   @override
   Future<List<TensorData>> process(ModelInput input) async {
@@ -25,12 +30,16 @@ class YoloInputProcessor extends InputProcessor<ModelInput> {
     }
 
     // Select preprocessor based on settings and preprocess
-    if (useOpenCV) {
-      final preprocessor = OpenCVYoloPreprocessor(config: config);
-      return await preprocessor.preprocess(bytes);
-    } else {
-      final preprocessor = YoloPreprocessor(config: config);
-      return await preprocessor.preprocess(bytes);
+    switch (preprocessingProvider) {
+      case PreprocessingProvider.gpu:
+        final preprocessor = GpuYoloPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
+      case PreprocessingProvider.opencv:
+        final preprocessor = OpenCVYoloPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
+      case PreprocessingProvider.imageLib:
+        final preprocessor = YoloPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
     }
   }
 }
