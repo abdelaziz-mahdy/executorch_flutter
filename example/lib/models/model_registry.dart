@@ -52,7 +52,7 @@ class ModelRegistry {
       // Text Generation Models
       const GemmaModelDefinition(
         name: 'gemma-3-270m',
-        displayName: 'Gemma 3 270M',
+        displayName: 'Gemma 3 270M (Not Working Yet)',
         description: 'Google Gemma 3 text generation model (270M parameters)',
         assetPath: 'assets/models/gemma-3-270m_xnnpack.pte',
         inputSize: 128, // Sequence length
