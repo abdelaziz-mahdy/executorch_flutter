@@ -73,12 +73,13 @@ class YoloModelDefinition
 
   @override
   InputProcessor<ModelInput> createInputProcessor(ModelSettings settings) {
+    final yoloSettings = settings as YoloModelSettings;
     return YoloInputProcessor(
       config: YoloPreprocessConfig(
         targetWidth: inputSize,
         targetHeight: inputSize,
       ),
-      useOpenCV: settings.preprocessingProvider == PreprocessingProvider.opencv,
+      preprocessingProvider: yoloSettings.preprocessingProvider,
     );
   }
 
@@ -268,6 +269,18 @@ class YoloModelDefinition
                 }
               },
             ),
+            RadioListTile<PreprocessingProvider>(
+              title: Text(PreprocessingProvider.gpu.displayName),
+              subtitle: Text(PreprocessingProvider.gpu.description),
+              value: PreprocessingProvider.gpu,
+              groupValue: yoloSettings.preprocessingProvider,
+              onChanged: (value) {
+                if (value != null) {
+                  yoloSettings.preprocessingProvider = value;
+                  onSettingsChanged(yoloSettings);
+                }
+              },
+            ),
           ],
         ),
 
@@ -368,5 +381,10 @@ class YoloModelDefinition
         ),
       ],
     );
+  }
+
+  @override
+  String getExportCommand() {
+    return 'python3 main.py export --yolo $name';
   }
 }

@@ -45,3 +45,10 @@ macos/executorch_flutter/Sources/executorch_flutter/
 # Internal development documentation
 specs/
 PIGEON_MACOS_NOTES.md
+example/example/assets/models/gemma-3-270m_xnnpack.pte
+example/example/assets/models/gemma-3-270m_tokenizer_config.json
+.gitignore
+example/example/assets/models/gemma-3-270m_vocab.json
+example/assets/models/gemma-3-270m_xnnpack.pte
+example/assets/models/gemma-3-270m_tokenizer_config.json
+example/assets/models/gemma-3-270m_vocab.json

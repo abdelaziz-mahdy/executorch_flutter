@@ -19,3 +19,10 @@ class LiveCameraInput extends ModelInput {
 
   LiveCameraInput(this.frameBytes);
 }
+
+/// Input for text generation models (e.g., Gemma, GPT, etc.)
+class TextPromptInput extends ModelInput {
+  final String text;
+
+  TextPromptInput(this.text);
+}

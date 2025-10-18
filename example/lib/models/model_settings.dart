@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Camera provider options (how to capture frames)
+/// Only used by models that support camera input (e.g., image models)
 enum CameraProvider {
   platform('Platform Camera', 'Uses Flutter camera plugin'),
   opencv('OpenCV Camera', 'Uses opencv_dart for camera');
@@ -12,9 +13,11 @@ enum CameraProvider {
 }
 
 /// Preprocessing provider options (how to prepare tensors)
+/// Only used by models that need preprocessing (e.g., image models)
 enum PreprocessingProvider {
   imageLib('Image Library', 'Uses Dart image library for preprocessing'),
-  opencv('OpenCV', 'Uses opencv_dart for preprocessing');
+  opencv('OpenCV', 'Uses opencv_dart for preprocessing'),
+  gpu('GPU Shader', 'Uses GPU Fragment Shader for preprocessing');
 
   const PreprocessingProvider(this.displayName, this.description);
 
@@ -24,14 +27,11 @@ enum PreprocessingProvider {
 
 /// Base class for model-specific settings
 /// Each model type can extend this to add their own configuration options
+/// Only includes truly universal settings (performance overlay)
 abstract class ModelSettings extends ChangeNotifier {
   ModelSettings({
     bool showPerformanceOverlay = true,
-    CameraProvider cameraProvider = CameraProvider.opencv,
-    PreprocessingProvider preprocessingProvider = PreprocessingProvider.opencv,
-  }) : _showPerformanceOverlay = showPerformanceOverlay,
-       _cameraProvider = cameraProvider,
-       _preprocessingProvider = preprocessingProvider;
+  }) : _showPerformanceOverlay = showPerformanceOverlay;
 
   /// Whether to show performance overlay
   bool _showPerformanceOverlay;
@@ -39,26 +39,6 @@ abstract class ModelSettings extends ChangeNotifier {
   set showPerformanceOverlay(bool value) {
     if (_showPerformanceOverlay != value) {
       _showPerformanceOverlay = value;
-      notifyListeners();
-    }
-  }
-
-  /// Camera provider selection (for models that support camera input)
-  CameraProvider _cameraProvider;
-  CameraProvider get cameraProvider => _cameraProvider;
-  set cameraProvider(CameraProvider value) {
-    if (_cameraProvider != value) {
-      _cameraProvider = value;
-      notifyListeners();
-    }
-  }
-
-  /// Preprocessing provider selection
-  PreprocessingProvider _preprocessingProvider;
-  PreprocessingProvider get preprocessingProvider => _preprocessingProvider;
-  set preprocessingProvider(PreprocessingProvider value) {
-    if (_preprocessingProvider != value) {
-      _preprocessingProvider = value;
       notifyListeners();
     }
   }

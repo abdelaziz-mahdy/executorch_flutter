@@ -78,13 +78,14 @@ class MobileNetModelDefinition
 
   @override
   InputProcessor<ModelInput> createInputProcessor(ModelSettings settings) {
+    final classificationSettings = settings as ClassificationModelSettings;
     return MobileNetInputProcessor(
       config: ImagePreprocessConfig(
         targetWidth: inputSize,
         targetHeight: inputSize,
         normalizeToFloat: true,
       ),
-      useOpenCV: settings.preprocessingProvider == PreprocessingProvider.opencv,
+      preprocessingProvider: classificationSettings.preprocessingProvider,
     );
   }
 
@@ -277,6 +278,18 @@ class MobileNetModelDefinition
                 }
               },
             ),
+            RadioListTile<PreprocessingProvider>(
+              title: Text(PreprocessingProvider.gpu.displayName),
+              subtitle: Text(PreprocessingProvider.gpu.description),
+              value: PreprocessingProvider.gpu,
+              groupValue: classificationSettings.preprocessingProvider,
+              onChanged: (value) {
+                if (value != null) {
+                  classificationSettings.preprocessingProvider = value;
+                  onSettingsChanged(classificationSettings);
+                }
+              },
+            ),
           ],
         ),
 
@@ -352,5 +365,10 @@ class MobileNetModelDefinition
         ),
       ],
     );
+  }
+
+  @override
+  String getExportCommand() {
+    return 'python3 main.py export --mobilenet';
   }
 }

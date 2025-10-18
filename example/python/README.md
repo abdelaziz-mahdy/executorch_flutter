@@ -46,7 +46,7 @@ python main.py export --labels
 
 **Supported YOLO models**: yolo11n, yolov8n, yolov5n (nano versions only)
 
-**Output**: `../example/assets/models/`
+**Output**: `../assets/models/`
 
 ### Validate
 
@@ -57,12 +57,12 @@ Validate exported models with test images and save results.
 python main.py validate
 
 # Custom directories
-python main.py validate --models-dir ../example/assets/models \
-                        --images-dir ../example/assets/images \
-                        --output-file ../example/assets/results.json
+python main.py validate --models-dir ../assets/models \
+                        --images-dir ../assets/images \
+                        --output-file ../assets/results.json
 ```
 
-**Output**: `../example/assets/model_test_results.json`
+**Output**: `../assets/model_test_results.json`
 
 ## File Structure
 
@@ -85,7 +85,7 @@ python/
 python main.py
 
 # 2. Verify files exist
-ls -lh ../example/assets/models/
+ls -lh ../assets/models/
 
 # 3. Run Flutter app
 cd ../example
@@ -102,7 +102,7 @@ python main.py export --all
 python main.py validate
 
 # 3. Check results
-cat ../example/assets/model_test_results.json
+cat ../assets/model_test_results.json
 ```
 
 ## Exported Models
@@ -151,7 +151,7 @@ python export_yolo_official.py --model_name yolo11n.pt --backend xnnpack
 ```
 
 ### Models don't load in Flutter
-1. Verify .pte files exist in `../example/assets/models/`
+1. Verify .pte files exist in `../assets/models/`
 2. Check file sizes (should be ~10MB each)
 3. Re-export with `python main.py export --all`
 
@@ -223,4 +223,4 @@ For issues or questions:
 - Check Flutter app logs: `flutter logs`
 - Re-export models: `python main.py export --all`
 - Run validation: `python main.py validate`
-- Review results: `cat ../example/assets/model_test_results.json`
+- Review results: `cat ../assets/model_test_results.json`

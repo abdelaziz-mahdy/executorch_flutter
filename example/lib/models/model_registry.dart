@@ -1,12 +1,13 @@
 import 'model_definition.dart';
 import 'yolo_model_definition.dart';
 import 'mobilenet_model_definition.dart';
+import 'gemma_model_definition.dart';
 
 /// Central registry of all available models
 /// To add a new model, just add it to this list!
 /// Each model is completely self-contained and knows:
 /// - Where its model file is
-/// - Where its labels are
+/// - Where its labels are (if applicable)
 /// - How to process its inputs/outputs
 /// - How to render its results
 class ModelRegistry {
@@ -46,6 +47,16 @@ class ModelRegistry {
         assetPath: 'assets/models/yolov5n_xnnpack.pte',
         inputSize: 640,
         labelsAssetPath: 'assets/coco_labels.txt',
+      ),
+
+      // Text Generation Models
+      const GemmaModelDefinition(
+        name: 'gemma-3-270m',
+        displayName: 'Gemma 3 270M (Not Working Yet)',
+        description: 'Google Gemma 3 text generation model (270M parameters)',
+        assetPath: 'assets/models/gemma-3-270m_xnnpack.pte',
+        inputSize: 128, // Sequence length
+        vocabAssetPath: 'assets/models/gemma-3-270m_vocab.json',
       ),
     ];
   }
