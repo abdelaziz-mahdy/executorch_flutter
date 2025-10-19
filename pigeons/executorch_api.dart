@@ -1,40 +1,28 @@
 // Pigeon API specification for Flutter ExecuTorch package
-// This file defines the type-safe interface between Dart and native platforms
-// Updated: 2025-10-07 - Updated to ExecuTorch 1.0.0
-// Android: ExecuTorch 1.0.0-rc2, iOS/macOS: SPM 1.0.0, Xcode 15+/Swift 5.9+
+// This file now only defines shared types (TensorData, TensorType)
+// All communication happens via FFI, not platform channels
+// Updated: 2025-10-18 - Migrated to FFI architecture
 
 import 'package:pigeon/pigeon.dart';
 
 @ConfigurePigeon(PigeonOptions(
   dartOut: 'lib/src/generated/executorch_api.dart',
   dartOptions: DartOptions(),
-  kotlinOut:
-      'android/src/main/kotlin/com/zcreations/executorch_flutter/generated/ExecutorchApi.kt',
-  kotlinOptions: KotlinOptions(
-    package: 'com.zcreations.executorch_flutter.generated',
-  ),
-  swiftOut: 'darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift',
-  swiftOptions: SwiftOptions(),
   dartPackageName: 'executorch_flutter',
 ))
 
 /// Tensor data type enumeration
+/// Maps to ETFlutterDataType in C wrapper
 enum TensorType {
-  float32,
-  int8,
-  int32,
-  uint8,
+  float32,  // 32-bit IEEE 754 floating point
+  int8,     // 8-bit signed integer
+  int32,    // 32-bit signed integer
+  uint8,    // 8-bit unsigned integer
 }
 
-// API uses exceptions for error handling instead of status enums
-// On success: methods return result
-// On failure: methods throw PlatformException with error details
-// Dart wrappers catch and convert to typed ExecuTorch exceptions
-
-// Metadata removed - ExecuTorch doesn't provide runtime introspection
-// Models should document their input/output specs externally
-
 /// Tensor data for input/output
+/// This is the primary data structure shared between Dart and C (via FFI)
+/// It matches ETFlutterTensorData in the C wrapper
 class TensorData {
   TensorData({
     required this.shape,
@@ -43,54 +31,23 @@ class TensorData {
     this.name,
   });
 
+  /// Tensor shape (e.g., [1, 3, 224, 224] for NCHW image)
+  /// Max 8 dimensions (ET_FLUTTER_MAX_TENSOR_DIMS)
   List<int?> shape; // Pigeon requires nullable generics
+
+  /// Element data type
   TensorType dataType;
+
+  /// Raw tensor data as bytes
+  /// Length must match shape * dtype size
   Uint8List data;
+
+  /// Optional tensor name (max 64 chars)
   String? name;
 }
 
-// Removed InferenceRequest and InferenceResult - simplified API
-// forward() now takes inputs directly and returns outputs directly
-
-/// Model loading result
-/// On success: returns unique model ID
-/// On failure: platform throws exception
-class ModelLoadResult {
-  ModelLoadResult({
-    required this.modelId,
-  });
-
-  String modelId;
-}
-
-/// Host API - Called from Dart to native platforms
-/// Minimal interface matching native ExecuTorch: load → forward → dispose
-/// Plus utility methods: getLoadedModels, setDebugLogging
-/// All methods throw PlatformException on error
-@HostApi()
-abstract class ExecutorchHostApi {
-  /// Load a model from the specified file path
-  /// Returns a unique model ID for subsequent operations
-  /// Throws: PlatformException if file not found or model loading fails
-  @async
-  ModelLoadResult load(String filePath);
-
-  /// Run forward pass (inference) on a loaded model
-  /// Returns output tensors directly (no wrapper object)
-  /// Throws: PlatformException if model not found or inference fails
-  @async
-  List<TensorData?> forward(String modelId, List<TensorData?> inputs);
-
-  /// Dispose a loaded model and free its resources
-  /// User has full control over memory management
-  /// Throws: PlatformException if model not found
-  void dispose(String modelId);
-
-  /// Get list of currently loaded model IDs
-  /// Returns empty list if no models loaded
-  List<String?> getLoadedModels();
-
-  /// Enable or disable ExecuTorch debug logging
-  /// Only works in debug builds
-  void setDebugLogging(bool enabled);
-}
+// Note: ExecutorchHostApi and other platform channel interfaces removed
+// All communication now happens via:
+// - C wrapper: src/c_wrapper/executorch_flutter_wrapper.h
+// - FFI bridge: lib/src/ffi/executorch_ffi_bridge.dart
+// - Dart API: lib/src/executorch_model.dart

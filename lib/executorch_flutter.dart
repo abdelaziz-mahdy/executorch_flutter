@@ -6,22 +6,20 @@
 ///
 /// ## Key Features
 ///
-/// - **High Performance**: Optimized for mobile inference with ExecuTorch runtime
-/// - **Type Safe**: Generated platform communication with Pigeon ensures type safety
+/// - **High Performance**: Optimized for mobile inference with ExecuTorch runtime via FFI
+/// - **Type Safe**: Direct C interop with Dart FFI for zero-overhead communication
 /// - **Cross Platform**: Identical APIs across Android, iOS, and macOS platforms
 /// - **User-Controlled Resources**: Explicit model lifecycle management with load/dispose
 /// - **Easy Integration**: Simple API for loading models and running inference
+/// - **Automatic Cleanup**: NativeFinalizer ensures models are freed on garbage collection
 ///
 /// ## Quick Start
 ///
 /// ```dart
 /// import 'package:executorch_flutter/executorch_flutter.dart';
 ///
-/// // Initialize the manager
-/// await ExecutorchManager.instance.initialize();
-///
-/// // Load a model
-/// final model = await ExecutorchManager.instance.loadModel('path/to/model.pte');
+/// // Load a model (FFI initializes automatically on first use)
+/// final model = await ExecuTorchModel.load('/path/to/model.pte');
 ///
 /// // Prepare input data
 /// final inputTensor = TensorData(
@@ -39,16 +37,14 @@
 ///   print('Output shape: ${output.shape}');
 /// }
 ///
-/// // Clean up
+/// // Clean up (automatic via finalizer, but recommended for explicit cleanup)
 /// await model.dispose();
 /// ```
 ///
 /// ## Main Classes
 ///
-/// - [ExecutorchManager]: Main entry point for ExecuTorch operations
-/// - [ExecuTorchModel]: Represents a loaded model instance
-/// - [TensorData]: Tensor data representation
-/// - [ModelMetadata]: Model information and specifications
+/// - [ExecuTorchModel]: Represents a loaded model instance (load/forward/dispose)
+/// - [TensorData]: Tensor data representation (shape, type, data bytes)
 ///
 /// ## Processors
 ///
@@ -68,20 +64,15 @@
 /// For detailed documentation and examples, see the individual class documentation.
 library;
 
-import 'package:executorch_flutter/executorch_flutter.dart'
-    show
-        ExecutorchManager,
-        ExecuTorchModel,
-        TensorData,
-        ExecuTorchPreprocessor,
-        ExecuTorchPostprocessor,
-        ExecuTorchProcessor;
-
-export 'src/executorch_errors.dart';
 // Core API exports
-export 'src/executorch_inference.dart';
+export 'src/executorch_errors.dart';
 export 'src/executorch_model.dart';
-// Generated Pigeon types - direct export for type safety
-export 'src/generated/executorch_api.dart';
+
+// Tensor types from Pigeon (still used for data structures)
+export 'src/generated/executorch_api.dart' show TensorData, TensorType;
+
 // Preprocessing and postprocessing utilities
 export 'src/processors/processors.dart';
+
+// Note: executorch_inference.dart (ExecutorchManager) is deprecated in favor of
+// direct ExecuTorchModel.load() usage with FFI

@@ -31,17 +31,9 @@ void main() async {
     debugPrint('❌ Failed to initialize Service Locator: $e');
   }
 
-  // Initialize ExecuTorch manager
-  try {
-    await ExecutorchManager.instance.initialize();
-    debugPrint('✅ ExecuTorch Manager initialized successfully');
-
-    // Enable debug logging to see detailed ExecuTorch logs
-    await ExecutorchManager.instance.setDebugLogging(true);
-    debugPrint('✅ ExecuTorch debug logging enabled');
-  } catch (e) {
-    debugPrint('❌ Failed to initialize ExecuTorch: $e');
-  }
+  // ExecuTorch FFI bridge initializes automatically on first model load
+  // No explicit initialization needed
+  debugPrint('✅ ExecuTorch FFI ready (initializes on first use)');
 
   // Initialize Performance Service
   try {

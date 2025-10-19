@@ -180,6 +180,45 @@ flutter build macos --debug               # For macOS
 flutter build apk --debug                 # For Android
 ```
 
+## Build Configuration
+
+The plugin uses a **zero-setup build system** with pre-built ExecuTorch libraries that are automatically downloaded during the build process:
+
+- **Android**: Pre-built AAR from Maven Central (`org.pytorch:executorch-android:1.0.0`)
+- **iOS/macOS**: Pre-built XCFrameworks via Swift Package Manager (ExecuTorch 1.0.0)
+
+### Platform-Specific Details
+
+#### Android
+- **Dependencies**: Downloaded automatically by Gradle from Maven Central
+- **Architectures**: arm64-v8a (primary), x86_64 (emulator)
+- **Build Time**: ~40-60 seconds (first build), ~10-20 seconds (incremental)
+- **Backends Included**: XNNPACK, optimized kernels
+
+#### iOS
+- **Dependencies**: Downloaded automatically by CocoaPods/Swift Package Manager
+- **Architectures**: arm64 (physical devices only - **no simulator support**)
+- **Build Time**: ~5-7 minutes (first build), ~30-60 seconds (incremental)
+- **Backends Included**: XNNPACK, CoreML, MPS, optimized kernels
+
+#### macOS
+- **Dependencies**: Downloaded automatically by Swift Package Manager
+- **Architectures**: arm64 (Apple Silicon only)
+- **Build Time**: ~5-7 minutes (first build), ~30-60 seconds (incremental)
+- **Backends Included**: XNNPACK, CoreML, MPS, optimized kernels
+
+### Build Performance
+
+**First Build**:
+- Android: ~40-60 seconds (downloads AAR ~50MB)
+- iOS/macOS: ~5-7 minutes (downloads XCFrameworks ~100MB via SPM)
+
+**Incremental Build**:
+- Android: ~10-20 seconds
+- iOS/macOS: ~30-60 seconds
+
+**No manual setup required** - all dependencies are downloaded automatically by the build system.
+
 ## Advanced Usage
 
 ### Preprocessing Strategies

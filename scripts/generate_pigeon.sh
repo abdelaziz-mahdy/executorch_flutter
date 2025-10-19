@@ -1,11 +1,13 @@
 #!/bin/bash
-# Pigeon code generation script with automatic Swift public type fixes
+# Pigeon type generation script (FFI architecture)
+#
+# NOTE: This package uses FFI for all platform communication, not platform channels.
+# Pigeon is only used to generate TensorData and TensorType definitions for type safety.
 #
 # This script:
-# 1. Generates Pigeon code for all platforms
+# 1. Generates Pigeon type definitions (TensorData, TensorType) for Dart/Kotlin/Swift
 # 2. Automatically makes Swift types public (required for SPM)
-# 3. Removes PigeonError handling (not used)
-# 4. Creates symlinks for iOS and macOS to shared darwin code
+# 3. Creates symlinks for iOS and macOS to shared darwin code
 #
 # Usage: ./scripts/generate_pigeon.sh
 
@@ -22,12 +24,12 @@ echo -e "${BLUE}Starting Pigeon code generation...${NC}"
 # Navigate to project root
 cd "$(dirname "$0")/.."
 
-echo -e "${BLUE}[1/4] Generating Pigeon code for Dart/Android/Darwin...${NC}"
+echo -e "${BLUE}[1/4] Generating Pigeon type definitions (FFI, no platform channels)...${NC}"
 dart pub global run pigeon --input pigeons/executorch_api.dart
 
 DARWIN_SWIFT="darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift"
 
-echo -e "${BLUE}[2/4] Making Swift types public (SPM requirement)...${NC}"
+echo -e "${BLUE}[2/4] Making Swift types public (required for SPM)...${NC}"
 # Make all enums public
 sed -i '' 's/^enum /public enum /g' "$DARWIN_SWIFT"
 
@@ -67,9 +69,10 @@ ln -sf ../../../darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift 
 ln -sf ../../../darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift \
        macos/Classes/Generated/ExecutorchApi.swift
 
-echo -e "${GREEN}✓ Pigeon generation complete!${NC}"
-echo -e "${GREEN}  • Dart: lib/src/generated/executorch_api.dart${NC}"
-echo -e "${GREEN}  • Kotlin: android/src/main/kotlin/.../ExecutorchApi.kt${NC}"
-echo -e "${GREEN}  • Darwin (shared): $DARWIN_SWIFT${NC}"
+echo -e "${GREEN}✓ Pigeon type generation complete!${NC}"
+echo -e "${GREEN}  • Dart types: lib/src/generated/executorch_api.dart${NC}"
+echo -e "${GREEN}  • Kotlin types: android/src/main/kotlin/.../ExecutorchApi.kt${NC}"
+echo -e "${GREEN}  • Darwin types (shared): $DARWIN_SWIFT${NC}"
 echo -e "${GREEN}  • iOS: symlink → darwin${NC}"
 echo -e "${GREEN}  • macOS: symlink → darwin${NC}"
+echo -e "${YELLOW}NOTE: All platform communication uses FFI (no platform channels)${NC}"

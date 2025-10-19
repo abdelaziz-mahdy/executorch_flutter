@@ -1,0 +1,5 @@
+module executorch_flutter_wrapper {
+    header "executorch_flutter_wrapper.h"
+    header "error_codes.h"
+    export *
+}

@@ -35,12 +35,30 @@ let package = Package(
                 .product(name: "kernels_optimized", package: "executorch"), // Optimized kernels
             ],
             path: "Sources/executorch_flutter",
-            resources: [
-                // Privacy manifest if needed for App Store submission
-                // .process("PrivacyInfo.xcprivacy"),
+            sources: [
+                // Swift sources
+                ".",
+                // C/C++ wrapper sources (FFI) - relative to Package root
+                "../../src/c_wrapper/error_codes.c",
+                "../../src/c_wrapper/error_mapping.c",
+                "../../src/c_wrapper/tensor_utils.c",
+                "../../src/c_wrapper/executorch_flutter_wrapper.c",
+                "../../src/c_wrapper/executorch_flutter_wrapper.cpp",
+                "../../src/c_wrapper/platform/platform_macos.c",
             ],
+            publicHeadersPath: "include",
             cSettings: [
-                .headerSearchPath("include")
+                .headerSearchPath("include"),
+                .headerSearchPath("../../src/c_wrapper"),  // C wrapper headers
+                .define("TARGET_OS_OSX", to: "1"),
+                .define("__APPLE__"),
+                .unsafeFlags(["-fvisibility=default"]),  // Export all symbols for FFI
+            ],
+            cxxSettings: [
+                .headerSearchPath("../../src/c_wrapper"),
+                .define("TARGET_OS_OSX", to: "1"),
+                .define("__APPLE__"),
+                .unsafeFlags(["-fvisibility=default"]),  // Export all symbols for FFI
             ],
             linkerSettings: [
                 // Force load all symbols from static libraries to ensure backend registration

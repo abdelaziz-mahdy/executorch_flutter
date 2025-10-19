@@ -15,7 +15,18 @@ Supports ARM64 devices and simulators with optimized performance for mobile ML w
   s.author           = { 'PyTorch Team' => 'executorch@pytorch.org' }
 
   s.source           = { :path => '.' }
+
+  # Swift and Dart-generated sources
   s.source_files     = 'Classes/**/*'
+
+  # C/C++ wrapper sources (FFI)
+  s.source_files    += '../src/c_wrapper/*.{h,c,cpp}',
+                       '../src/c_wrapper/platform/platform_ios.c'
+
+  # Public headers for C wrapper (accessible to Swift via bridging)
+  s.public_header_files = '../src/c_wrapper/executorch_flutter_wrapper.h',
+                         '../src/c_wrapper/error_codes.h'
+
   s.dependency 'Flutter'
 
   # iOS deployment target aligned with ExecuTorch 1.0.0 requirements
@@ -37,14 +48,18 @@ Supports ARM64 devices and simulators with optimized performance for mobile ML w
   # Additional system libraries required by ExecuTorch
   s.libraries = ['c++', 'resolv']
 
-  # Basic build configuration for Swift package integration
+  # Basic build configuration for Swift package integration + C wrapper
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
     'VALID_ARCHS' => 'arm64 x86_64',
     'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
     'CLANG_CXX_LIBRARY' => 'libc++',
-    'OTHER_LDFLAGS' => '-ObjC'
+    'OTHER_LDFLAGS' => '-ObjC',
+    # Include paths for C wrapper
+    'HEADER_SEARCH_PATHS' => '"$(PODS_TARGET_SRCROOT)/../src/c_wrapper"',
+    # Enable C++17 for wrapper
+    'GCC_C_LANGUAGE_STANDARD' => 'c11'
   }
 
   # Additional build settings for release optimization

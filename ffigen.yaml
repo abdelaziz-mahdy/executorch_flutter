@@ -1,0 +1,32 @@
+# FFI bindings configuration for ExecuTorch Flutter C wrapper
+# Auto-generates Dart FFI bindings from C headers
+
+name: ExecutorchFfiBindings
+description: Auto-generated FFI bindings for ExecuTorch Flutter C wrapper
+output: lib/src/generated/executorch_ffi_bindings.dart
+language: c
+
+headers:
+  entry-points:
+    - src/c_wrapper/executorch_flutter_wrapper.h
+
+compiler-opts:
+  - -Isrc/c_wrapper
+
+# Let ffigen automatically include all declarations from entry-point headers
+# No filters specified - include everything
+
+# Silence enum implementation-defined size warning
+# Our enums are defined with explicit underlying types
+silence-enum-warning: true
+
+comments:
+  style: any
+  length: full
+
+preamble: |
+  // Auto-generated FFI bindings for ExecuTorch Flutter C wrapper.
+  // DO NOT EDIT - regenerate using: dart run ffigen
+  //
+  // Generated from: src/c_wrapper/executorch_flutter_wrapper.h
+  // Configuration: ffigen.yaml
