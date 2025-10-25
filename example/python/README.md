@@ -1,20 +1,36 @@
 # ExecuTorch Flutter - Python Tools
 
-Unified command-line tool for model export and validation.
+Unified command-line tool for model export and validation with **multi-backend support**.
 
 ## Quick Start
 
 ```bash
-# Export all models (default mode)
+# Export all models with all available backends (default mode)
 python main.py
 
-# Export specific models
+# Export specific model with all backends
 python main.py export --mobilenet
-python main.py export --yolo yolo11n
+
+# Export with specific backends only
+python main.py export --mobilenet --backends xnnpack coreml
+
+# Export all models with XNNPACK only (fast)
+python main.py export --all --backends xnnpack
 
 # Validate all models
 python main.py validate
 ```
+
+## Backend Support
+
+This tool now exports models for multiple ExecuTorch backends:
+
+- **XNNPACK**: CPU-optimized (Android, iOS, macOS, Linux) - *default*
+- **CoreML**: Apple Neural Engine (iOS, macOS) - *best performance on Apple devices*
+- **MPS**: Metal GPU acceleration (iOS, macOS) - *GPU-accelerated*
+- **Vulkan**: Cross-platform GPU (Android, Linux) - *GPU-accelerated*
+
+📚 **See [BACKENDS.md](BACKENDS.md) for complete backend selection guide**
 
 ## Installation
 
@@ -108,14 +124,21 @@ cat ../assets/model_test_results.json
 ## Exported Models
 
 ### MobileNet V3 Small
-- **File**: `mobilenet_v3_small_xnnpack.pte` (~9.8 MB)
+- **Files**: `mobilenet_v3_small_{backend}.pte` (~5-6 MB per backend)
+  - `mobilenet_v3_small_xnnpack.pte` (CPU)
+  - `mobilenet_v3_small_coreml.pte` (Apple NPU)
+  - `mobilenet_v3_small_mps.pte` (Apple GPU)
+  - `mobilenet_v3_small_vulkan.pte` (GPU)
 - **Input**: [1, 3, 224, 224] (RGB, ImageNet normalized)
 - **Output**: [1, 1000] logits (requires softmax)
 - **Use**: Image classification (1000 ImageNet classes)
 
 ### YOLO Nano Models
-All YOLO models have the same specifications:
-- **Files**: `yolo11n_xnnpack.pte`, `yolov8n_xnnpack.pte`, `yolov5n_xnnpack.pte` (~10-12 MB each)
+All YOLO models export to multiple backends:
+- **Files**: `{model}_{backend}.pte` (~8-9 MB per backend)
+  - `yolo11n_xnnpack.pte`, `yolo11n_coreml.pte`, `yolo11n_mps.pte`, `yolo11n_vulkan.pte`
+  - `yolov8n_xnnpack.pte`, `yolov8n_coreml.pte`, `yolov8n_mps.pte`, `yolov8n_vulkan.pte`
+  - `yolov5n_xnnpack.pte`, `yolov5n_coreml.pte`, `yolov5n_mps.pte`, `yolov5n_vulkan.pte`
 - **Input**: [1, 3, 640, 640] (RGB, normalized to [0,1])
 - **Output**: [1, 84, 8400] (4 bbox coords + 80 COCO classes, raw format)
 - **Use**: Object detection (80 COCO classes)

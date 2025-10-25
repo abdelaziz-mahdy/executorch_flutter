@@ -24,39 +24,66 @@ import torch
 import torchvision.models as models
 
 
-def export_mobilenet(output_dir="../assets/models"):
-    """Export MobileNet V3 Small using Ultralytics-style ExecuTorch export."""
+def export_mobilenet(output_dir="../assets/models", backends=None):
+    """Export MobileNet V3 Small with multiple backend support."""
     print("\n" + "="*70)
     print("  Exporting MobileNet V3 Small")
     print("="*70 + "\n")
 
     try:
         import torch
-        from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
-        from executorch.exir import to_edge_transform_and_lower
         from pathlib import Path
+        from executorch_exporter import ExecuTorchExporter, ExportConfig
+
+        # Default backends: xnnpack for all platforms, coreml/mps for Apple, vulkan for Android
+        if backends is None:
+            backends = ['xnnpack', 'coreml', 'mps', 'vulkan']
 
         # Load model
         model = models.mobilenet_v3_small(weights='DEFAULT').eval()
         sample_inputs = (torch.randn(1, 3, 224, 224),)
 
-        # Export using official Ultralytics pattern
-        et_program = to_edge_transform_and_lower(
-            torch.export.export(model, sample_inputs),
-            partitioner=[XnnpackPartitioner()]
-        ).to_executorch()
+        # Create exporter
+        exporter = ExecuTorchExporter()
 
-        # Save model
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        model_file = output_path / "mobilenet_v3_small_xnnpack.pte"
+        # Filter backends to only available ones
+        available_backends = [b for b in backends if exporter.available_backends.get(b, False)]
 
-        with open(model_file, "wb") as file:
-            file.write(et_program.buffer)
+        if not available_backends:
+            print(f"⚠️  No available backends from requested: {backends}")
+            print(f"   Available backends: {[k for k, v in exporter.available_backends.items() if v]}")
+            return False
 
-        file_size_mb = model_file.stat().st_size / (1024 * 1024)
-        print(f"✅ MobileNet exported successfully: {model_file.name} ({file_size_mb:.1f} MB)")
-        return True
+        print(f"📦 Exporting to backends: {available_backends}")
+
+        # Create export config
+        config = ExportConfig(
+            model_name='mobilenet_v3_small',
+            backends=available_backends,
+            output_dir=output_dir,
+            quantize=False,
+            input_shapes=[[1, 3, 224, 224]],
+            input_dtypes=['float32']
+        )
+
+        # Export to all backends
+        results = exporter.export_model(model, sample_inputs, config)
+
+        # Check success
+        successful = [r for r in results if r.success]
+        failed = [r for r in results if not r.success]
+
+        if successful:
+            print(f"\n✅ Successfully exported {len(successful)}/{len(results)} backends")
+            for result in successful:
+                print(f"   • {result.backend}: {result.output_path.split('/')[-1]} ({result.file_size_mb:.1f} MB)")
+
+        if failed:
+            print(f"\n⚠️  Failed {len(failed)} backend(s):")
+            for result in failed:
+                print(f"   • {result.backend}: {result.error_message}")
+
+        return len(successful) > 0
 
     except Exception as e:
         print(f"❌ Export failed: {e}")
@@ -65,8 +92,8 @@ def export_mobilenet(output_dir="../assets/models"):
         return False
 
 
-def export_yolo(model_name="yolo11n", output_dir="../assets/models"):
-    """Export YOLO model using Ultralytics-style ExecuTorch export."""
+def export_yolo(model_name="yolo11n", output_dir="../assets/models", backends=None):
+    """Export YOLO model with multiple backend support."""
     print("\n" + "="*70)
     print(f"  Exporting {model_name.upper()}")
     print("="*70 + "\n")
@@ -74,15 +101,18 @@ def export_yolo(model_name="yolo11n", output_dir="../assets/models"):
     try:
         import torch
         import numpy as np
-        from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
-        from executorch.exir import to_edge_transform_and_lower
         from pathlib import Path
         from ultralytics import YOLO
+        from executorch_exporter import ExecuTorchExporter, ExportConfig
+
+        # Default backends: xnnpack for all platforms, coreml/mps for Apple, vulkan for Android
+        if backends is None:
+            backends = ['xnnpack', 'coreml', 'mps', 'vulkan']
 
         # Load YOLO model
         model = YOLO(f"{model_name}.pt")
 
-        # Run a dummy prediction to initialize the model (same as export_yolo_official.py)
+        # Run a dummy prediction to initialize the model
         np_dummy_tensor = np.ones((640, 640, 3))
         model.predict(np_dummy_tensor, imgsz=(640, 640), device="cpu")
 
@@ -92,22 +122,45 @@ def export_yolo(model_name="yolo11n", output_dir="../assets/models"):
         # Prepare sample inputs (640x640 for YOLO)
         sample_inputs = (torch.randn(1, 3, 640, 640),)
 
-        # Export using official Ultralytics pattern
-        et_program = to_edge_transform_and_lower(
-            torch.export.export(pt_model, sample_inputs),
-            partitioner=[XnnpackPartitioner()]
-        ).to_executorch()
+        # Create exporter
+        exporter = ExecuTorchExporter()
 
-        # Save model
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        model_file = output_path / f"{model_name}_xnnpack.pte"
+        # Filter backends to only available ones
+        available_backends = [b for b in backends if exporter.available_backends.get(b, False)]
 
-        with open(model_file, "wb") as file:
-            file.write(et_program.buffer)
+        if not available_backends:
+            print(f"⚠️  No available backends from requested: {backends}")
+            print(f"   Available backends: {[k for k, v in exporter.available_backends.items() if v]}")
+            return False
 
-        file_size_mb = model_file.stat().st_size / (1024 * 1024)
-        print(f"✅ {model_name} exported successfully: {model_file.name} ({file_size_mb:.1f} MB)")
+        print(f"📦 Exporting to backends: {available_backends}")
+
+        # Create export config
+        config = ExportConfig(
+            model_name=model_name,
+            backends=available_backends,
+            output_dir=output_dir,
+            quantize=False,
+            input_shapes=[[1, 3, 640, 640]],
+            input_dtypes=['float32']
+        )
+
+        # Export to all backends
+        results = exporter.export_model(pt_model, sample_inputs, config)
+
+        # Check success
+        successful = [r for r in results if r.success]
+        failed = [r for r in results if not r.success]
+
+        if successful:
+            print(f"\n✅ Successfully exported {len(successful)}/{len(results)} backends")
+            for result in successful:
+                print(f"   • {result.backend}: {result.output_path.split('/')[-1]} ({result.file_size_mb:.1f} MB)")
+
+        if failed:
+            print(f"\n⚠️  Failed {len(failed)} backend(s):")
+            for result in failed:
+                print(f"   • {result.backend}: {result.error_message}")
 
         # Clean up downloaded model files (handles both .pt and variant names like yolov5nu.pt)
         for pt_file in Path.cwd().glob("*.pt"):
@@ -115,7 +168,7 @@ def export_yolo(model_name="yolo11n", output_dir="../assets/models"):
                 pt_file.unlink()
                 print(f"   Cleaned up: {pt_file.name}")
 
-        return True
+        return len(successful) > 0
 
     except Exception as e:
         print(f"❌ Export failed: {e}")
@@ -290,6 +343,13 @@ def cmd_export(args):
 ╚══════════════════════════════════════════════════════════════════╝
 """)
 
+    # Display backend information
+    backends = args.backends if hasattr(args, 'backends') and args.backends else None
+    if backends:
+        print(f"\n📦 Exporting with backends: {', '.join(backends)}")
+    else:
+        print(f"\n📦 Exporting with default backends: xnnpack, coreml, mps, vulkan")
+
     success_count = 0
     total_count = 0
 
@@ -308,13 +368,13 @@ def cmd_export(args):
     # Export MobileNet
     if export_mobilenet_flag:
         total_count += 1
-        if export_mobilenet(args.output_dir):
+        if export_mobilenet(args.output_dir, backends):
             success_count += 1
 
     # Export YOLO models
     for model_name in export_yolo_models:
         total_count += 1
-        if export_yolo(model_name):
+        if export_yolo(model_name, args.output_dir, backends):
             success_count += 1
 
     # Export Gemma
@@ -394,12 +454,13 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py                          # Export all models (default)
-  python main.py export --mobilenet       # Export MobileNet only
-  python main.py export --yolo yolo11n    # Export YOLO11n
-  python main.py export --gemma           # Export Gemma text generation model
-  python main.py export --all             # Export all models
-  python main.py validate                 # Validate all models
+  python main.py                                    # Export all models with all backends (default)
+  python main.py export --mobilenet                 # Export MobileNet with all backends
+  python main.py export --mobilenet --backends xnnpack coreml  # MobileNet with specific backends
+  python main.py export --yolo yolo11n              # Export YOLO11n with all backends
+  python main.py export --all --backends xnnpack    # Export all models with XNNPACK only
+  python main.py export --gemma                     # Export Gemma text generation model
+  python main.py validate                           # Validate all models
 
 Supported YOLO models:
   yolo11n, yolo11s, yolov8n, yolov8s, yolov5n, yolov5s
@@ -407,6 +468,24 @@ Supported YOLO models:
 Supported Text Generation models:
   gemma-3-270m (Google Gemma 3, 270M parameters, text-only, ~240 MB)
   gemma-3-1b   (Google Gemma 3, 1B parameters, text-only, ~1.5 GB)
+
+Backend Information:
+  xnnpack  - CPU-optimized, works on all platforms (Android, iOS, macOS)
+  coreml   - Apple Neural Engine optimization (iOS, macOS only)
+  mps      - Metal Performance Shaders GPU acceleration (iOS, macOS only)
+  vulkan   - Cross-platform GPU acceleration (Android, Linux)
+  qnn      - Qualcomm AI Engine (Snapdragon devices)
+  arm      - ARM Ethos-U NPU (embedded devices)
+
+Default backends: xnnpack, coreml, mps, vulkan
+Note: Only available backends on your system will be used.
+
+Performance Guidelines:
+  - iOS/macOS: Use CoreML for best performance (Apple Neural Engine)
+  - iOS/macOS GPU: Use MPS for GPU-accelerated inference
+  - Android GPU: Use Vulkan for GPU-accelerated inference
+  - Qualcomm devices: Use QNN for NPU acceleration
+  - CPU fallback: XNNPACK works everywhere
 
 Note: Gemma models require additional setup (advanced):
   1. Install optimum-executorch from source:
@@ -427,6 +506,9 @@ Note: Gemma models require additional setup (advanced):
     export_parser.add_argument('--yolo', nargs='+', metavar='MODEL', help='Export YOLO model(s)')
     export_parser.add_argument('--gemma', action='store_true', help='Export Gemma text generation model')
     export_parser.add_argument('--labels', action='store_true', help='Generate label files')
+    export_parser.add_argument('--backends', nargs='+',
+                                choices=['xnnpack', 'coreml', 'mps', 'vulkan', 'qnn', 'arm'],
+                                help='Backend(s) to export for (default: xnnpack, coreml, mps, vulkan)')
     export_parser.add_argument('--output-dir', default='../assets/models',
                                 help='Output directory (default: ../assets/models)')
 
