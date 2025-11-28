@@ -19,7 +19,9 @@ class ProcessorTensorUtils {
 
     if (data.length != elementCount) {
       throw ArgumentError(
-          'Data length (${data.length}) does not match shape element count ($elementCount)');
+        'Data length (${data.length}) does not match '
+        'shape element count ($elementCount)',
+      );
     }
 
     Uint8List bytes;
@@ -90,48 +92,72 @@ class ProcessorTensorUtils {
   }
 }
 
-/// Base exception class for processor-related errors
+/// Base exception class for processor-related errors.
+///
+/// This is the parent class for all processor-specific exceptions.
+/// It provides a consistent error handling mechanism across all
+/// preprocessing and postprocessing operations.
 abstract class ProcessorException implements Exception {
+  /// Creates a processor exception with the given [message] and optional
+  /// [cause].
   const ProcessorException(this.message, [this.cause]);
 
+  /// The error message describing what went wrong.
   final String message;
+
+  /// The underlying cause of this exception, if any.
   final Object? cause;
 
   @override
   String toString() => 'ProcessorException: $message';
 }
 
-/// Generic processor exception implementation
+/// Generic processor exception implementation.
+///
+/// Used for unexpected or general errors that don't fit specific categories.
 class GenericProcessorException extends ProcessorException {
+  /// Creates a generic processor exception with the given [message].
   const GenericProcessorException(super.message, [super.cause]);
 }
 
-/// Exception thrown during preprocessing operations
+/// Exception thrown during preprocessing operations.
+///
+/// Thrown when input data cannot be successfully converted to tensors.
 class PreprocessingException extends ProcessorException {
+  /// Creates a preprocessing exception with the given [message].
   const PreprocessingException(super.message, [super.cause]);
 
   @override
   String toString() => 'PreprocessingException: $message';
 }
 
-/// Exception thrown during postprocessing operations
+/// Exception thrown during postprocessing operations.
+///
+/// Thrown when model output tensors cannot be converted to results.
 class PostprocessingException extends ProcessorException {
+  /// Creates a postprocessing exception with the given [message].
   const PostprocessingException(super.message, [super.cause]);
 
   @override
   String toString() => 'PostprocessingException: $message';
 }
 
-/// Exception thrown for invalid processor input
+/// Exception thrown for invalid processor input.
+///
+/// Thrown when input validation fails before preprocessing.
 class InvalidInputException extends ProcessorException {
+  /// Creates an invalid input exception with the given [message].
   const InvalidInputException(super.message, [super.cause]);
 
   @override
   String toString() => 'InvalidInputException: $message';
 }
 
-/// Exception thrown for invalid processor output
+/// Exception thrown for invalid processor output.
+///
+/// Thrown when model output validation fails before postprocessing.
 class InvalidOutputException extends ProcessorException {
+  /// Creates an invalid output exception with the given [message].
   const InvalidOutputException(super.message, [super.cause]);
 
   @override
@@ -144,8 +170,8 @@ class InvalidOutputException extends ProcessorException {
 /// inference. Implementations should convert domain-specific input (images,
 /// text, audio) into tensors suitable for model execution.
 ///
-/// Type parameter [T] represents the input data type (e.g., Uint8List for images,
-/// String for text, Float32List for audio).
+/// Type parameter [T] represents the input data type (e.g., Uint8List
+/// for images, String for text, Float32List for audio).
 abstract class ExecuTorchPreprocessor<T> {
   /// Human-readable name for the input type this preprocessor handles
   String get inputTypeName;
@@ -245,15 +271,16 @@ abstract class ExecuTorchProcessor<T, R> {
       // Run inference (throws exception on failure)
       final outputs = await model.forward(inputs);
 
-      // Validate outputs - filter out null values
-      final validOutputs = outputs.where((output) => output != null).toList();
-      if (!postprocessor.validateOutputs(validOutputs)) {
+      // Validate outputs
+      if (!postprocessor.validateOutputs(outputs)) {
         throw InvalidOutputException(
-            'Model outputs validation failed for ${postprocessor.outputTypeName}');
+          'Model outputs validation failed for '
+          '${postprocessor.outputTypeName}',
+        );
       }
 
       // Postprocess outputs
-      final result = await postprocessor.postprocess(validOutputs);
+      final result = await postprocessor.postprocess(outputs);
 
       return result;
     } catch (e) {

@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:developer';
 import 'dart:io';
 
@@ -61,6 +63,8 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   YoloProcessor? _processor;
   List<String>? _classLabels;
 
+  // TODO: Use for frame rotation handling on Android
+  // ignore: unused_field
   int _camFrameRotation = 0;
   String errorMessage = "";
 
@@ -166,7 +170,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
       idx = 0;
     }
 
-    var desc = cameras[idx];
+    final desc = cameras[idx];
     _camFrameRotation = Platform.isAndroid ? desc.sensorOrientation : 0;
 
     // cameras[0] for rear-camera

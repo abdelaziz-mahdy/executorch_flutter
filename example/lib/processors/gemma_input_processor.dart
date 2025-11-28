@@ -79,7 +79,7 @@ class GemmaInputProcessor extends InputProcessor<TextPromptInput> {
 /// In production, use a proper SentencePiece tokenizer library
 class GemmaVocabularyLoader {
   /// Load vocabulary from a simple text file (word per line)
-  /// Format: word<tab>id
+  /// Format: `word\tid`
   static Future<Map<String, int>> loadFromFile(String path) async {
     // Placeholder implementation
     // In production, load from the actual tokenizer vocabulary file

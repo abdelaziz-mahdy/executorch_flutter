@@ -1,4 +1,4 @@
-/// Main ExecutorchManager API class providing high-level ExecuTorch inference management
+/// Main ExecutorchManager API class providing high-level inference management
 library;
 
 import 'dart:async';
@@ -20,6 +20,7 @@ class ExecutorchManager {
   static ExecutorchManager? _instance;
 
   /// Get the singleton instance of ExecutorchManager
+  // ignore: prefer_constructors_over_static_methods
   static ExecutorchManager get instance {
     _instance ??= ExecutorchManager._();
     return _instance!;
@@ -57,7 +58,7 @@ class ExecutorchManager {
 
   /// Enable or disable ExecuTorch debug logging
   ///
-  /// When enabled, detailed ExecuTorch internal logs will be printed to the console.
+  /// When enabled, detailed ExecuTorch internal logs will be printed.
   /// This is useful for debugging model loading and inference issues.
   ///
   /// Note: Debug logging only works in debug builds of the native libraries.
@@ -79,10 +80,10 @@ class ExecutorchManager {
   /// Load an ExecuTorch model from a file path
   ///
   /// [filePath] must point to a valid ExecuTorch .pte model file.
-  /// Returns the loaded model instance that can be used for inference via [ExecuTorchModel.forward].
+  /// Returns the loaded model instance that can be used for inference.
   ///
-  /// The model will be cached and can be accessed later via [getLoadedModel].
-  /// If a model with the same file path is already loaded, returns the cached instance.
+  /// The model will be cached and accessed later via [getLoadedModel].
+  /// If a model with the same file path is loaded, returns cached instance.
   Future<ExecuTorchModel> loadModel(String filePath) async {
     _ensureInitialized();
 
@@ -117,7 +118,8 @@ class ExecutorchManager {
     // For now, delegate to loadModel - in a full implementation,
     // this would extract the asset to a temporary file first
     throw UnimplementedError(
-      'Asset loading not yet implemented. Use loadModel() with file path instead.',
+      'Asset loading not yet implemented. '
+      'Use loadModel() with file path instead.',
     );
   }
 
@@ -152,7 +154,7 @@ class ExecutorchManager {
 
   /// Dispose a loaded model and free its resources
   ///
-  /// After calling this method, the model cannot be used for inference via [ExecuTorchModel.forward].
+  /// After calling this method, the model cannot be used for inference.
   /// The model is removed from the loaded models cache.
   Future<void> disposeModel(String modelId) async {
     _ensureInitialized();

@@ -273,13 +273,13 @@ public protocol ExecutorchHostApi {
   /// Dispose a loaded model and free its resources
   /// User has full control over memory management
   /// Throws: PlatformException if model not found
-  func dispose(modelId: String) throws
+  func dispose(modelId: String, completion: @escaping (Result<Void, Error>) -> Void)
   /// Get list of currently loaded model IDs
   /// Returns empty list if no models loaded
-  func getLoadedModels() throws -> [String?]
+  func getLoadedModels(completion: @escaping (Result<[String?], Error>) -> Void)
   /// Enable or disable ExecuTorch debug logging
   /// Only works in debug builds
-  func setDebugLogging(enabled: Bool) throws
+  func setDebugLogging(enabled: Bool, completion: @escaping (Result<Void, Error>) -> Void)
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -337,11 +337,13 @@ class ExecutorchHostApiSetup {
       disposeChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let modelIdArg = args[0] as! String
-        do {
-          try api.dispose(modelId: modelIdArg)
-          reply(wrapResult(nil))
-        } catch {
-          reply(wrapError(error))
+        api.dispose(modelId: modelIdArg) { result in
+          switch result {
+          case .success:
+            reply(wrapResult(nil))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
         }
       }
     } else {
@@ -352,11 +354,13 @@ class ExecutorchHostApiSetup {
     let getLoadedModelsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getLoadedModels\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       getLoadedModelsChannel.setMessageHandler { _, reply in
-        do {
-          let result = try api.getLoadedModels()
-          reply(wrapResult(result))
-        } catch {
-          reply(wrapError(error))
+        api.getLoadedModels { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
         }
       }
     } else {
@@ -369,11 +373,13 @@ class ExecutorchHostApiSetup {
       setDebugLoggingChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let enabledArg = args[0] as! Bool
-        do {
-          try api.setDebugLogging(enabled: enabledArg)
-          reply(wrapResult(nil))
-        } catch {
-          reply(wrapError(error))
+        api.setDebugLogging(enabled: enabledArg) { result in
+          switch result {
+          case .success:
+            reply(wrapResult(nil))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
         }
       }
     } else {

@@ -114,32 +114,41 @@ class ExecutorchFlutterPlugin: FlutterPlugin, ExecutorchHostApi {
         }
     }
 
-    override fun dispose(modelId: String) {
-        runBlocking {
+    override fun dispose(modelId: String, callback: (Result<Unit>) -> Unit) {
+        pluginScope.launch {
             try {
                 Log.d(TAG, "Disposing model: $modelId")
                 modelManager.dispose(modelId)
                 Log.d(TAG, "Model disposed successfully: $modelId")
+                callback(Result.success(Unit))
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to dispose model: $modelId", e)
-                throw Exception("Failed to dispose model $modelId: ${e.message}", e)
+                callback(Result.failure(Exception("Failed to dispose model $modelId: ${e.message}", e)))
             }
         }
     }
 
-    override fun getLoadedModels(): List<String?> {
-        return try {
-            val models = modelManager.getLoadedModels()
-            Log.d(TAG, "Currently loaded models: ${models.size}")
-            models
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get loaded models", e)
-            emptyList()
+    override fun getLoadedModels(callback: (Result<List<String?>>) -> Unit) {
+        pluginScope.launch {
+            try {
+                val models = modelManager.getLoadedModels()
+                Log.d(TAG, "Currently loaded models: ${models.size}")
+                callback(Result.success(models))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get loaded models", e)
+                callback(Result.failure(e))
+            }
         }
     }
 
-    override fun setDebugLogging(enabled: Boolean) {
-        modelManager.setDebugLogging(enabled)
+    override fun setDebugLogging(enabled: Boolean, callback: (Result<Unit>) -> Unit) {
+        try {
+            modelManager.setDebugLogging(enabled)
+            callback(Result.success(Unit))
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set debug logging", e)
+            callback(Result.failure(e))
+        }
     }
 }
 

@@ -8,7 +8,6 @@ import '../models/model_input.dart';
 import '../models/model_settings.dart';
 import '../models/classification_model_settings.dart';
 import '../models/yolo_model_settings.dart';
-import '../processors/base_processor.dart';
 import '../controllers/camera_controller.dart';
 import '../controllers/opencv_camera_controller.dart';
 import '../controllers/platform_camera_controller.dart';
@@ -34,10 +33,8 @@ class ModelController extends ChangeNotifier {
   final ModelDefinition definition;
   final ExecuTorchModel execuTorchModel;
 
-  // Settings and processors
+  // Settings
   ModelSettings _settings;
-  InputProcessor? _inputProcessor;
-  OutputProcessor? _outputProcessor;
 
   // Camera management
   CameraController? _cameraController;
@@ -103,11 +100,9 @@ class ModelController extends ChangeNotifier {
     return controller;
   }
 
-  /// Update processors when settings change
+  /// Log when settings change (processors are created on demand in processInput)
   void _updateProcessors() {
-    _inputProcessor = definition.createInputProcessor(_settings);
-    _outputProcessor = definition.createOutputProcessor(_settings);
-    debugPrint('🔄 Processors recreated with new settings');
+    debugPrint('🔄 Settings updated - processors will be recreated on next use');
   }
 
   /// Update settings and recreate processors
@@ -380,8 +375,6 @@ class ModelController extends ChangeNotifier {
   @override
   Future<void> dispose() async {
     await disableCameraMode();
-    _inputProcessor = null;
-    _outputProcessor = null;
     await execuTorchModel.dispose();
     super.dispose();
   }

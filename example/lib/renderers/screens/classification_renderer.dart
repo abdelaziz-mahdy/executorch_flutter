@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../models/model_input.dart';
 import '../../processors/image_processor.dart';
@@ -19,18 +18,6 @@ class ClassificationRenderer extends StatefulWidget {
 }
 
 class _ClassificationRendererState extends State<ClassificationRenderer> {
-  // Cache the image bytes to enable gapless playback
-  Uint8List? _cachedBytes;
-
-  @override
-  void didUpdateWidget(ClassificationRenderer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Update cached bytes when input changes
-    if (widget.input is LiveCameraInput) {
-      _cachedBytes = (widget.input as LiveCameraInput).frameBytes;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // Build the image widget based on input type
