@@ -27,6 +27,9 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+
       - name: Get dependencies
         run: flutter pub get
         working-directory: example
@@ -54,6 +57,9 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
 
       - name: Get dependencies
         run: flutter pub get
@@ -86,6 +92,9 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+
       - name: Get dependencies
         run: flutter pub get
         working-directory: example
@@ -113,6 +122,9 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
 
       - name: Get dependencies (package)
         run: flutter pub get
