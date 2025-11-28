@@ -9,9 +9,12 @@ on:
 
 jobs:
   # Android Release Build
+  # Using macos-14 instead of ubuntu-latest due to Flutter SPM compatibility issue
+  # Issue: https://github.com/flutter/flutter/issues/162594
+  # Fix merged but not released yet: https://github.com/flutter/flutter/pull/178073
   build-android:
     name: Build Android (Release)
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -122,9 +125,12 @@ jobs:
           retention-days: 7
 
   # Analyze and Format Check (package only, not example app)
+  # Using macos-14 instead of ubuntu-latest due to Flutter SPM compatibility issue
+  # Issue: https://github.com/flutter/flutter/issues/162594
+  # Fix merged but not released yet: https://github.com/flutter/flutter/pull/178073
   analyze:
     name: Analyze & Format
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
