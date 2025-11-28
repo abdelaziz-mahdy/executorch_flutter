@@ -115,7 +115,10 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.warning_amber,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 8),
             const Text('Model Not Found'),
           ],
@@ -143,9 +146,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 ),
                 child: Text(
                   model.assetPath,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                 ),
               ),
               Text(
@@ -161,9 +164,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 ),
                 child: SelectableText(
                   'cd example/python\n$exportCommand',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                 ),
               ),
               if (specialSetup != null) ...[
@@ -188,7 +191,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                           specialSetup,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
                           ),
                         ),
                       ),
@@ -215,7 +220,10 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 8),
             const Text('Failed to Load Model'),
           ],
@@ -227,9 +235,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
             children: [
               Text(
                 'Failed to load ${model.displayName}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Text(

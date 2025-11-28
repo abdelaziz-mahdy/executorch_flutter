@@ -30,7 +30,9 @@ class GpuYoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
     if (_isInitialized) return;
 
     try {
-      _program = await ui.FragmentProgram.fromAsset('shaders/yolo_preprocess.frag');
+      _program = await ui.FragmentProgram.fromAsset(
+        'shaders/yolo_preprocess.frag',
+      );
       _isInitialized = true;
       debugPrint('✅ GPU shader initialized successfully');
     } catch (e) {
@@ -149,7 +151,7 @@ class GpuYoloPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
     const scale = 1.0 / 255.0;
     for (int i = 0; i < totalPixels; i++) {
       final pixelIndex = i * 4;
-      floats[i] = pixels[pixelIndex] * scale;                  // R channel
+      floats[i] = pixels[pixelIndex] * scale; // R channel
       floats[i + totalPixels] = pixels[pixelIndex + 1] * scale; // G channel
       floats[i + totalPixels * 2] = pixels[pixelIndex + 2] * scale; // B channel
     }

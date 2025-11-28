@@ -8,10 +8,10 @@ class GemmaModelSettings extends ModelSettings {
     double temperature = 0.7,
     double topP = 0.9,
     int topK = 50,
-  })  : _maxLength = maxLength,
-        _temperature = temperature,
-        _topP = topP,
-        _topK = topK;
+  }) : _maxLength = maxLength,
+       _temperature = temperature,
+       _topP = topP,
+       _topK = topK;
 
   /// Maximum number of tokens to generate (32-512)
   int _maxLength;

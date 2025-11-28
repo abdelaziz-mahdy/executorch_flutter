@@ -94,12 +94,7 @@ class GemmaVocabularyLoader {
 
   /// Create a simple character-level vocabulary
   static Map<String, int> createCharacterVocabulary() {
-    final vocab = <String, int>{
-      '<pad>': 0,
-      '<unk>': 1,
-      '<bos>': 2,
-      '<eos>': 3,
-    };
+    final vocab = <String, int>{'<pad>': 0, '<unk>': 1, '<bos>': 2, '<eos>': 3};
 
     // Add ASCII printable characters
     int id = 4;

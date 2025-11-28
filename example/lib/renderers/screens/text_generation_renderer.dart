@@ -14,8 +14,7 @@ class TextGenerationRenderer extends StatefulWidget {
   final TextGenerationResult? result;
 
   @override
-  State<TextGenerationRenderer> createState() =>
-      _TextGenerationRendererState();
+  State<TextGenerationRenderer> createState() => _TextGenerationRendererState();
 }
 
 class _TextGenerationRendererState extends State<TextGenerationRenderer> {
@@ -45,11 +44,7 @@ class _TextGenerationRendererState extends State<TextGenerationRenderer> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.edit,
-                      size: 16,
-                      color: Colors.blue.shade700,
-                    ),
+                    Icon(Icons.edit, size: 16, color: Colors.blue.shade700),
                     const SizedBox(width: 8),
                     Text(
                       'Prompt',
@@ -64,10 +59,7 @@ class _TextGenerationRendererState extends State<TextGenerationRenderer> {
                 const SizedBox(height: 8),
                 SelectableText(
                   textInput.text,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
+                  style: const TextStyle(fontSize: 14, height: 1.5),
                 ),
               ],
             ),
@@ -148,11 +140,7 @@ class _TextGenerationRendererState extends State<TextGenerationRenderer> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.analytics,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
+                      const Icon(Icons.analytics, size: 16, color: Colors.grey),
                       const SizedBox(width: 8),
                       Text(
                         'Statistics',
@@ -199,10 +187,7 @@ class _TextGenerationRendererState extends State<TextGenerationRenderer> {
                     SizedBox(height: 16),
                     Text(
                       'Generating text...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -218,19 +203,10 @@ class _TextGenerationRendererState extends State<TextGenerationRenderer> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.grey,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey)),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
       ],
     );

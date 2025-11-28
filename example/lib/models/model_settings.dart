@@ -29,9 +29,8 @@ enum PreprocessingProvider {
 /// Each model type can extend this to add their own configuration options
 /// Only includes truly universal settings (performance overlay)
 abstract class ModelSettings extends ChangeNotifier {
-  ModelSettings({
-    bool showPerformanceOverlay = true,
-  }) : _showPerformanceOverlay = showPerformanceOverlay;
+  ModelSettings({bool showPerformanceOverlay = true})
+    : _showPerformanceOverlay = showPerformanceOverlay;
 
   /// Whether to show performance overlay
   bool _showPerformanceOverlay;

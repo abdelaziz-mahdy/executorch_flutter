@@ -8,10 +8,10 @@ class YoloModelSettings extends ModelSettings {
     PreprocessingProvider preprocessingProvider = PreprocessingProvider.opencv,
     double confidenceThreshold = 0.5,
     double nmsThreshold = 0.45,
-  })  : _cameraProvider = cameraProvider,
-        _preprocessingProvider = preprocessingProvider,
-        _confidenceThreshold = confidenceThreshold,
-        _nmsThreshold = nmsThreshold;
+  }) : _cameraProvider = cameraProvider,
+       _preprocessingProvider = preprocessingProvider,
+       _confidenceThreshold = confidenceThreshold,
+       _nmsThreshold = nmsThreshold;
 
   /// Camera provider selection (for live camera input)
   CameraProvider _cameraProvider;

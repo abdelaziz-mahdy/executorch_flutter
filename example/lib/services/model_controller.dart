@@ -102,7 +102,9 @@ class ModelController extends ChangeNotifier {
 
   /// Log when settings change (processors are created on demand in processInput)
   void _updateProcessors() {
-    debugPrint('🔄 Settings updated - processors will be recreated on next use');
+    debugPrint(
+      '🔄 Settings updated - processors will be recreated on next use',
+    );
   }
 
   /// Update settings and recreate processors
@@ -112,7 +114,8 @@ class ModelController extends ChangeNotifier {
     CameraProvider? newCameraProvider;
 
     if (_settings is ClassificationModelSettings) {
-      oldCameraProvider = (_settings as ClassificationModelSettings).cameraProvider;
+      oldCameraProvider =
+          (_settings as ClassificationModelSettings).cameraProvider;
     } else if (_settings is YoloModelSettings) {
       oldCameraProvider = (_settings as YoloModelSettings).cameraProvider;
     }

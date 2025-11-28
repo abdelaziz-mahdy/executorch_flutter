@@ -7,9 +7,9 @@ class ClassificationModelSettings extends ModelSettings {
     CameraProvider cameraProvider = CameraProvider.opencv,
     PreprocessingProvider preprocessingProvider = PreprocessingProvider.opencv,
     int topK = 5,
-  })  : _cameraProvider = cameraProvider,
-        _preprocessingProvider = preprocessingProvider,
-        _topK = topK;
+  }) : _cameraProvider = cameraProvider,
+       _preprocessingProvider = preprocessingProvider,
+       _topK = topK;
 
   /// Camera provider selection (for live camera input)
   CameraProvider _cameraProvider;
