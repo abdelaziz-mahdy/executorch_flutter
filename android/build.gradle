@@ -53,8 +53,8 @@ android {
         implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
         implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 
-        // ExecuTorch dependencies (upgraded to 1.0.0-rc2 to match Swift PM 1.0.0 and Python nightly)
-        implementation 'org.pytorch:executorch-android:1.0.0-rc2'
+        // ExecuTorch dependencies (1.0.1 stable release)
+        implementation 'org.pytorch:executorch-android:1.0.1'
         implementation 'com.facebook.soloader:soloader:0.10.5'
         implementation 'com.facebook.fbjni:fbjni:0.7.0'
 

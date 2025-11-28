@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.0.3 - ExecuTorch 1.0.1 Upgrade
+
+### Dependencies
+
+- **Android**: Upgraded ExecuTorch from `0.7.0` to `1.0.1` stable release
+- **iOS**: Upgraded Swift Package Manager dependency from `swiftpm-0.7.0` to `swiftpm-1.0.1`
+- **macOS**: Upgraded Swift Package Manager dependency from `swiftpm-0.7.0` to `swiftpm-1.0.1`
+
+### Notes
+
+- This release updates all platforms to use the latest stable ExecuTorch 1.0.1 release
+- No API changes - drop-in upgrade from 0.0.2
+
 ## 0.0.2 - Swift 6 Compatibility Fix
 
 ### Bug Fixes
@@ -10,6 +23,12 @@ All notable changes to this project will be documented in this file.
   - Added `try` keyword to `withUnsafeBytes` calls for Swift 6 compatibility
   - Resolves build failures on Xcode 16+ with Swift 6 language mode
   - Affects tensor conversion for Float32, Int32, and UInt8 data types
+
+### Dependencies
+
+- **Android**: ExecuTorch `0.7.0`
+- **iOS**: Swift Package Manager `swiftpm-0.7.0`
+- **macOS**: Swift Package Manager `swiftpm-0.7.0`
 
 
 ## 0.0.1 - Initial Release

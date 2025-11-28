@@ -1,0 +1,128 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Android Release Build
+  build-android:
+    name: Build Android (Release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: example
+
+      - name: Build Android APK (Release)
+        run: flutter build apk --release
+        working-directory: example
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: example/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+
+  # iOS Release Build
+  build-ios:
+    name: Build iOS (Release)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: example
+
+      - name: Build iOS (Release, no codesign)
+        run: flutter build ios --release --no-codesign
+        working-directory: example
+
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-build
+          path: example/build/ios/iphoneos/Runner.app
+          retention-days: 7
+
+  # macOS Debug Build
+  # Release builds fail due to Flutter fat bundle issue with SPM packages
+  # Issue: https://github.com/flutter/flutter/issues/176605
+  # Fix merged but not released yet: https://github.com/flutter/flutter/pull/176948
+  build-macos:
+    name: Build macOS (Debug)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: example
+
+      - name: Build macOS (Debug)
+        run: flutter build macos --debug
+        working-directory: example
+
+      - name: Upload macOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-debug-build
+          path: example/build/macos/Build/Products/Debug/executorch_flutter_example.app
+          retention-days: 7
+
+  # Analyze and Format Check
+  analyze:
+    name: Analyze & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies (package)
+        run: flutter pub get
+
+      - name: Get dependencies (example)
+        run: flutter pub get
+        working-directory: example
+
+      - name: Analyze package
+        run: flutter analyze lib
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed lib

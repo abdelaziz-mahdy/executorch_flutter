@@ -13,9 +13,9 @@ let package = Package(
     ],
     dependencies: [
         // ExecuTorch Swift Package Manager dependency
-        // Using swiftpm-1.0.0 to match Python nightly build (1.0.0.dev20250916)
-        // https://github.com/pytorch/executorch/tree/swiftpm-1.0.0
-        .package(url: "https://github.com/pytorch/executorch.git", branch: "swiftpm-1.0.0")
+        // Using swiftpm-1.0.1 stable release
+        // https://github.com/pytorch/executorch/tree/swiftpm-1.0.1
+        .package(url: "https://github.com/pytorch/executorch.git", branch: "swiftpm-1.0.1")
     ],
     targets: [
         .target(

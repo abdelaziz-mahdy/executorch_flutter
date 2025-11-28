@@ -5,7 +5,7 @@
 **executorch_flutter** is a Flutter plugin package that provides on-device machine learning inference using PyTorch ExecuTorch. It enables Flutter developers to run optimized ML models on mobile and desktop platforms with a simple, type-safe Dart API.
 
 **Package Name**: `executorch_flutter`
-**Version**: 0.0.1 (pre-release)
+**Version**: 0.0.3
 **License**: MIT
 **Platforms**: Android, iOS, macOS
 
@@ -23,8 +23,8 @@
 
 - **Flutter Plugin**: Federated plugin architecture with platform-specific implementations
 - **Platform Communication**: Pigeon v22.7.0 for type-safe method channel code generation
-- **Android**: Kotlin + ExecuTorch AAR 1.0.0-rc2 + Coroutines
-- **iOS/macOS**: Swift + ExecuTorch XCFrameworks (SPM 1.0.0) + async/await
+- **Android**: Kotlin + ExecuTorch AAR 1.0.1 + Coroutines
+- **iOS/macOS**: Swift + ExecuTorch XCFrameworks (SPM 1.0.1) + async/await
 - **Memory Management**: User-controlled lifecycle (explicit load/dispose)
 
 ### Design Principles
@@ -43,7 +43,7 @@
 - **Minimum SDK**: API 23 (Android 6.0)
 - **Architectures**: arm64-v8a (primary), x86_64 (emulator)
 - **Dependencies**:
-  - ExecuTorch AAR 1.0.0-rc2 (`org.pytorch:executorch-android:1.0.0-rc2`)
+  - ExecuTorch AAR 1.0.1 (`org.pytorch:executorch-android:1.0.1`)
   - Available at: https://repo.maven.apache.org/maven2/org/pytorch/executorch-android/
   - FBJNI (JNI bridge)
   - SoLoader (native library loading)
@@ -53,8 +53,8 @@
 ### iOS
 - **Minimum Version**: iOS 13.0
 - **Architectures**: arm64 (physical devices only, no simulator support)
-- **Dependencies**: ExecuTorch XCFrameworks via Swift Package Manager (SPM 1.0.0)
-  - Branch: `swiftpm-1.0.0` from https://github.com/pytorch/executorch.git
+- **Dependencies**: ExecuTorch XCFrameworks via Swift Package Manager (SPM 1.0.1)
+  - Branch: `swiftpm-1.0.1` from https://github.com/pytorch/executorch.git
 - **Threading**: Swift async/await with Task detachment
 - **Implementation**: Shared sources via symlinks from `darwin/`
 - **Note**: Simulator support requires x86_64 ExecuTorch builds (not currently available)
@@ -62,8 +62,8 @@
 ### macOS
 - **Minimum Version**: macOS 11.0
 - **Architectures**: arm64 (Apple Silicon only)
-- **Dependencies**: ExecuTorch XCFrameworks via Swift Package Manager (SPM 1.0.0)
-  - Branch: `swiftpm-1.0.0` from https://github.com/pytorch/executorch.git
+- **Dependencies**: ExecuTorch XCFrameworks via Swift Package Manager (SPM 1.0.1)
+  - Branch: `swiftpm-1.0.1` from https://github.com/pytorch/executorch.git
 - **Threading**: Swift async/await with Task detachment
 - **Implementation**: Shared sources via symlinks from `darwin/`
 - **Platform-Specific APIs**: Conditional compilation using `#if os(iOS)` / `#if os(macOS)`
@@ -791,7 +791,7 @@ for (int c = 0; c < 3; c++) {
   - Check `model.inputShapes` and `model.outputShapes` to verify expected formats
   - Verify tensor data types match model expectations (Float32, Int32, Int8, UInt8)
   - Ensure tensor shapes match exactly (including batch dimension)
-  - Check ExecuTorch version compatibility (Android: 1.0.0-rc2, iOS/macOS: SPM 1.0.0)
+  - Check ExecuTorch version compatibility (Android: 1.0.1, iOS/macOS: SPM 1.0.1)
 
 **5. Memory Issues**
 - **Issue**: Models not disposed, accumulating in memory
@@ -894,7 +894,7 @@ Key features:
 ---
 
 **Last Updated**: 2025-10-10
-**Package Version**: 0.0.1 (pre-release)
-**ExecuTorch Version**: 1.0.0-rc2 (Android AAR) / 1.0.0 (iOS/macOS SPM)
+**Package Version**: 0.0.3
+**ExecuTorch Version**: 1.0.1 (Android AAR) / 1.0.1 (iOS/macOS SPM)
 **API**: Simplified to `load()` + `forward()` + `dispose()` only
 **Architecture**: Generic Settings Provider with atomic utility methods
