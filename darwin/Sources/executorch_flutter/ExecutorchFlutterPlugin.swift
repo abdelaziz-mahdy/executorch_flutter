@@ -176,7 +176,10 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
 
     public func dispose(modelId: String) throws {
         print("[\(Self.TAG)] Disposing model: \(modelId)")
-        var thrownError: Error? = nil
+
+        // Use nonisolated(unsafe) to allow mutation from Task
+        // This is safe because we use semaphore to synchronize
+        nonisolated(unsafe) var thrownError: Error? = nil
 
         let semaphore = DispatchSemaphore(value: 0)
         Task {
@@ -196,8 +199,10 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
     }
 
     public func getLoadedModels() throws -> [String?] {
-        var result: [String?] = []
-        var thrownError: Error? = nil
+        // Use nonisolated(unsafe) to allow mutation from Task
+        // This is safe because we use semaphore to synchronize
+        nonisolated(unsafe) var result: [String?] = []
+        nonisolated(unsafe) var thrownError: Error? = nil
 
         let semaphore = DispatchSemaphore(value: 0)
         Task {
@@ -244,7 +249,9 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
      * Pigeon doesn't support async methods yet, so we need to bridge async/await to sync
      */
     private func executeSync<T>(_ operation: @escaping () async throws -> T) throws -> T {
-        var result: Result<T, Error>?
+        // Use nonisolated(unsafe) to allow mutation from Task
+        // This is safe because we use semaphore to synchronize
+        nonisolated(unsafe) var result: Result<T, Error>?
         let semaphore = DispatchSemaphore(value: 0)
 
         Task {
