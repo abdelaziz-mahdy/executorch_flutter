@@ -59,6 +59,13 @@ jobs:
       - name: Enable Swift Package Manager
         run: flutter config --enable-swift-package-manager
 
+      # Increase Git buffer size for large SPM packages (ExecuTorch is ~2GB)
+      - name: Configure Git for large repositories
+        run: |
+          git config --global http.postBuffer 524288000
+          git config --global http.maxRequestBuffer 100M
+          git config --global core.compression 0
+
       - name: Get dependencies
         run: flutter pub get
         working-directory: example
@@ -91,6 +98,13 @@ jobs:
 
       - name: Enable Swift Package Manager
         run: flutter config --enable-swift-package-manager
+
+      # Increase Git buffer size for large SPM packages (ExecuTorch is ~2GB)
+      - name: Configure Git for large repositories
+        run: |
+          git config --global http.postBuffer 524288000
+          git config --global http.maxRequestBuffer 100M
+          git config --global core.compression 0
 
       - name: Get dependencies
         run: flutter pub get
