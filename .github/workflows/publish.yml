@@ -32,6 +32,15 @@ jobs:
           PREVIOUS_VERSION=$(grep '^version:' /tmp/old_pubspec.yaml | sed 's/version: //' || echo "0.0.0")
           echo "Previous version: $PREVIOUS_VERSION"
 
+          # Check if tag already exists
+          TAG_EXISTS=$(git tag -l "v$CURRENT_VERSION")
+          if [ -n "$TAG_EXISTS" ]; then
+            echo "Tag v$CURRENT_VERSION already exists, skipping"
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           # Compare versions
           if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
             echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
@@ -50,41 +59,18 @@ jobs:
     if: needs.check-version.outputs.should_publish == 'true'
     uses: ./.github/workflows/build.yml
 
-  # Publish to pub.dev
-  publish:
-    name: Publish to pub.dev
-    needs: [check-version, build-checks]
-    if: needs.check-version.outputs.should_publish == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write  # Required for OIDC authentication with pub.dev
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Verify package
-        run: dart pub publish --dry-run
-
-      - name: Publish to pub.dev
-        run: dart pub publish --force
-
-  # Create GitHub Release
+  # Create tag and GitHub Release (pub.dev auto-publishes on tag)
   create-release:
-    name: Create GitHub Release
-    needs: [check-version, publish]
+    name: Create Tag & Release
+    needs: [check-version, build-checks]
     if: needs.check-version.outputs.should_publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Extract changelog for version
         id: changelog
@@ -100,7 +86,15 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Create and push tag
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.check-version.outputs.version }}
@@ -112,6 +106,6 @@ jobs:
 
             ---
 
-            📦 [View on pub.dev](https://pub.dev/packages/executorch_flutter/versions/${{ needs.check-version.outputs.version }})
+            📦 Publishing to [pub.dev](https://pub.dev/packages/executorch_flutter)... (triggered by tag)
           draft: false
           prerelease: false
