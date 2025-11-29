@@ -3,8 +3,6 @@ name: Create Release
 on:
   push:
     branches: [main]
-    paths:
-      - 'pubspec.yaml'
   workflow_dispatch:
 
 # Cancel in-progress runs when a new run is triggered
@@ -13,7 +11,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Check if version changed
+  # Run build checks on every push to main
+  build-checks:
+    name: Build Checks
+    uses: ./.github/workflows/build.yml
+
+  # Check if version changed (only needed for release decision)
   check-version:
     name: Check Version Change
     runs-on: ubuntu-latest
@@ -55,13 +58,6 @@ jobs:
             echo "should_release=true" >> $GITHUB_OUTPUT
             echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           fi
-
-  # Run all build checks before creating release
-  build-checks:
-    name: Build Checks
-    needs: check-version
-    if: needs.check-version.outputs.should_release == 'true'
-    uses: ./.github/workflows/build.yml
 
   # Create tag and GitHub Release (triggers publish.yml which publishes to pub.dev)
   create-release:

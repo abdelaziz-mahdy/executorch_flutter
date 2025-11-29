@@ -1,8 +1,7 @@
 name: Build
 
 on:
-  push:
-    branches: [main]
+  # Only run on PRs and manual triggers - main branch builds are handled by release.yml
   pull_request:
     branches: [main]
   workflow_dispatch:
