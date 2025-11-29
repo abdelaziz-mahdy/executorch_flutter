@@ -220,10 +220,7 @@ class MobileNetModelDefinition
             context: context,
             title: 'Camera Provider',
             children: [
-              RadioListTile<CameraProvider>(
-                title: Text(CameraProvider.platform.displayName),
-                subtitle: Text(CameraProvider.platform.description),
-                value: CameraProvider.platform,
+              RadioGroup<CameraProvider>(
                 groupValue: classificationSettings.cameraProvider,
                 onChanged: (value) {
                   if (value != null) {
@@ -231,18 +228,20 @@ class MobileNetModelDefinition
                     onSettingsChanged(classificationSettings);
                   }
                 },
-              ),
-              RadioListTile<CameraProvider>(
-                title: Text(CameraProvider.opencv.displayName),
-                subtitle: Text(CameraProvider.opencv.description),
-                value: CameraProvider.opencv,
-                groupValue: classificationSettings.cameraProvider,
-                onChanged: (value) {
-                  if (value != null) {
-                    classificationSettings.cameraProvider = value;
-                    onSettingsChanged(classificationSettings);
-                  }
-                },
+                child: Column(
+                  children: [
+                    RadioListTile<CameraProvider>(
+                      title: Text(CameraProvider.platform.displayName),
+                      subtitle: Text(CameraProvider.platform.description),
+                      value: CameraProvider.platform,
+                    ),
+                    RadioListTile<CameraProvider>(
+                      title: Text(CameraProvider.opencv.displayName),
+                      subtitle: Text(CameraProvider.opencv.description),
+                      value: CameraProvider.opencv,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -254,10 +253,7 @@ class MobileNetModelDefinition
           context: context,
           title: 'Preprocessing',
           children: [
-            RadioListTile<PreprocessingProvider>(
-              title: Text(PreprocessingProvider.imageLib.displayName),
-              subtitle: Text(PreprocessingProvider.imageLib.description),
-              value: PreprocessingProvider.imageLib,
+            RadioGroup<PreprocessingProvider>(
               groupValue: classificationSettings.preprocessingProvider,
               onChanged: (value) {
                 if (value != null) {
@@ -265,30 +261,25 @@ class MobileNetModelDefinition
                   onSettingsChanged(classificationSettings);
                 }
               },
-            ),
-            RadioListTile<PreprocessingProvider>(
-              title: Text(PreprocessingProvider.opencv.displayName),
-              subtitle: Text(PreprocessingProvider.opencv.description),
-              value: PreprocessingProvider.opencv,
-              groupValue: classificationSettings.preprocessingProvider,
-              onChanged: (value) {
-                if (value != null) {
-                  classificationSettings.preprocessingProvider = value;
-                  onSettingsChanged(classificationSettings);
-                }
-              },
-            ),
-            RadioListTile<PreprocessingProvider>(
-              title: Text(PreprocessingProvider.gpu.displayName),
-              subtitle: Text(PreprocessingProvider.gpu.description),
-              value: PreprocessingProvider.gpu,
-              groupValue: classificationSettings.preprocessingProvider,
-              onChanged: (value) {
-                if (value != null) {
-                  classificationSettings.preprocessingProvider = value;
-                  onSettingsChanged(classificationSettings);
-                }
-              },
+              child: Column(
+                children: [
+                  RadioListTile<PreprocessingProvider>(
+                    title: Text(PreprocessingProvider.imageLib.displayName),
+                    subtitle: Text(PreprocessingProvider.imageLib.description),
+                    value: PreprocessingProvider.imageLib,
+                  ),
+                  RadioListTile<PreprocessingProvider>(
+                    title: Text(PreprocessingProvider.opencv.displayName),
+                    subtitle: Text(PreprocessingProvider.opencv.description),
+                    value: PreprocessingProvider.opencv,
+                  ),
+                  RadioListTile<PreprocessingProvider>(
+                    title: Text(PreprocessingProvider.gpu.displayName),
+                    subtitle: Text(PreprocessingProvider.gpu.description),
+                    value: PreprocessingProvider.gpu,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

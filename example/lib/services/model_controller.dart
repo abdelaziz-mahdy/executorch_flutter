@@ -8,7 +8,6 @@ import '../models/model_input.dart';
 import '../models/model_settings.dart';
 import '../models/classification_model_settings.dart';
 import '../models/yolo_model_settings.dart';
-import '../processors/base_processor.dart';
 import '../controllers/camera_controller.dart';
 import '../controllers/opencv_camera_controller.dart';
 import '../controllers/platform_camera_controller.dart';
@@ -34,15 +33,16 @@ class ModelController extends ChangeNotifier {
   final ModelDefinition definition;
   final ExecuTorchModel execuTorchModel;
 
-  // Settings and processors
+  // Settings
   ModelSettings _settings;
-  InputProcessor? _inputProcessor;
-  OutputProcessor? _outputProcessor;
 
   // Camera management
   CameraController? _cameraController;
   StreamSubscription<Uint8List>? _frameSubscription;
   bool _isCameraMode = false;
+
+  // Disposal state - prevents notifyListeners after dispose
+  bool _isDisposed = false;
 
   // Processing state
   ModelInput? _currentInput;
@@ -80,6 +80,13 @@ class ModelController extends ChangeNotifier {
           totalTime: _totalTime,
         );
 
+  /// Safe notify that won't throw if disposed
+  void _safeNotifyListeners() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
   /// Create controller with preloaded resources
   static Future<ModelController> create({
     required ModelDefinition definition,
@@ -103,11 +110,11 @@ class ModelController extends ChangeNotifier {
     return controller;
   }
 
-  /// Update processors when settings change
+  /// Log when settings change (processors are created on demand in processInput)
   void _updateProcessors() {
-    _inputProcessor = definition.createInputProcessor(_settings);
-    _outputProcessor = definition.createOutputProcessor(_settings);
-    debugPrint('🔄 Processors recreated with new settings');
+    debugPrint(
+      '🔄 Settings updated - processors will be recreated on next use',
+    );
   }
 
   /// Update settings and recreate processors
@@ -117,7 +124,8 @@ class ModelController extends ChangeNotifier {
     CameraProvider? newCameraProvider;
 
     if (_settings is ClassificationModelSettings) {
-      oldCameraProvider = (_settings as ClassificationModelSettings).cameraProvider;
+      oldCameraProvider =
+          (_settings as ClassificationModelSettings).cameraProvider;
     } else if (_settings is YoloModelSettings) {
       oldCameraProvider = (_settings as YoloModelSettings).cameraProvider;
     }
@@ -140,15 +148,17 @@ class ModelController extends ChangeNotifier {
       _recreateCamera();
     }
 
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   /// Process static input (images)
   Future<void> processInput(ModelInput input) async {
+    if (_isDisposed) return;
+
     _isProcessing = true;
     _currentInput = input;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotifyListeners();
 
     try {
       // Detailed timing
@@ -173,18 +183,18 @@ class ModelController extends ChangeNotifier {
       _currentResult = result;
       _isProcessing = false;
 
-      notifyListeners();
+      _safeNotifyListeners();
     } catch (e) {
       debugPrint('❌ Processing failed: $e');
       _errorMessage = 'Processing failed: $e';
       _isProcessing = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   /// Enable camera mode
   Future<void> enableCameraMode() async {
-    if (_isCameraMode) return;
+    if (_isCameraMode || _isDisposed) return;
 
     debugPrint('📷 Enabling camera...');
     _currentInput = null;
@@ -202,18 +212,20 @@ class ModelController extends ChangeNotifier {
       _isCameraMode = true;
 
       debugPrint('✅ Camera enabled');
-      notifyListeners();
+      _safeNotifyListeners();
     } catch (e) {
       debugPrint('❌ Camera failed: $e');
       _errorMessage = 'Camera failed: $e';
       _isCameraMode = false;
-      notifyListeners();
+      _safeNotifyListeners();
       rethrow;
     }
   }
 
   /// Disable camera mode
-  Future<void> disableCameraMode() async {
+  ///
+  /// If [silent] is true, doesn't call notifyListeners (used during dispose)
+  Future<void> disableCameraMode({bool silent = false}) async {
     if (!_isCameraMode) return;
 
     debugPrint('📷 Disabling camera...');
@@ -224,7 +236,9 @@ class ModelController extends ChangeNotifier {
     _isCameraMode = false;
 
     debugPrint('✅ Camera disabled');
-    notifyListeners();
+    if (!silent) {
+      _safeNotifyListeners();
+    }
   }
 
   /// Toggle camera
@@ -238,8 +252,8 @@ class ModelController extends ChangeNotifier {
 
   /// Process camera frames
   Future<void> _processFrameBytes(Uint8List imageBytes) async {
-    if (_isProcessingFrame) {
-      debugPrint('⏭️ Skipping frame');
+    // Skip if disposed, already processing, or not in camera mode
+    if (_isDisposed || _isProcessingFrame || !_isCameraMode) {
       return;
     }
 
@@ -257,11 +271,17 @@ class ModelController extends ChangeNotifier {
       final preprocessingTime = preprocessStopwatch.elapsedMilliseconds
           .toDouble();
 
+      // Check again in case we were disposed during preprocessing
+      if (_isDisposed) return;
+
       // Inference
       final inferenceStopwatch = Stopwatch()..start();
       final outputs = await execuTorchModel.forward(tensors);
       inferenceStopwatch.stop();
       final inferenceTime = inferenceStopwatch.elapsedMilliseconds.toDouble();
+
+      // Check again in case we were disposed during inference
+      if (_isDisposed) return;
 
       // Postprocessing
       final postprocessStopwatch = Stopwatch()..start();
@@ -273,6 +293,9 @@ class ModelController extends ChangeNotifier {
 
       totalStopwatch.stop();
       final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();
+
+      // Final check before updating state
+      if (_isDisposed) return;
 
       // Update performance tracker
       _performanceTracker.update(
@@ -289,9 +312,12 @@ class ModelController extends ChangeNotifier {
       _postprocessingTime = postprocessingTime;
       _totalTime = totalTime;
 
-      notifyListeners();
+      _safeNotifyListeners();
     } catch (e) {
-      debugPrint('❌ Frame processing failed: $e');
+      // Only log if not disposed (disposed model throws expected errors)
+      if (!_isDisposed) {
+        debugPrint('❌ Frame processing failed: $e');
+      }
     } finally {
       _isProcessingFrame = false;
     }
@@ -379,9 +405,11 @@ class ModelController extends ChangeNotifier {
 
   @override
   Future<void> dispose() async {
-    await disableCameraMode();
-    _inputProcessor = null;
-    _outputProcessor = null;
+    // Mark as disposed first to prevent any further operations
+    _isDisposed = true;
+
+    // Disable camera silently (don't notify since we're disposing)
+    await disableCameraMode(silent: true);
     await execuTorchModel.dispose();
     super.dispose();
   }

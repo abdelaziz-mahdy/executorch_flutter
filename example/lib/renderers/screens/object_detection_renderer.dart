@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../models/model_input.dart';
 import '../../processors/yolo_processor.dart';
@@ -33,18 +32,6 @@ class ObjectDetectionRenderer extends StatefulWidget {
 }
 
 class _ObjectDetectionRendererState extends State<ObjectDetectionRenderer> {
-  // Cache the image bytes to enable gapless playback
-  Uint8List? _cachedBytes;
-
-  @override
-  void didUpdateWidget(ObjectDetectionRenderer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Update cached bytes when input changes
-    if (widget.input is LiveCameraInput) {
-      _cachedBytes = (widget.input as LiveCameraInput).frameBytes;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // Determine which image widget to use based on input type

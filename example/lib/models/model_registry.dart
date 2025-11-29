@@ -24,7 +24,8 @@ class ModelRegistry {
       const MobileNetModelDefinition(
         name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (XNNPACK)',
-        description: 'CPU-optimized image classification - works on all platforms',
+        description:
+            'CPU-optimized image classification - works on all platforms',
         assetPath: 'assets/models/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
         labelsAssetPath: 'assets/imagenet_classes.txt',

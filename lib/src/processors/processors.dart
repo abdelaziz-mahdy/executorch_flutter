@@ -33,7 +33,9 @@
 ///   bool validateInput(Uint8List input) => input.isNotEmpty;
 ///
 ///   @override
-///   Future<List<TensorData>> preprocess(Uint8List input, {ModelMetadata? metadata}) async {
+///   Future<List<TensorData>> preprocess(
+///     Uint8List input, {ModelMetadata? metadata}
+///   ) async {
 ///     // Convert image to tensor
 ///     final tensorData = ProcessorTensorUtils.createTensor(
 ///       shape: [1, 3, 224, 224],
@@ -48,7 +50,8 @@
 ///
 /// ### Creating a Custom Postprocessor
 /// ```dart
-/// class MyClassificationPostprocessor extends ExecuTorchPostprocessor<MyResult> {
+/// class MyClassificationPostprocessor
+///     extends ExecuTorchPostprocessor<MyResult> {
 ///   @override
 ///   String get outputTypeName => 'Classification';
 ///
@@ -56,7 +59,9 @@
 ///   bool validateOutputs(List<TensorData> outputs) => outputs.isNotEmpty;
 ///
 ///   @override
-///   Future<MyResult> postprocess(List<TensorData> outputs, {ModelMetadata? metadata}) async {
+///   Future<MyResult> postprocess(
+///     List<TensorData> outputs, {ModelMetadata? metadata}
+///   ) async {
 ///     // Process model outputs
 ///     return MyResult(/* ... */);
 ///   }

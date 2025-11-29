@@ -5,8 +5,7 @@ import 'base_processor.dart';
 
 /// Output processor for Gemma text generation model
 /// Converts token ID tensors back to generated text
-class GemmaOutputProcessor
-    extends OutputProcessor<TextGenerationResult> {
+class GemmaOutputProcessor extends OutputProcessor<TextGenerationResult> {
   final Map<int, String> reverseVocabulary;
   final int eosTokenId;
   final int bosTokenId;

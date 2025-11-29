@@ -174,55 +174,61 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         }
     }
 
-    public func dispose(modelId: String) throws {
+    public func dispose(modelId: String, completion: @escaping (Result<Void, Error>) -> Void) {
         print("[\(Self.TAG)] Disposing model: \(modelId)")
 
-        // Use nonisolated(unsafe) to allow mutation from Task
-        // This is safe because we use semaphore to synchronize
-        nonisolated(unsafe) var thrownError: Error? = nil
-
-        let semaphore = DispatchSemaphore(value: 0)
         Task {
             do {
-                try await modelManager.dispose(modelId: modelId)
+                try await self.modelManager.dispose(modelId: modelId)
+                print("[\(Self.TAG)] Model disposed successfully: \(modelId)")
+                completion(.success(()))
+            } catch let executorchError as ExecutorchError {
+                print("[\(Self.TAG)] Failed to dispose model: \(modelId), error: \(executorchError)")
+                let pigeonError = PigeonError(
+                    code: executorchError.errorCode,
+                    message: executorchError.localizedDescription,
+                    details: nil
+                )
+                completion(.failure(pigeonError))
             } catch {
-                thrownError = error
+                print("[\(Self.TAG)] Failed to dispose model: \(modelId), error: \(error)")
+                let pigeonError = PigeonError(
+                    code: "UNKNOWN_ERROR",
+                    message: error.localizedDescription,
+                    details: nil
+                )
+                completion(.failure(pigeonError))
             }
-            semaphore.signal()
         }
-        semaphore.wait()
-
-        if let error = thrownError {
-            throw error
-        }
-        print("[\(Self.TAG)] Model disposed successfully: \(modelId)")
     }
 
-    public func getLoadedModels() throws -> [String?] {
-        // Use nonisolated(unsafe) to allow mutation from Task
-        // This is safe because we use semaphore to synchronize
-        nonisolated(unsafe) var result: [String?] = []
-        nonisolated(unsafe) var thrownError: Error? = nil
-
-        let semaphore = DispatchSemaphore(value: 0)
+    public func getLoadedModels(completion: @escaping (Result<[String?], Error>) -> Void) {
         Task {
             do {
-                result = try await modelManager.getLoadedModels()
+                let result = try await self.modelManager.getLoadedModels()
+                print("[\(Self.TAG)] Currently loaded models: \(result.count)")
+                completion(.success(result))
+            } catch let executorchError as ExecutorchError {
+                print("[\(Self.TAG)] Failed to get loaded models: \(executorchError)")
+                let pigeonError = PigeonError(
+                    code: executorchError.errorCode,
+                    message: executorchError.localizedDescription,
+                    details: nil
+                )
+                completion(.failure(pigeonError))
             } catch {
-                thrownError = error
+                print("[\(Self.TAG)] Failed to get loaded models: \(error)")
+                let pigeonError = PigeonError(
+                    code: "UNKNOWN_ERROR",
+                    message: error.localizedDescription,
+                    details: nil
+                )
+                completion(.failure(pigeonError))
             }
-            semaphore.signal()
         }
-        semaphore.wait()
-
-        if let error = thrownError {
-            throw error
-        }
-        print("[\(Self.TAG)] Currently loaded models: \(result.count)")
-        return result
     }
 
-    public func setDebugLogging(enabled: Bool) throws {
+    public func setDebugLogging(enabled: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
         #if DEBUG
         if enabled {
             if logSink == nil {
@@ -240,38 +246,7 @@ public class ExecutorchFlutterPlugin: NSObject, FlutterPlugin, ExecutorchHostApi
         #else
         print("[\(Self.TAG)] ⚠️  Debug logging only available in DEBUG builds")
         #endif
-    }
-
-    // MARK: - Private Helper Methods
-
-    /**
-     * Execute async code synchronously for Pigeon compatibility
-     * Pigeon doesn't support async methods yet, so we need to bridge async/await to sync
-     */
-    private func executeSync<T>(_ operation: @escaping () async throws -> T) throws -> T {
-        // Use nonisolated(unsafe) to allow mutation from Task
-        // This is safe because we use semaphore to synchronize
-        nonisolated(unsafe) var result: Result<T, Error>?
-        let semaphore = DispatchSemaphore(value: 0)
-
-        Task {
-            do {
-                let value = try await operation()
-                result = .success(value)
-            } catch {
-                result = .failure(error)
-            }
-            semaphore.signal()
-        }
-
-        semaphore.wait()
-
-        switch result! {
-        case .success(let value):
-            return value
-        case .failure(let error):
-            throw error
-        }
+        completion(.success(()))
     }
 }
 

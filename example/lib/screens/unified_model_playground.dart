@@ -63,12 +63,19 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Future<void> _selectModel(ModelDefinition model) async {
-    // Dispose previous controller (handles camera cleanup)
-    await _controller?.dispose();
+    // Remove listener and dispose previous controller (handles camera cleanup)
+    final oldController = _controller;
+    if (oldController != null) {
+      oldController.removeListener(_onControllerChanged);
+    }
 
     setState(() {
+      _controller = null; // Clear controller immediately to avoid stale state
       _isLoadingModel = true;
     });
+
+    // Dispose after clearing reference to prevent race conditions
+    await oldController?.dispose();
 
     try {
       final modelPath = await _loadAssetModel(model.assetPath);
@@ -81,19 +88,25 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         settings: settings,
       );
 
-      setState(() {
-        _controller = controller;
-        _controller!.addListener(_onControllerChanged);
-        _isLoadingModel = false;
-      });
+      if (mounted) {
+        setState(() {
+          _controller = controller;
+          _controller!.addListener(_onControllerChanged);
+          _isLoadingModel = false;
+        });
+      } else {
+        // Widget was unmounted during loading, clean up
+        await controller.dispose();
+      }
     } catch (e) {
       debugPrint('❌ Failed to load model: $e');
-      setState(() {
-        _isLoadingModel = false;
-      });
-
-      // Show helpful error dialog only if the asset file is missing
       if (mounted) {
+        setState(() {
+          _controller = null; // Ensure controller is null on failure
+          _isLoadingModel = false;
+        });
+
+        // Show helpful error dialog only if the asset file is missing
         final errorString = e.toString();
         if (errorString.contains('Asset not found') ||
             errorString.contains('Unable to load asset')) {
@@ -115,7 +128,10 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.warning_amber,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 8),
             const Text('Model Not Found'),
           ],
@@ -143,9 +159,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 ),
                 child: Text(
                   model.assetPath,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                 ),
               ),
               Text(
@@ -161,9 +177,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 ),
                 child: SelectableText(
                   'cd example/python\n$exportCommand',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                 ),
               ),
               if (specialSetup != null) ...[
@@ -188,7 +204,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                           specialSetup,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
                           ),
                         ),
                       ),
@@ -215,7 +233,10 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 8),
             const Text('Failed to Load Model'),
           ],
@@ -227,9 +248,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
             children: [
               Text(
                 'Failed to load ${model.displayName}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Text(
@@ -284,9 +305,42 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => ListenableBuilder(
-        listenable: _controller!,
-        builder: (context, _) => _controller!.buildSettingsWidget(context),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => ListenableBuilder(
+          listenable: _controller!,
+          builder: (context, _) => SingleChildScrollView(
+            controller: scrollController,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                top: 16,
+                left: 8,
+                right: 8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Settings content
+                  _controller!.buildSettingsWidget(context),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

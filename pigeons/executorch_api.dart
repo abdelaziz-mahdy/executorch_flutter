@@ -84,13 +84,16 @@ abstract class ExecutorchHostApi {
   /// Dispose a loaded model and free its resources
   /// User has full control over memory management
   /// Throws: PlatformException if model not found
+  @async
   void dispose(String modelId);
 
   /// Get list of currently loaded model IDs
   /// Returns empty list if no models loaded
+  @async
   List<String?> getLoadedModels();
 
   /// Enable or disable ExecuTorch debug logging
   /// Only works in debug builds
+  @async
   void setDebugLogging(bool enabled);
 }

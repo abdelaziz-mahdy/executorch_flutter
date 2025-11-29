@@ -211,10 +211,7 @@ class YoloModelDefinition
             context: context,
             title: 'Camera Provider',
             children: [
-              RadioListTile<CameraProvider>(
-                title: Text(CameraProvider.platform.displayName),
-                subtitle: Text(CameraProvider.platform.description),
-                value: CameraProvider.platform,
+              RadioGroup<CameraProvider>(
                 groupValue: yoloSettings.cameraProvider,
                 onChanged: (value) {
                   if (value != null) {
@@ -222,18 +219,20 @@ class YoloModelDefinition
                     onSettingsChanged(yoloSettings);
                   }
                 },
-              ),
-              RadioListTile<CameraProvider>(
-                title: Text(CameraProvider.opencv.displayName),
-                subtitle: Text(CameraProvider.opencv.description),
-                value: CameraProvider.opencv,
-                groupValue: yoloSettings.cameraProvider,
-                onChanged: (value) {
-                  if (value != null) {
-                    yoloSettings.cameraProvider = value;
-                    onSettingsChanged(yoloSettings);
-                  }
-                },
+                child: Column(
+                  children: [
+                    RadioListTile<CameraProvider>(
+                      title: Text(CameraProvider.platform.displayName),
+                      subtitle: Text(CameraProvider.platform.description),
+                      value: CameraProvider.platform,
+                    ),
+                    RadioListTile<CameraProvider>(
+                      title: Text(CameraProvider.opencv.displayName),
+                      subtitle: Text(CameraProvider.opencv.description),
+                      value: CameraProvider.opencv,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -245,10 +244,7 @@ class YoloModelDefinition
           context: context,
           title: 'Preprocessing',
           children: [
-            RadioListTile<PreprocessingProvider>(
-              title: Text(PreprocessingProvider.imageLib.displayName),
-              subtitle: Text(PreprocessingProvider.imageLib.description),
-              value: PreprocessingProvider.imageLib,
+            RadioGroup<PreprocessingProvider>(
               groupValue: yoloSettings.preprocessingProvider,
               onChanged: (value) {
                 if (value != null) {
@@ -256,30 +252,25 @@ class YoloModelDefinition
                   onSettingsChanged(yoloSettings);
                 }
               },
-            ),
-            RadioListTile<PreprocessingProvider>(
-              title: Text(PreprocessingProvider.opencv.displayName),
-              subtitle: Text(PreprocessingProvider.opencv.description),
-              value: PreprocessingProvider.opencv,
-              groupValue: yoloSettings.preprocessingProvider,
-              onChanged: (value) {
-                if (value != null) {
-                  yoloSettings.preprocessingProvider = value;
-                  onSettingsChanged(yoloSettings);
-                }
-              },
-            ),
-            RadioListTile<PreprocessingProvider>(
-              title: Text(PreprocessingProvider.gpu.displayName),
-              subtitle: Text(PreprocessingProvider.gpu.description),
-              value: PreprocessingProvider.gpu,
-              groupValue: yoloSettings.preprocessingProvider,
-              onChanged: (value) {
-                if (value != null) {
-                  yoloSettings.preprocessingProvider = value;
-                  onSettingsChanged(yoloSettings);
-                }
-              },
+              child: Column(
+                children: [
+                  RadioListTile<PreprocessingProvider>(
+                    title: Text(PreprocessingProvider.imageLib.displayName),
+                    subtitle: Text(PreprocessingProvider.imageLib.description),
+                    value: PreprocessingProvider.imageLib,
+                  ),
+                  RadioListTile<PreprocessingProvider>(
+                    title: Text(PreprocessingProvider.opencv.displayName),
+                    subtitle: Text(PreprocessingProvider.opencv.description),
+                    value: PreprocessingProvider.opencv,
+                  ),
+                  RadioListTile<PreprocessingProvider>(
+                    title: Text(PreprocessingProvider.gpu.displayName),
+                    subtitle: Text(PreprocessingProvider.gpu.description),
+                    value: PreprocessingProvider.gpu,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

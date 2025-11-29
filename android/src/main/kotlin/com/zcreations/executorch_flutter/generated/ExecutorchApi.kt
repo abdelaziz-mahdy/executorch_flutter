@@ -233,17 +233,17 @@ interface ExecutorchHostApi {
    * User has full control over memory management
    * Throws: PlatformException if model not found
    */
-  fun dispose(modelId: String)
+  fun dispose(modelId: String, callback: (Result<Unit>) -> Unit)
   /**
    * Get list of currently loaded model IDs
    * Returns empty list if no models loaded
    */
-  fun getLoadedModels(): List<String?>
+  fun getLoadedModels(callback: (Result<List<String?>>) -> Unit)
   /**
    * Enable or disable ExecuTorch debug logging
    * Only works in debug builds
    */
-  fun setDebugLogging(enabled: Boolean)
+  fun setDebugLogging(enabled: Boolean, callback: (Result<Unit>) -> Unit)
 
   companion object {
     /** The codec used by ExecutorchHostApi. */
@@ -301,13 +301,14 @@ interface ExecutorchHostApi {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val modelIdArg = args[0] as String
-            val wrapped: List<Any?> = try {
-              api.dispose(modelIdArg)
-              listOf(null)
-            } catch (exception: Throwable) {
-              ExecutorchApiPigeonUtils.wrapError(exception)
+            api.dispose(modelIdArg) { result: Result<Unit> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(ExecutorchApiPigeonUtils.wrapError(error))
+              } else {
+                reply.reply(ExecutorchApiPigeonUtils.wrapResult(null))
+              }
             }
-            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)
@@ -317,12 +318,15 @@ interface ExecutorchHostApi {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.executorch_flutter.ExecutorchHostApi.getLoadedModels$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
-            val wrapped: List<Any?> = try {
-              listOf(api.getLoadedModels())
-            } catch (exception: Throwable) {
-              ExecutorchApiPigeonUtils.wrapError(exception)
+            api.getLoadedModels{ result: Result<List<String?>> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(ExecutorchApiPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(ExecutorchApiPigeonUtils.wrapResult(data))
+              }
             }
-            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)
@@ -334,13 +338,14 @@ interface ExecutorchHostApi {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val enabledArg = args[0] as Boolean
-            val wrapped: List<Any?> = try {
-              api.setDebugLogging(enabledArg)
-              listOf(null)
-            } catch (exception: Throwable) {
-              ExecutorchApiPigeonUtils.wrapError(exception)
+            api.setDebugLogging(enabledArg) { result: Result<Unit> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(ExecutorchApiPigeonUtils.wrapError(error))
+              } else {
+                reply.reply(ExecutorchApiPigeonUtils.wrapResult(null))
+              }
             }
-            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)

@@ -79,8 +79,10 @@ class GemmaModelDefinition
 
     // Get special token IDs from vocabulary
     final padTokenId = vocabulary['<pad>'] ?? vocabulary['[PAD]'] ?? 0;
-    final bosTokenId = vocabulary['<bos>'] ?? vocabulary['[BOS]'] ?? vocabulary['<s>'] ?? 2;
-    final eosTokenId = vocabulary['<eos>'] ?? vocabulary['[EOS]'] ?? vocabulary['</s>'] ?? 3;
+    final bosTokenId =
+        vocabulary['<bos>'] ?? vocabulary['[BOS]'] ?? vocabulary['<s>'] ?? 2;
+    final eosTokenId =
+        vocabulary['<eos>'] ?? vocabulary['[EOS]'] ?? vocabulary['</s>'] ?? 3;
 
     return GemmaInputProcessor(
       maxLength: inputSize,
@@ -103,8 +105,10 @@ class GemmaModelDefinition
 
     // Get special token IDs
     final padTokenId = vocabulary['<pad>'] ?? vocabulary['[PAD]'] ?? 0;
-    final bosTokenId = vocabulary['<bos>'] ?? vocabulary['[BOS]'] ?? vocabulary['<s>'] ?? 2;
-    final eosTokenId = vocabulary['<eos>'] ?? vocabulary['[EOS]'] ?? vocabulary['</s>'] ?? 3;
+    final bosTokenId =
+        vocabulary['<bos>'] ?? vocabulary['[BOS]'] ?? vocabulary['<s>'] ?? 2;
+    final eosTokenId =
+        vocabulary['<eos>'] ?? vocabulary['[EOS]'] ?? vocabulary['</s>'] ?? 3;
 
     return GemmaOutputProcessor(
       reverseVocabulary: reverseVocab,
@@ -135,17 +139,12 @@ class GemmaModelDefinition
       children: [
         Text(
           'Generation Details',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        _buildDetailRow(
-          context,
-          'Input Prompt',
-          result.inputPrompt,
-        ),
+        _buildDetailRow(context, 'Input Prompt', result.inputPrompt),
         const SizedBox(height: 8),
         _buildDetailRow(
           context,
@@ -187,16 +186,16 @@ class GemmaModelDefinition
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -209,8 +208,9 @@ class GemmaModelDefinition
     required ModelSettings settings,
     required Function(ModelSettings) onSettingsChanged,
   }) {
-    final gemmaSettings =
-        settings is GemmaModelSettings ? settings : GemmaModelSettings();
+    final gemmaSettings = settings is GemmaModelSettings
+        ? settings
+        : GemmaModelSettings();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,9 +347,9 @@ class GemmaModelDefinition
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
         ),
         Container(
@@ -378,9 +378,7 @@ class GemmaModelDefinition
 
 /// Text input widget for text generation models
 class _TextInputWidget extends StatefulWidget {
-  const _TextInputWidget({
-    required this.onTextSubmitted,
-  });
+  const _TextInputWidget({required this.onTextSubmitted});
 
   final Function(String) onTextSubmitted;
 
@@ -415,9 +413,9 @@ class _TextInputWidgetState extends State<_TextInputWidget> {
         children: [
           Text(
             'Enter your prompt',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           TextField(

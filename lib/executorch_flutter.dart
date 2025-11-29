@@ -6,10 +6,10 @@
 ///
 /// ## Key Features
 ///
-/// - **High Performance**: Optimized for mobile inference with ExecuTorch runtime
-/// - **Type Safe**: Generated platform communication with Pigeon ensures type safety
-/// - **Cross Platform**: Identical APIs across Android, iOS, and macOS platforms
-/// - **User-Controlled Resources**: Explicit model lifecycle management with load/dispose
+/// - **High Performance**: Optimized for mobile inference with ExecuTorch
+/// - **Type Safe**: Generated platform communication with Pigeon
+/// - **Cross Platform**: Identical APIs across Android, iOS, and macOS
+/// - **User-Controlled Resources**: Explicit model lifecycle with load/dispose
 /// - **Easy Integration**: Simple API for loading models and running inference
 ///
 /// ## Quick Start
@@ -45,19 +45,16 @@
 ///
 /// ## Main Classes
 ///
-/// - [ExecutorchManager]: Main entry point for ExecuTorch operations
-/// - [ExecuTorchModel]: Represents a loaded model instance
-/// - [TensorData]: Tensor data representation
-/// - [ModelMetadata]: Model information and specifications
+/// - `ExecutorchManager`: Main entry point for ExecuTorch operations
+/// - `ExecuTorchModel`: Represents a loaded model instance
+/// - `TensorData`: Tensor data representation
+/// - `ModelMetadata`: Model information and specifications
 ///
 /// ## Processors
 ///
-/// - [ExecuTorchPreprocessor]: Base class for input preprocessing
-/// - [ExecuTorchPostprocessor]: Base class for output postprocessing
-/// - [ExecuTorchProcessor]: Combined preprocessing and postprocessing
-/// - [ImageClassificationProcessor]: Ready-to-use image classification
-/// - [TextClassificationProcessor]: Ready-to-use text classification
-/// - [AudioClassificationProcessor]: Ready-to-use audio classification
+/// - `ExecuTorchPreprocessor`: Base class for input preprocessing
+/// - `ExecuTorchPostprocessor`: Base class for output postprocessing
+/// - `ExecuTorchProcessor`: Combined preprocessing and postprocessing
 ///
 /// ## Platform Support
 ///
@@ -65,17 +62,8 @@
 /// - **iOS**: iOS 13.0+, arm64 (device only, simulator not supported)
 /// - **macOS**: macOS 12.0+ (Monterey), arm64 only (Apple Silicon)
 ///
-/// For detailed documentation and examples, see the individual class documentation.
+/// For detailed documentation and examples, see the class documentation.
 library;
-
-import 'package:executorch_flutter/executorch_flutter.dart'
-    show
-        ExecutorchManager,
-        ExecuTorchModel,
-        TensorData,
-        ExecuTorchPreprocessor,
-        ExecuTorchPostprocessor,
-        ExecuTorchProcessor;
 
 export 'src/executorch_errors.dart';
 // Core API exports
