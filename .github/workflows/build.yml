@@ -8,9 +8,10 @@ on:
   workflow_call:  # Allow this workflow to be called by other workflows
 
 # Cancel in-progress runs when a new run is triggered
+# Use run_id for workflow_call to avoid deadlock with parent workflow
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: build-${{ github.event_name == 'workflow_call' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
 jobs:
   # Android Release Build
