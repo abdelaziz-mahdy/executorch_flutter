@@ -1,6 +1,15 @@
 # Files to exclude from pub.dev publishing
 # Keep package size small and exclude development/example files
 
+# Gitignore files (suppress pub.dev warning about checked-in gitignored files)
+.gitignore
+android/.gitignore
+example/.gitignore
+example/android/.gitignore
+example/ios/.gitignore
+example/macos/.gitignore
+ios/.gitignore
+
 # Build artifacts and generated files
 build/
 .dart_tool/
