@@ -20,14 +20,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if version changed and tag doesn't exist
+      - name: Check if version needs publishing
         id: check
         run: |
-          # Get current version
+          # Get current version from pubspec.yaml
           CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
           echo "Current version: $CURRENT_VERSION"
 
-          # Check if tag already exists
+          # Check if tag already exists locally
           if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
             echo "Tag v$CURRENT_VERSION already exists, skipping"
             echo "should_release=false" >> $GITHUB_OUTPUT
@@ -35,19 +35,19 @@ jobs:
             exit 0
           fi
 
-          # Get previous version (from previous commit)
-          git show HEAD~1:pubspec.yaml > /tmp/old_pubspec.yaml 2>/dev/null || echo "version: 0.0.0" > /tmp/old_pubspec.yaml
-          PREVIOUS_VERSION=$(grep '^version:' /tmp/old_pubspec.yaml | sed 's/version: //' || echo "0.0.0")
-          echo "Previous version: $PREVIOUS_VERSION"
+          # Get package info from pub.dev API
+          PUB_DEV_RESPONSE=$(curl -s "https://pub.dev/api/packages/executorch_flutter")
+          LATEST_PUB_VERSION=$(echo "$PUB_DEV_RESPONSE" | grep -o '"version":"[^"]*"' | head -1 | sed 's/"version":"//;s/"//')
+          echo "Latest version on pub.dev: $LATEST_PUB_VERSION"
 
-          # Compare versions
-          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
-            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
-            echo "should_release=true" >> $GITHUB_OUTPUT
+          # Check if current version is already published
+          if echo "$PUB_DEV_RESPONSE" | grep -q "\"version\":\"$CURRENT_VERSION\""; then
+            echo "Version $CURRENT_VERSION already published on pub.dev, skipping"
+            echo "should_release=false" >> $GITHUB_OUTPUT
             echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           else
-            echo "Version unchanged"
-            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "Version $CURRENT_VERSION not found on pub.dev, will publish"
+            echo "should_release=true" >> $GITHUB_OUTPUT
             echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           fi
 
