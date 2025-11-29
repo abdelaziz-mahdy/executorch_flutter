@@ -63,12 +63,19 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Future<void> _selectModel(ModelDefinition model) async {
-    // Dispose previous controller (handles camera cleanup)
-    await _controller?.dispose();
+    // Remove listener and dispose previous controller (handles camera cleanup)
+    final oldController = _controller;
+    if (oldController != null) {
+      oldController.removeListener(_onControllerChanged);
+    }
 
     setState(() {
+      _controller = null; // Clear controller immediately to avoid stale state
       _isLoadingModel = true;
     });
+
+    // Dispose after clearing reference to prevent race conditions
+    await oldController?.dispose();
 
     try {
       final modelPath = await _loadAssetModel(model.assetPath);
@@ -81,19 +88,25 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         settings: settings,
       );
 
-      setState(() {
-        _controller = controller;
-        _controller!.addListener(_onControllerChanged);
-        _isLoadingModel = false;
-      });
+      if (mounted) {
+        setState(() {
+          _controller = controller;
+          _controller!.addListener(_onControllerChanged);
+          _isLoadingModel = false;
+        });
+      } else {
+        // Widget was unmounted during loading, clean up
+        await controller.dispose();
+      }
     } catch (e) {
       debugPrint('❌ Failed to load model: $e');
-      setState(() {
-        _isLoadingModel = false;
-      });
-
-      // Show helpful error dialog only if the asset file is missing
       if (mounted) {
+        setState(() {
+          _controller = null; // Ensure controller is null on failure
+          _isLoadingModel = false;
+        });
+
+        // Show helpful error dialog only if the asset file is missing
         final errorString = e.toString();
         if (errorString.contains('Asset not found') ||
             errorString.contains('Unable to load asset')) {
