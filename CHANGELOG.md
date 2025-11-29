@@ -1,7 +1,13 @@
 # Changelog
 
-## next
+## 0.0.4
 
+### Improvements
+- Converted internal Pigeon API to async for better thread safety on iOS/macOS
+- Fixed race conditions in example app when disposing models during camera mode
+- Fixed UI getting stuck in camera mode when model loading fails
+
+### Code Quality
 - Fixed 100+ static analysis issues
 - Removed 9 deprecated lint rules (Dart 3.0-3.7)
 - Migrated to Flutter 3.32+ `RadioGroup` API

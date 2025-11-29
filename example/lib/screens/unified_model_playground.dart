@@ -305,9 +305,42 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => ListenableBuilder(
-        listenable: _controller!,
-        builder: (context, _) => _controller!.buildSettingsWidget(context),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => ListenableBuilder(
+          listenable: _controller!,
+          builder: (context, _) => SingleChildScrollView(
+            controller: scrollController,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                top: 16,
+                left: 8,
+                right: 8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Settings content
+                  _controller!.buildSettingsWidget(context),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
