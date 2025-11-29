@@ -8,6 +8,11 @@ on:
   workflow_dispatch:
   workflow_call:  # Allow this workflow to be called by other workflows
 
+# Cancel in-progress runs when a new run is triggered
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Android Release Build
   # Using macos-14 instead of ubuntu-latest due to Flutter SPM compatibility issue
