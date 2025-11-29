@@ -2,110 +2,11 @@ name: Publish to pub.dev
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'pubspec.yaml'
-  workflow_dispatch:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
 
 jobs:
-  # Check if version changed
-  check-version:
-    name: Check Version Change
-    runs-on: ubuntu-latest
-    outputs:
-      should_publish: ${{ steps.check.outputs.should_publish }}
-      version: ${{ steps.check.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check if version changed
-        id: check
-        run: |
-          # Get current version
-          CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
-          echo "Current version: $CURRENT_VERSION"
-
-          # Get previous version (from previous commit)
-          git show HEAD~1:pubspec.yaml > /tmp/old_pubspec.yaml 2>/dev/null || echo "version: 0.0.0" > /tmp/old_pubspec.yaml
-          PREVIOUS_VERSION=$(grep '^version:' /tmp/old_pubspec.yaml | sed 's/version: //' || echo "0.0.0")
-          echo "Previous version: $PREVIOUS_VERSION"
-
-          # Check if tag already exists
-          TAG_EXISTS=$(git tag -l "v$CURRENT_VERSION")
-          if [ -n "$TAG_EXISTS" ]; then
-            echo "Tag v$CURRENT_VERSION already exists, skipping"
-            echo "should_publish=false" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Compare versions
-          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
-            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "Version unchanged"
-            echo "should_publish=false" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          fi
-
-  # Run all build checks before publishing
-  build-checks:
-    name: Build Checks
-    needs: check-version
-    if: needs.check-version.outputs.should_publish == 'true'
-    uses: ./.github/workflows/build.yml
-
-  # Create tag and GitHub Release (pub.dev auto-publishes on tag)
-  create-release:
-    name: Create Tag & Release
-    needs: [check-version, build-checks]
-    if: needs.check-version.outputs.should_publish == 'true'
-    runs-on: ubuntu-latest
+  publish:
     permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Extract changelog for version
-        id: changelog
-        run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
-          # Extract changelog section for this version
-          CHANGELOG=$(awk "/^## $VERSION/,/^## [0-9]/" CHANGELOG.md | head -n -1 | tail -n +2)
-          if [ -z "$CHANGELOG" ]; then
-            CHANGELOG="Release version $VERSION"
-          fi
-          # Handle multiline output
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Create and push tag
-        run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$VERSION" -m "Release v$VERSION"
-          git push origin "v$VERSION"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.check-version.outputs.version }}
-          name: v${{ needs.check-version.outputs.version }}
-          body: |
-            ## What's Changed
-
-            ${{ steps.changelog.outputs.changelog }}
-
-            ---
-
-            📦 Publishing to [pub.dev](https://pub.dev/packages/executorch_flutter)... (triggered by tag)
-          draft: false
-          prerelease: false
+      id-token: write # Required for authentication using OIDC
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1

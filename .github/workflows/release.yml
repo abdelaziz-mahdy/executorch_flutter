@@ -1,0 +1,110 @@
+name: Create Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pubspec.yaml'
+  workflow_dispatch:
+
+jobs:
+  # Check if version changed
+  check-version:
+    name: Check Version Change
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version changed and tag doesn't exist
+        id: check
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          echo "Current version: $CURRENT_VERSION"
+
+          # Check if tag already exists
+          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
+            echo "Tag v$CURRENT_VERSION already exists, skipping"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get previous version (from previous commit)
+          git show HEAD~1:pubspec.yaml > /tmp/old_pubspec.yaml 2>/dev/null || echo "version: 0.0.0" > /tmp/old_pubspec.yaml
+          PREVIOUS_VERSION=$(grep '^version:' /tmp/old_pubspec.yaml | sed 's/version: //' || echo "0.0.0")
+          echo "Previous version: $PREVIOUS_VERSION"
+
+          # Compare versions
+          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Version unchanged"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          fi
+
+  # Run all build checks before creating release
+  build-checks:
+    name: Build Checks
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    uses: ./.github/workflows/build.yml
+
+  # Create tag and GitHub Release (triggers publish.yml which publishes to pub.dev)
+  create-release:
+    name: Create Tag & Release
+    needs: [check-version, build-checks]
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract changelog for version
+        id: changelog
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          # Extract changelog section for this version
+          CHANGELOG=$(awk "/^## $VERSION/,/^## [0-9]/" CHANGELOG.md | head -n -1 | tail -n +2)
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="Release version $VERSION"
+          fi
+          # Handle multiline output
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: v${{ needs.check-version.outputs.version }}
+          body: |
+            ## What's Changed
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ---
+
+            📦 [View on pub.dev](https://pub.dev/packages/executorch_flutter/versions/${{ needs.check-version.outputs.version }})
+          draft: false
+          prerelease: false
