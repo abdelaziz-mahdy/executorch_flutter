@@ -34,9 +34,7 @@ flutter:
 
 topics:
   - machine-learning
-  - inference
-  - executorch
   - pytorch
-  - mobile-ai
-  - on-device-ai
-  - edge-ai
+  - ai
+  - mobile
+  - deep-learning
