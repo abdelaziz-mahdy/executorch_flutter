@@ -59,14 +59,15 @@ jobs:
             echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           fi
 
-  # Create tag and GitHub Release (triggers publish.yml which publishes to pub.dev)
+  # Create tag, GitHub Release, and publish to pub.dev
   create-release:
-    name: Create Tag & Release
+    name: Create Tag & Release & Publish
     needs: [check-version, build-checks]
     if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write  # Required for pub.dev OIDC authentication
     steps:
       - uses: actions/checkout@v4
         with:
@@ -109,3 +110,18 @@ jobs:
             📦 [View on pub.dev](https://pub.dev/packages/executorch_flutter/versions/${{ needs.check-version.outputs.version }})
           draft: false
           prerelease: false
+
+      # Publish to pub.dev using OIDC authentication
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Publish to pub.dev
+        run: dart pub publish --force
