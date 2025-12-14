@@ -44,6 +44,7 @@ android {
 
     defaultConfig {
         minSdkVersion 23  // Required for ExecuTorch
+        consumerProguardFiles 'proguard-rules.pro'
     }
 
     dependencies {

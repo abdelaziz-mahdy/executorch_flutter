@@ -1,5 +1,10 @@
 # Changelog
 
+## [next]
+
+### Bug Fixes
+- **Android**: Added ProGuard rules to prevent crashes in release builds when loading models
+
 ## 0.0.4
 
 ### Improvements
