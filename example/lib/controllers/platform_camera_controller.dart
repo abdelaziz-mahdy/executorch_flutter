@@ -49,11 +49,14 @@ class PlatformCameraController implements CameraController {
       debugPrint('📱 Camera sensor orientation: $_sensorOrientation');
 
       // Initialize camera controller
+      // iOS requires bgra8888, Android uses yuv420
       _cameraController = camera_pkg.CameraController(
         camera,
         camera_pkg.ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup: camera_pkg.ImageFormatGroup.yuv420,
+        imageFormatGroup: Platform.isAndroid
+            ? camera_pkg.ImageFormatGroup.yuv420
+            : camera_pkg.ImageFormatGroup.bgra8888,
       );
 
       await _cameraController!.initialize();

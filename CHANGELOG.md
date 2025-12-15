@@ -1,5 +1,11 @@
 # Changelog
 
+## [next]
+
+### Bug Fixes
+- **Android**: Added ProGuard rules to prevent crashes in release builds when loading models
+- **iOS**: Fixed camera initialization by using `bgra8888` image format instead of `yuv420`
+
 ## 0.0.4
 
 ### Improvements
