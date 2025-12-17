@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.6
+- **Android** fix Crash on model reuse
+
 ## 0.0.5
 
 ### Bug Fixes
