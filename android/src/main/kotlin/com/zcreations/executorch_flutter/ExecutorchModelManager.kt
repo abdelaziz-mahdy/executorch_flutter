@@ -165,9 +165,16 @@ class ExecutorchModelManager(
         val loadedModel = loadedModels.remove(modelId)
             ?: throw ModelNotFoundException("Model not found: $modelId")
 
-        // Note: ExecuTorch Module cleanup handled by garbage collection
-        if (isDebugLoggingEnabled) {
-            Log.d(TAG, "Disposed model: $modelId")
+        // Explicitly destroy native resources instead of waiting for GC
+        // This is critical to prevent crashes when switching models
+        try {
+            loadedModel.module.destroy()
+            if (isDebugLoggingEnabled) {
+                Log.d(TAG, "Disposed model: $modelId (native resources freed)")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error destroying module: $modelId", e)
+            throw e
         }
     }
 
