@@ -98,6 +98,14 @@ if [ -f "executor_runner.js" ] && [ -f "executor_runner.wasm" ]; then
         mkdir -p "${OUTPUT_DIR}"
         cp executor_runner.js "${OUTPUT_DIR}/"
         cp executor_runner.wasm "${OUTPUT_DIR}/"
+
+        # Also copy HTML example for reference
+        if [ -f "executor_runner.html" ]; then
+            mkdir -p "${OUTPUT_DIR}/tmp"
+            cp executor_runner.html "${OUTPUT_DIR}/tmp/"
+            echo "✅ Copied executor_runner.html to ${OUTPUT_DIR}/tmp/ for reference"
+        fi
+
         echo "✅ Copied to ${OUTPUT_DIR}"
     fi
 
@@ -106,6 +114,14 @@ if [ -f "executor_runner.js" ] && [ -f "executor_runner.wasm" ]; then
         echo "Copying binaries to /output volume..."
         cp executor_runner.js /output/
         cp executor_runner.wasm /output/
+
+        # Also copy HTML example to output/tmp for reference
+        if [ -f "executor_runner.html" ]; then
+            mkdir -p /output/tmp
+            cp executor_runner.html /output/tmp/
+            echo "✅ Copied executor_runner.html to web/wasm/tmp/ for reference"
+        fi
+
         echo "✅ Copied to /output"
     fi
 else
