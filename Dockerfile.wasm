@@ -1,0 +1,65 @@
+# Dockerfile for building ExecuTorch WebAssembly binaries
+# This container includes Emscripten and all dependencies needed to build executor_runner.js/.wasm
+
+FROM ubuntu:22.04
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    python3 \
+    python3-pip \
+    wget \
+    curl \
+    ninja-build \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Emscripten
+# Use "latest" for ARM64 support on Apple Silicon
+ENV EMSDK_VERSION=latest
+ENV EMSDK=/opt/emsdk
+WORKDIR /opt
+RUN git clone https://github.com/emscripten-core/emsdk.git && \
+    cd emsdk && \
+    ./emsdk install ${EMSDK_VERSION} && \
+    ./emsdk activate ${EMSDK_VERSION}
+
+# Set up Emscripten environment variables
+ENV PATH="${EMSDK}:${EMSDK}/upstream/emscripten:${PATH}"
+# EMSDK_NODE will be set dynamically by emsdk_env.sh
+
+# Clone ExecuTorch repository with submodules
+ENV EXECUTORCH_VERSION=v1.0.1
+WORKDIR /workspace
+RUN git clone --branch ${EXECUTORCH_VERSION} --depth 1 --recurse-submodules --shallow-submodules https://github.com/pytorch/executorch.git
+
+# Install Python dependencies for ExecuTorch
+WORKDIR /workspace/executorch
+
+# Upgrade pip and setuptools first (fixes ModuleNotFoundError)
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
+
+RUN pip3 install --no-cache-dir \
+    torch \
+    torchvision \
+    pyyaml \
+    numpy
+
+# Install ExecuTorch Python package
+RUN pip3 install --no-cache-dir -e .
+
+# Build script that will be executed
+COPY scripts/build_wasm_in_container.sh /build_wasm.sh
+RUN chmod +x /build_wasm.sh
+
+# Default command: build Wasm binaries
+CMD ["/build_wasm.sh"]
+
+# Build outputs will be in /workspace/executorch/cmake-out-wasm/
+# Mount a volume to /output to copy binaries out
+VOLUME ["/output"]
