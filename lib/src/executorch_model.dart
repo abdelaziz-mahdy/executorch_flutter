@@ -2,6 +2,10 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:path_provider/path_provider.dart';
 
 import 'executorch_errors.dart';
 import 'generated/executorch_api.dart';
@@ -16,27 +20,24 @@ import 'generated/executorch_api.dart';
 ///
 /// ### Loading from Assets (Recommended):
 /// ```dart
-/// import 'dart:io';
 /// import 'package:flutter/services.dart';
-/// import 'package:path_provider/path_provider.dart';
 ///
-/// // Load from assets
+/// // Load from assets (works on all platforms)
 /// final byteData = await rootBundle.load('assets/models/model.pte');
-/// final tempDir = await getTemporaryDirectory();
-/// final file = File('${tempDir.path}/model.pte');
-/// await file.writeAsBytes(byteData.buffer.asUint8List());
-/// final model = await ExecuTorchModel.load(file.path);
+/// final model = await ExecuTorchModel.loadFromBytes(
+///   byteData.buffer.asUint8List(),
+/// );
 ///
-/// // Run inference (calls native module.forward())
+/// // Run inference
 /// final outputs = await model.forward(inputs);
 ///
 /// // Clean up
 /// await model.dispose();
 /// ```
 ///
-/// ### Loading from File System Directly:
+/// ### Loading from File System (Native only):
 /// ```dart
-/// // Load from file path
+/// // Load from file path (Android, iOS, macOS only)
 /// final model = await ExecuTorchModel.load('/path/to/model.pte');
 ///
 /// // Run inference
@@ -51,6 +52,7 @@ import 'generated/executorch_api.dart';
 /// This Dart API directly maps to the native ExecuTorch APIs:
 /// - **Kotlin (Android)**: `Module.load()` → `module.forward()`
 /// - **Swift (iOS/macOS)**: `Module()` + `load("forward")` → `module.forward()`
+/// - **Web**: JavaScript wrapper → WebAssembly module
 ///
 /// Note: ExecuTorch doesn't provide runtime introspection for model metadata.
 /// Input/output specs must be known externally (from model documentation).
@@ -58,6 +60,7 @@ class ExecuTorchModel {
   ExecuTorchModel._({
     required this.modelId,
     required this.hostApi,
+    this.tempFile,
   });
 
   /// Unique identifier for this model instance
@@ -65,6 +68,9 @@ class ExecuTorchModel {
 
   /// Reference to the host API for platform communication
   final ExecutorchHostApi hostApi;
+
+  /// Temporary file used for byte-based loading (if any)
+  final File? tempFile;
 
   /// Whether this model has been disposed
   bool _isDisposed = false;
@@ -123,6 +129,57 @@ class ExecuTorchModel {
     } catch (e) {
       throw ExecuTorchException(
         'Failed to load model from $filePath: $e',
+      );
+    }
+  }
+
+  /// Load an ExecuTorch model from bytes (works on all platforms)
+  ///
+  /// This method works on all platforms:
+  /// - **Native (Android, iOS, macOS)**: Writes bytes to temp file, then loads
+  /// - **Web**: Loads bytes directly into WebAssembly virtual filesystem
+  ///
+  /// ### Loading from Assets:
+  /// ```dart
+  /// import 'package:flutter/services.dart';
+  ///
+  /// final byteData = await rootBundle.load('assets/models/model.pte');
+  /// final model = await ExecuTorchModel.loadFromBytes(
+  ///   byteData.buffer.asUint8List(),
+  /// );
+  /// ```
+  ///
+  /// ### Parameters:
+  /// - [modelBytes]: Model file bytes in .pte format
+  ///
+  /// ### Returns:
+  /// A loaded model instance ready for inference
+  ///
+  /// ### Throws:
+  /// - [ExecuTorchException] if model format is invalid or loading fails
+  static Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) async {
+    final hostApi = ExecutorchHostApi();
+
+    try {
+      // Write bytes to temp file, then load via file path
+      // Note: The temp file is kept until dispose() is called because
+      // native implementations memory-map the file
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File(
+        '${tempDir.path}/model_${DateTime.now().millisecondsSinceEpoch}.pte',
+      );
+      await tempFile.writeAsBytes(modelBytes);
+
+      final loadResult = await hostApi.load(tempFile.path);
+
+      return ExecuTorchModel._(
+        modelId: loadResult.modelId,
+        hostApi: hostApi,
+        tempFile: tempFile, // Keep temp file for memory mapping
+      );
+    } catch (e) {
+      throw ExecuTorchException(
+        'Failed to load model from bytes: $e',
       );
     }
   }
@@ -187,12 +244,24 @@ class ExecuTorchModel {
   /// Dispose this model and free its resources
   ///
   /// Call this when you're done with the model to free platform resources.
+  /// This also cleans up any temporary files created during byte-based loading.
   /// The user has full control over memory management.
   Future<void> dispose() async {
     if (_isDisposed) return;
 
     await hostApi.dispose(modelId);
     _isDisposed = true;
+
+    // Clean up temporary file if it was created for byte-based loading
+    if (tempFile != null) {
+      try {
+        if (await tempFile!.exists()) {
+          await tempFile!.delete();
+        }
+      } catch (_) {
+        // Ignore deletion errors
+      }
+    }
   }
 
   /// Check if this model has been disposed
