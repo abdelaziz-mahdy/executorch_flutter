@@ -57,9 +57,14 @@ if [ -d "cmake-out-wasm" ]; then
     rm -rf cmake-out-wasm
 fi
 
-# Install ExecuTorch if not already installed
-echo "Installing ExecuTorch Python package..."
-./install_executorch.sh --clean
+# Note: We skip ./install_executorch.sh for Wasm builds
+# The Python package isn't needed - we only build the C++ runtime
+
+# Create models directory with dummy file (prevents Emscripten file_packager error)
+# We'll load models at runtime via HTTP, not embed them
+echo "Creating models directory with placeholder..."
+mkdir -p models
+echo "# Placeholder for Emscripten file_packager" > models/.placeholder
 
 # Configure CMake with Emscripten
 echo ""

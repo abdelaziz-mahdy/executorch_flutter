@@ -9,7 +9,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
-    cmake \
     git \
     python3 \
     python3-pip \
@@ -18,6 +17,11 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install CMake 3.29+ via pip (ExecuTorch requirement)
+# Ubuntu 22.04 ships with CMake 3.22, but we need 3.29+
+# Using pip ensures we get a recent version that works on ARM64
+RUN pip3 install --no-cache-dir cmake>=3.29.0
 
 # Install Emscripten
 # Use "latest" for ARM64 support on Apple Silicon
@@ -38,20 +42,22 @@ ENV EXECUTORCH_VERSION=v1.0.1
 WORKDIR /workspace
 RUN git clone --branch ${EXECUTORCH_VERSION} --depth 1 --recurse-submodules --shallow-submodules https://github.com/pytorch/executorch.git
 
-# Install Python dependencies for ExecuTorch
+# Install minimal Python dependencies for Wasm build
 WORKDIR /workspace/executorch
 
-# Upgrade pip and setuptools first (fixes ModuleNotFoundError)
+# Upgrade pip, setuptools, wheel first
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
 
-RUN pip3 install --no-cache-dir \
-    torch \
-    torchvision \
-    pyyaml \
-    numpy
+# Install torch (needed for torchgen module used by code generation scripts)
+# Install only CPU version to save space
+RUN pip3 install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
-# Install ExecuTorch Python package
-RUN pip3 install --no-cache-dir -e .
+# Install other dependencies
+RUN pip3 install --no-cache-dir pyyaml
+
+# Make executorch package importable without building C++ extensions
+# This allows Python scripts like gen_oplist.py to import executorch modules
+ENV PYTHONPATH="/workspace/executorch:${PYTHONPATH}"
 
 # Build script that will be executed
 COPY scripts/build_wasm_in_container.sh /build_wasm.sh
