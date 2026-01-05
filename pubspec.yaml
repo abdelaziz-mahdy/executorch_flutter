@@ -39,6 +39,9 @@ flutter:
         pluginClass: ExecutorchFlutterWebPlugin
         fileName: src/web/executorch_web_plugin.dart
 
+executables:
+  setup_web: setup_web
+
 topics:
   - machine-learning
   - pytorch

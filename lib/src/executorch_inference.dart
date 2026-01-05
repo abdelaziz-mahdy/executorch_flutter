@@ -4,8 +4,11 @@ library;
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'executorch_manager_native_stub.dart' as stub
-    if (dart.library.js_interop) 'executorch_manager_web_stub.dart';
+import 'executorch_manager_unsupported_stub.dart'
+    if (dart.library.io) 'executorch_manager_native_stub.dart'
+    if (dart.library.js_interop) 'executorch_manager_web_stub.dart'
+    if (dart.library.js) 'executorch_manager_web_stub.dart'
+    as stub;
 import 'executorch_model.dart';
 import 'generated/executorch_api.dart';
 

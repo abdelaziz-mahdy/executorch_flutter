@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get_it/get_it.dart';
-import 'service_locator_native.dart'
-    if (dart.library.js_interop) 'service_locator_web.dart' as impl;
+import 'service_locator_unsupported.dart'
+    if (dart.library.io) 'service_locator_native.dart'
+    if (dart.library.js_interop) 'service_locator_web.dart'
+    if (dart.library.js) 'service_locator_web.dart'
+    as impl;
 
 final getIt = GetIt.instance;
 

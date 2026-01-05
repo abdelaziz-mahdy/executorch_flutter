@@ -44,7 +44,7 @@ class WasmModuleLoader {
     _initCompleter = Completer<void>();
 
     try {
-      final runner = js.ExecuTorchRunner.instance;
+      final runner = js.execuTorchRunner;
       await runner.initialize().toDart;
 
       _isInitialized = true;

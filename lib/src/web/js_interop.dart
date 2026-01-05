@@ -7,14 +7,35 @@ library;
 import 'dart:js_interop';
 import 'dart:typed_data';
 
+/// Global ExecuTorchRunner instance accessor
+///
+/// Access the global ExecuTorchRunner instance created by executorch_wrapper.js
+/// This must be called after the wrapper script has loaded.
+@JS('ExecuTorchRunner')
+external ExecuTorchRunner? get _execuTorchRunnerOrNull;
+
+/// Get the global ExecuTorchRunner instance
+///
+/// Throws if the wrapper script hasn't loaded yet.
+ExecuTorchRunner get execuTorchRunner {
+  final runner = _execuTorchRunnerOrNull;
+  if (runner == null) {
+    throw StateError(
+      'ExecuTorchRunner is not available. '
+      'Make sure to include the executorch_wrapper.js script in your '
+      'index.html:\n'
+      '  <script src="js/executorch_wrapper.js"></script>\n'
+      'This script must be loaded before Flutter starts.',
+    );
+  }
+  return runner;
+}
+
 /// JavaScript ExecuTorchRunner class binding
 ///
 /// Maps to window.ExecuTorchRunner instance created by executorch_wrapper.js
-@JS('window.ExecuTorchRunner')
+@JS()
 extension type ExecuTorchRunner._(JSObject _) implements JSObject {
-  /// Get the global ExecuTorchRunner instance
-  external static ExecuTorchRunner get instance;
-
   /// Initialize the Wasm module (call once before using)
   external JSPromise<JSAny?> initialize();
 

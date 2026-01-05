@@ -62,7 +62,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
       await WasmModuleLoader.ensureInitialized();
 
       // Get JavaScript runner instance
-      final runner = js.ExecuTorchRunner.instance;
+      final runner = js.execuTorchRunner;
 
       // Convert model bytes to JavaScript Uint8Array
       final jsModelBytes = modelBytes.toJSUint8Array();
@@ -122,7 +122,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
 
     try {
       // Get JavaScript runner instance
-      final runner = js.ExecuTorchRunner.instance;
+      final runner = js.execuTorchRunner;
 
       // Convert Dart tensors to JavaScript format
       final jsTensors = _convertTensorsToJS(inputs);
@@ -156,7 +156,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
 
     try {
       // Get JavaScript runner instance
-      final runner = js.ExecuTorchRunner.instance;
+      final runner = js.execuTorchRunner;
 
       // Dispose model via JavaScript
       await runner.dispose(int.parse(modelId)).toDart;

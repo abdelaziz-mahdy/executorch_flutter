@@ -16,7 +16,8 @@ import '../processors/camera_image_converter_stub.dart'
     if (dart.library.io) '../processors/camera_image_converter.dart';
 import '../ui/widgets/performance_monitor.dart';
 import 'model_controller_platform.dart'
-    if (dart.library.io) 'model_controller_platform_native.dart' as platform;
+    if (dart.library.io) 'model_controller_platform_native.dart'
+    as platform;
 
 /// Central controller that owns ALL model state and lifecycle
 ///

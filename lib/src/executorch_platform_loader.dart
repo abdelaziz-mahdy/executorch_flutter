@@ -5,5 +5,7 @@
 /// - Native (Android, iOS, macOS): ExecuTorchModel with file-based loading
 library;
 
-export 'executorch_model_native_stub.dart'
-    if (dart.library.js_interop) 'executorch_model_web_stub.dart';
+export 'executorch_model_unsupported_stub.dart'
+    if (dart.library.io) 'executorch_model_native_stub.dart'
+    if (dart.library.js_interop) 'executorch_model_web_stub.dart'
+    if (dart.library.js) 'executorch_model_web_stub.dart';

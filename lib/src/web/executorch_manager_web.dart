@@ -57,7 +57,7 @@ class ExecutorchManagerWeb implements ExecutorchManager {
     _ensureInitialized();
 
     try {
-      final runner = js.ExecuTorchRunner.instance;
+      final runner = js.execuTorchRunner;
       runner.setDebugLogging(enabled);
     } catch (e) {
       throw ExecuTorchPlatformException(

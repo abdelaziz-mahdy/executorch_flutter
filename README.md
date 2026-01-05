@@ -10,7 +10,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 ## Features
 
-- ✅ **Cross-Platform Support**: Android (API 23+), iOS (17.0+), and macOS (12.0+ Apple Silicon)
+- ✅ **Cross-Platform Support**: Android (API 23+), iOS (17.0+), macOS (12.0+ Apple Silicon), and Web (experimental)
 - ✅ **Type-Safe API**: Generated with Pigeon for reliable cross-platform communication
 - ✅ **Async Operations**: Non-blocking model loading and inference execution
 - ✅ **Multiple Models**: Support for concurrent model instances
@@ -116,6 +116,41 @@ See the `example/` directory for a full working application:
 - **Architecture**: **arm64 only** (Apple Silicon)
   - ⚠️ **Intel Macs (x86_64) are NOT supported**
 - **Supported Backends**: XNNPACK, CoreML, MPS
+
+### Web (Experimental)
+- **Status**: Experimental - API may change
+- **Runtime**: WebAssembly (Wasm)
+- **Supported Backends**: XNNPACK (Wasm)
+
+#### Web Setup
+
+1. **Run the setup script** to copy required JavaScript files:
+
+```bash
+dart run executorch_flutter:setup_web
+```
+
+2. **Add the script tag** to your `web/index.html` (before the Flutter bootstrap script):
+
+```html
+<head>
+  <!-- ... other head elements ... -->
+
+  <!-- ExecuTorch Wasm wrapper - must load before Flutter -->
+  <script src="js/executorch_wrapper.js"></script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+```
+
+3. **Build the Wasm module** (optional - for custom ExecuTorch builds):
+
+If you need a custom Wasm build, see the [ExecuTorch Wasm documentation](https://pytorch.org/executorch/stable/). Place the generated files in `web/wasm/`:
+- `executor_runner.js`
+- `executor_runner.wasm`
+
+> **Note**: Web support is experimental. File-based model loading is not supported on web - use `loadModelFromAssets()` or `loadModelFromBytes()` instead.
 
 #### macOS Build Limitations
 
