@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// Camera provider options (how to capture frames)
@@ -10,6 +11,23 @@ enum CameraProvider {
 
   final String displayName;
   final String description;
+
+  /// Returns available camera providers for the current platform
+  /// OpenCV is not available on web
+  static List<CameraProvider> get availableProviders {
+    if (kIsWeb) {
+      return values.where((p) => p != CameraProvider.opencv).toList();
+    }
+    return values.toList();
+  }
+
+  /// Whether this provider is available on the current platform
+  bool get isAvailable {
+    if (kIsWeb && this == CameraProvider.opencv) {
+      return false;
+    }
+    return true;
+  }
 }
 
 /// Preprocessing provider options (how to prepare tensors)
@@ -23,6 +41,23 @@ enum PreprocessingProvider {
 
   final String displayName;
   final String description;
+
+  /// Returns available preprocessing providers for the current platform
+  /// OpenCV is not available on web
+  static List<PreprocessingProvider> get availableProviders {
+    if (kIsWeb) {
+      return values.where((p) => p != PreprocessingProvider.opencv).toList();
+    }
+    return values.toList();
+  }
+
+  /// Whether this provider is available on the current platform
+  bool get isAvailable {
+    if (kIsWeb && this == PreprocessingProvider.opencv) {
+      return false;
+    }
+    return true;
+  }
 }
 
 /// Base class for model-specific settings

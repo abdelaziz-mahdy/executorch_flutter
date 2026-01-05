@@ -5,7 +5,8 @@ import '../models/model_input.dart';
 import '../models/model_settings.dart';
 import 'base_processor.dart';
 import 'image_processor.dart';
-import 'opencv/opencv_imagenet_preprocessor.dart';
+import 'opencv/opencv_imagenet_preprocessor_stub.dart'
+    if (dart.library.io) 'opencv/opencv_imagenet_preprocessor.dart';
 
 /// MobileNet/ImageNet input processor with settings baked in
 class MobileNetInputProcessor extends InputProcessor<ModelInput> {
