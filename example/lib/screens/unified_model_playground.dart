@@ -1,8 +1,9 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
+import 'unified_model_playground_native.dart'
+    if (dart.library.js_interop) 'unified_model_playground_web.dart' as platform;
 import '../models/model_definition.dart';
 import '../models/model_registry.dart';
 import '../services/model_controller.dart';
@@ -78,8 +79,18 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     await oldController?.dispose();
 
     try {
-      final modelPath = await _loadAssetModel(model.assetPath);
-      final execuTorchModel = await ExecuTorchModel.load(modelPath);
+      final ExecuTorchModel execuTorchModel;
+      if (kIsWeb) {
+        // Web: Load bytes directly (no file system access)
+        final byteData = await rootBundle.load(model.assetPath);
+        execuTorchModel = await ExecuTorchModel.loadFromBytes(
+          byteData.buffer.asUint8List(),
+        );
+      } else {
+        // Native: Write to cache directory then load from path
+        final modelPath = await platform.loadAssetToFile(model.assetPath);
+        execuTorchModel = await ExecuTorchModel.load(modelPath);
+      }
       final settings = model.createDefaultSettings();
 
       final controller = await ModelController.create(
@@ -108,8 +119,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
 
         // Show helpful error dialog only if the asset file is missing
         final errorString = e.toString();
-        if (errorString.contains('Asset not found') ||
-            errorString.contains('Unable to load asset')) {
+        final isAssetNotFound = errorString.contains('Unable to load asset') ||
+            (errorString.contains('asset') && errorString.contains('.pte'));
+        if (isAssetNotFound) {
           _showModelNotFoundError(model);
         } else {
           _showModelLoadError(model, errorString);
@@ -283,20 +295,6 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         ],
       ),
     );
-  }
-
-  Future<String> _loadAssetModel(String assetPath) async {
-    try {
-      final byteData = await rootBundle.load(assetPath);
-      final directory = await getApplicationCacheDirectory();
-      final fileName = assetPath.split('/').last;
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsBytes(byteData.buffer.asUint8List());
-      return file.path;
-    } catch (e) {
-      // Re-throw with clearer error message
-      throw Exception('Asset not found: $assetPath');
-    }
   }
 
   void _showSettingsDialog() {
