@@ -1,17 +1,33 @@
+import 'package:universal_platform/universal_platform.dart';
+
 import 'model_settings.dart';
 
 /// Settings specific to YOLO models
 class YoloModelSettings extends ModelSettings {
   YoloModelSettings({
     super.showPerformanceOverlay,
-    CameraProvider cameraProvider = CameraProvider.opencv,
-    PreprocessingProvider preprocessingProvider = PreprocessingProvider.opencv,
+    CameraProvider? cameraProvider,
+    PreprocessingProvider? preprocessingProvider,
     double confidenceThreshold = 0.5,
     double nmsThreshold = 0.45,
-  }) : _cameraProvider = cameraProvider,
-       _preprocessingProvider = preprocessingProvider,
+  }) : _cameraProvider = cameraProvider ?? _defaultCameraProvider,
+       _preprocessingProvider = preprocessingProvider ?? _defaultPreprocessingProvider,
        _confidenceThreshold = confidenceThreshold,
        _nmsThreshold = nmsThreshold;
+
+  /// Default camera provider based on platform
+  static CameraProvider get _defaultCameraProvider {
+    if (UniversalPlatform.isWeb) {
+      return CameraProvider.platform; // OpenCV not available on web
+    }
+    return CameraProvider.platform; // Platform camera is more reliable
+  }
+
+  /// Default preprocessing provider based on platform
+  /// GPU shader is fastest and works on all platforms
+  static PreprocessingProvider get _defaultPreprocessingProvider {
+    return PreprocessingProvider.gpu;
+  }
 
   /// Camera provider selection (for live camera input)
   CameraProvider _cameraProvider;
@@ -74,8 +90,8 @@ class YoloModelSettings extends ModelSettings {
   @override
   void reset() {
     showPerformanceOverlay = true;
-    cameraProvider = CameraProvider.opencv;
-    preprocessingProvider = PreprocessingProvider.opencv;
+    cameraProvider = _defaultCameraProvider;
+    preprocessingProvider = _defaultPreprocessingProvider;
     confidenceThreshold = 0.5;
     nmsThreshold = 0.45;
   }

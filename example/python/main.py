@@ -507,8 +507,8 @@ Note: Gemma models require additional setup (advanced):
     export_parser.add_argument('--gemma', action='store_true', help='Export Gemma text generation model')
     export_parser.add_argument('--labels', action='store_true', help='Generate label files')
     export_parser.add_argument('--backends', nargs='+',
-                                choices=['xnnpack', 'coreml', 'mps', 'vulkan', 'qnn', 'arm'],
-                                help='Backend(s) to export for (default: xnnpack, coreml, mps, vulkan)')
+                                choices=['portable', 'xnnpack', 'coreml', 'mps', 'vulkan', 'qnn', 'arm'],
+                                help='Backend(s) to export for (default: xnnpack, coreml, mps, vulkan). Use "portable" for web/wasm.')
     export_parser.add_argument('--output-dir', default='../assets/models',
                                 help='Output directory (default: ../assets/models)')
 

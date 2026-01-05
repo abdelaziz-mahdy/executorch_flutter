@@ -25,12 +25,72 @@ python main.py validate
 
 This tool now exports models for multiple ExecuTorch backends:
 
-- **XNNPACK**: CPU-optimized (Android, iOS, macOS, Linux) - *default*
+- **Portable**: Generic CPU backend (Web/Wasm) - *required for web platform*
+- **XNNPACK**: CPU-optimized (Android, iOS, macOS, Linux) - *default for native*
 - **CoreML**: Apple Neural Engine (iOS, macOS) - *best performance on Apple devices*
 - **MPS**: Metal GPU acceleration (iOS, macOS) - *GPU-accelerated*
 - **Vulkan**: Cross-platform GPU (Android, Linux) - *GPU-accelerated*
 
 📚 **See [BACKENDS.md](BACKENDS.md) for complete backend selection guide**
+
+## Web/Wasm Support
+
+To run models in the browser, you must export them with the **portable** backend. XNNPACK and other hardware-optimized backends contain native code that won't work in WebAssembly.
+
+### Quick Export for Web
+
+```bash
+# Export all models for web (portable backend)
+python main.py export --all --backends portable
+
+# Or export specific models for web
+python main.py export --mobilenet --backends portable
+python main.py export --yolo yolo11n yolov8n yolov5n --backends portable
+```
+
+### Web Model Files
+
+After export, you'll have:
+- `mobilenet_v3_small_portable.pte` (~9.8 MB)
+- `yolo11n_portable.pte` (~10.2 MB)
+- `yolov8n_portable.pte` (~12.2 MB)
+- `yolov5n_portable.pte` (~10.3 MB)
+
+### Why Portable Backend?
+
+| Backend | Native Platforms | Web/Wasm |
+|---------|------------------|----------|
+| Portable | ✅ (slower) | ✅ Required |
+| XNNPACK | ✅ Fast | ❌ Not supported |
+| CoreML | ✅ iOS/macOS | ❌ Not supported |
+| MPS | ✅ iOS/macOS | ❌ Not supported |
+| Vulkan | ✅ Android/Linux | ❌ Not supported |
+
+The portable backend uses the generic ExecuTorch runtime without hardware-specific optimizations, making it compatible with WebAssembly.
+
+### Web Performance Notes
+
+⚠️ **Web is significantly slower than native platforms.** The portable backend runs pure CPU operations in WebAssembly without hardware acceleration.
+
+**Benchmark comparison (YOLO11n on macOS):**
+
+| Platform | Inference Time | Speedup |
+|----------|---------------|---------|
+| Native (XNNPACK) | ~50-100ms | 120x faster |
+| Web (Portable) | ~11-12 seconds | baseline |
+
+**Preprocessing comparison (Web):**
+
+| Method | Time | Notes |
+|--------|------|-------|
+| GPU Shader | ~75ms | Recommended for web |
+| ImageLib | ~560ms | CPU-based, slower |
+
+**Recommendations for Web:**
+- Use **GPU Shader** preprocessing (default on web)
+- Consider showing a loading indicator during inference
+- For real-time applications, native platforms are strongly recommended
+- Web is best suited for demos, prototyping, or infrequent inference
 
 ## Installation
 

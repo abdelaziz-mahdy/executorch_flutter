@@ -1,3 +1,5 @@
+import 'package:universal_platform/universal_platform.dart';
+
 import 'model_definition.dart';
 import 'yolo_model_definition.dart';
 import 'mobilenet_model_definition.dart';
@@ -12,12 +14,69 @@ import 'gemma_model_definition.dart';
 /// - How to render its results
 ///
 /// Backend Information:
-/// - XNNPACK: CPU-optimized, works on all platforms (Android, iOS, macOS)
+/// - Portable: Generic CPU backend, works on web/wasm
+/// - XNNPACK: CPU-optimized, works on native platforms (Android, iOS, macOS)
 /// - CoreML: Apple Neural Engine optimization (iOS, macOS)
 /// - MPS: Metal Performance Shaders for GPU acceleration (iOS, macOS)
 /// - Vulkan: Cross-platform GPU acceleration (Android, Linux)
 class ModelRegistry {
   static Future<List<ModelDefinition>> loadAll() async {
+    // Web platform uses portable backend models
+    if (UniversalPlatform.isWeb) {
+      return _webModels();
+    }
+
+    // Native platforms use optimized backend models
+    return _nativeModels();
+  }
+
+  /// Models optimized for web platform (portable backend)
+  static List<ModelDefinition> _webModels() {
+    return [
+      // ========== MobileNet Models (Web) ==========
+      const MobileNetModelDefinition(
+        name: 'mobilenet_v3_small_portable',
+        displayName: 'MobileNet V3 Small (Web)',
+        description: 'Web-compatible image classification - portable backend',
+        assetPath: 'assets/models/mobilenet_v3_small_portable.pte',
+        inputSize: 224,
+        labelsAssetPath: 'assets/imagenet_classes.txt',
+      ),
+
+      // ========== YOLO11 Nano Models (Web) ==========
+      const YoloModelDefinition(
+        name: 'yolo11n_portable',
+        displayName: 'YOLO11 Nano (Web)',
+        description: 'Web-compatible object detection - portable backend',
+        assetPath: 'assets/models/yolo11n_portable.pte',
+        inputSize: 640,
+        labelsAssetPath: 'assets/coco_labels.txt',
+      ),
+
+      // ========== YOLOv8 Nano Models (Web) ==========
+      const YoloModelDefinition(
+        name: 'yolov8n_portable',
+        displayName: 'YOLOv8 Nano (Web)',
+        description: 'Web-compatible object detection - portable backend',
+        assetPath: 'assets/models/yolov8n_portable.pte',
+        inputSize: 640,
+        labelsAssetPath: 'assets/coco_labels.txt',
+      ),
+
+      // ========== YOLOv5 Nano Models (Web) ==========
+      const YoloModelDefinition(
+        name: 'yolov5n_portable',
+        displayName: 'YOLOv5 Nano (Web)',
+        description: 'Web-compatible object detection - portable backend',
+        assetPath: 'assets/models/yolov5n_portable.pte',
+        inputSize: 640,
+        labelsAssetPath: 'assets/coco_labels.txt',
+      ),
+    ];
+  }
+
+  /// Models optimized for native platforms (XNNPACK, CoreML, MPS, Vulkan)
+  static List<ModelDefinition> _nativeModels() {
     return [
       // ========== MobileNet Models ==========
       // MobileNet V3 Small - XNNPACK (CPU)

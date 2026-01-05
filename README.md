@@ -120,7 +120,41 @@ See the `example/` directory for a full working application:
 ### Web (Experimental)
 - **Status**: Experimental - API may change
 - **Runtime**: WebAssembly (Wasm)
-- **Supported Backends**: XNNPACK (Wasm)
+- **Supported Backends**: Portable (CPU-only, no hardware acceleration)
+
+#### ⚠️ Web Performance Warning
+
+**Web is significantly slower than native platforms** (~100-120x slower). The portable backend runs pure CPU operations in WebAssembly without hardware acceleration.
+
+| Platform | Backend | YOLO11n Inference | Relative Speed |
+|----------|---------|-------------------|----------------|
+| Native (macOS/iOS/Android) | XNNPACK | ~50-100ms | 🚀 100-120x faster |
+| Web | Portable | ~11-12 seconds | baseline |
+
+**Preprocessing Performance (Web):**
+
+| Method | Time | Recommendation |
+|--------|------|----------------|
+| GPU Shader | ~75ms | ✅ Default, recommended |
+| ImageLib (CPU) | ~560ms | Slower fallback |
+
+**When to use Web:**
+- ✅ Demos and prototyping
+- ✅ Infrequent inference (not real-time)
+- ✅ Accessibility (no app install required)
+- ❌ Real-time camera inference
+- ❌ Production applications requiring speed
+
+#### Web Model Export
+
+Web requires models exported with the **portable** backend (XNNPACK won't work):
+
+```bash
+cd example/python
+python main.py export --all --backends portable
+```
+
+This creates `*_portable.pte` files that work with the Wasm runtime.
 
 #### Web Setup
 
@@ -147,8 +181,8 @@ dart run executorch_flutter:setup_web
 3. **Build the Wasm module** (optional - for custom ExecuTorch builds):
 
 If you need a custom Wasm build, see the [ExecuTorch Wasm documentation](https://pytorch.org/executorch/stable/). Place the generated files in `web/wasm/`:
-- `executor_runner.js`
-- `executor_runner.wasm`
+- `executorch.js`
+- `executorch.wasm`
 
 > **Note**: Web support is experimental. File-based model loading is not supported on web - use `loadModelFromAssets()` or `loadModelFromBytes()` instead.
 
@@ -221,12 +255,12 @@ flutter build apk --debug                 # For Android
 
 The example app demonstrates three preprocessing approaches for common model types:
 
-#### 1. GPU Preprocessing (Recommended)
+#### 1. GPU Preprocessing (Default, Recommended)
 Hardware-accelerated preprocessing using Flutter Fragment Shaders:
-- **Performance**: Comparable to OpenCV on most platforms
-- **Platform Support**: All platforms (mobile + desktop)
+- **Performance**: ~75ms on web, comparable to OpenCV on native
+- **Platform Support**: All platforms including web
 - **Dependencies**: None (native Flutter APIs)
-- **Use Case**: Real-time camera inference, high frame rates
+- **Use Case**: Real-time camera inference, high frame rates, web apps
 
 **📖 [Complete GPU Preprocessing Tutorial](example/GPU_PREPROCESSING.md)** - Step-by-step guide with GLSL shader examples
 
@@ -234,8 +268,8 @@ Hardware-accelerated preprocessing using Flutter Fragment Shaders:
 
 #### 2. OpenCV Preprocessing
 High-performance C++ library preprocessing:
-- **Performance**: High-performance (very close to GPU on macOS)
-- **Platform Support**: All platforms (cross-platform)
+- **Performance**: High-performance (very close to GPU on native)
+- **Platform Support**: Native platforms only (not available on web)
 - **Dependencies**: opencv_dart package
 - **Use Case**: Advanced image processing, computer vision operations
 
@@ -243,10 +277,10 @@ See **[OpenCV Processors](example/lib/processors/opencv/)** for implementations.
 
 #### 3. CPU Preprocessing (image library)
 Pure Dart image processing:
-- **Performance**: Slower than GPU/OpenCV, suitable for non-realtime use
+- **Performance**: ~560ms on web, slower than GPU/OpenCV
 - **Platform Support**: All platforms
 - **Dependencies**: image package
-- **Use Case**: Simple preprocessing, debugging
+- **Use Case**: Simple preprocessing, debugging, fallback option
 
 See the [example app](example/) for complete processor implementations using the strategy pattern.
 
