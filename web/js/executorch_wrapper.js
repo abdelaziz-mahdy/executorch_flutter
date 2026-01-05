@@ -14,6 +14,38 @@ class ExecuTorchRunner {
     this.nextModelId = 0;
     this.loadedModels = new Map(); // modelId -> { path, metadata }
     this.initPromise = null;
+    this.debugLoggingEnabled = false; // Debug logging flag
+  }
+
+  /**
+   * Enable or disable debug logging
+   * @param {boolean} enabled - true to enable, false to disable
+   */
+  setDebugLogging(enabled) {
+    this.debugLoggingEnabled = enabled;
+    if (enabled) {
+      console.log('[ExecuTorch] Debug logging enabled');
+    } else {
+      console.log('[ExecuTorch] Debug logging disabled');
+    }
+  }
+
+  /**
+   * Internal logging method (respects debug flag)
+   * @param {...any} args - Arguments to log
+   */
+  _log(...args) {
+    if (this.debugLoggingEnabled) {
+      console.log('[ExecuTorch]', ...args);
+    }
+  }
+
+  /**
+   * Internal error logging method (always logs)
+   * @param {...any} args - Arguments to log
+   */
+  _logError(...args) {
+    console.error('[ExecuTorch Error]', ...args);
   }
 
   /**
@@ -34,23 +66,23 @@ class ExecuTorchRunner {
       window.Module = {
         // Redirect stdout/stderr to console
         print: (text) => {
-          console.log('[ExecuTorch]', text);
+          this._log(text);
         },
         printErr: (text) => {
-          console.error('[ExecuTorch Error]', text);
+          this._logError(text);
         },
 
         // Called when Wasm is ready
         onRuntimeInitialized: () => {
           this.module = window.Module;
           this.isInitialized = true;
-          console.log('[ExecuTorch] Wasm runtime initialized');
+          this._log('Wasm runtime initialized');
           resolve();
         },
 
         // Error handler
         onAbort: (error) => {
-          console.error('[ExecuTorch] Wasm initialization failed:', error);
+          this._logError('Wasm initialization failed:', error);
           reject(new Error(`Wasm initialization failed: ${error}`));
         },
 
@@ -65,7 +97,7 @@ class ExecuTorchRunner {
       script.src = 'packages/executorch_flutter/web/wasm/executor_runner.js';
       script.async = true;
       script.onload = () => {
-        console.log('[ExecuTorch] executor_runner.js loaded');
+        this._log('executor_runner.js loaded');
         // Module.onRuntimeInitialized will be called when ready
       };
       script.onerror = (error) => {
@@ -100,7 +132,7 @@ class ExecuTorchRunner {
 
       // Write model bytes to virtual filesystem
       this.module.FS.writeFile(modelPath, modelBytes);
-      console.log(`[ExecuTorch] Wrote model to virtual FS: ${modelPath} (${modelBytes.length} bytes)`);
+      this._log(`Wrote model to virtual FS: ${modelPath} (${modelBytes.length} bytes)`);
 
       // TODO: Actually load the model using ExecuTorch C++ API via Emscripten bindings
       // For now, we just store the path and return metadata
@@ -117,7 +149,7 @@ class ExecuTorchRunner {
         }
       });
 
-      console.log(`[ExecuTorch] Model ${modelId} loaded successfully`);
+      this._log(`Model ${modelId} loaded successfully`);
 
       return {
         modelId: modelId,
@@ -126,7 +158,7 @@ class ExecuTorchRunner {
       };
 
     } catch (error) {
-      console.error('[ExecuTorch] Failed to load model:', error);
+      this._logError('Failed to load model:', error);
       throw new Error(`Failed to load model: ${error.message}`);
     }
   }
@@ -153,7 +185,7 @@ class ExecuTorchRunner {
     }
 
     try {
-      console.log(`[ExecuTorch] Running inference on model ${modelId} with ${inputs.length} inputs`);
+      this._log(`Running inference on model ${modelId} with ${inputs.length} inputs`);
 
       // TODO: Actual inference implementation using ExecuTorch C++ API
       // For now, return mock outputs (will be replaced when C++ bindings are added)
@@ -170,12 +202,12 @@ class ExecuTorchRunner {
         name: `output_${index}`,
       }));
 
-      console.log(`[ExecuTorch] Inference completed, returning ${mockOutputs.length} outputs`);
+      this._log(`Inference completed, returning ${mockOutputs.length} outputs`);
 
       return mockOutputs;
 
     } catch (error) {
-      console.error('[ExecuTorch] Inference failed:', error);
+      this._logError('Inference failed:', error);
       throw new Error(`Inference failed: ${error.message}`);
     }
   }
@@ -191,7 +223,7 @@ class ExecuTorchRunner {
     }
 
     if (!this.loadedModels.has(modelId)) {
-      console.warn(`[ExecuTorch] Model ${modelId} not found (already disposed?)`);
+      this._log(`Model ${modelId} not found (already disposed?)`);
       return;
     }
 
@@ -205,18 +237,18 @@ class ExecuTorchRunner {
       // Remove model file from virtual filesystem
       try {
         this.module.FS.unlink(modelPath);
-        console.log(`[ExecuTorch] Removed model file from virtual FS: ${modelPath}`);
+        this._log(`Removed model file from virtual FS: ${modelPath}`);
       } catch (e) {
-        console.warn(`[ExecuTorch] Failed to remove model file: ${e.message}`);
+        this._log(`Failed to remove model file: ${e.message}`);
       }
 
       // Remove from loaded models map
       this.loadedModels.delete(modelId);
 
-      console.log(`[ExecuTorch] Model ${modelId} disposed successfully`);
+      this._log(`Model ${modelId} disposed successfully`);
 
     } catch (error) {
-      console.error('[ExecuTorch] Failed to dispose model:', error);
+      this._logError('Failed to dispose model:', error);
       throw new Error(`Failed to dispose model: ${error.message}`);
     }
   }
@@ -260,4 +292,5 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = ExecuTorchRunner;
 }
 
+// Always log wrapper loaded (not affected by debug flag)
 console.log('[ExecuTorch] JavaScript wrapper loaded');

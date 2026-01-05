@@ -1,9 +1,25 @@
-/// Web platform stub - exports ExecuTorchModelWeb
+/// Web platform stub for ExecuTorchModel
+///
+/// Provides platform-specific factory methods for web platform.
+/// Used internally by ExecuTorchModel static methods.
 library;
 
-import 'web/executorch_model_web.dart' as web;
+import 'dart:typed_data';
 
-export 'web/executorch_model_web.dart' show ExecuTorchModelWeb;
+import 'web/executorch_model_web.dart';
 
-/// Type alias for consistency across platforms
-typedef ExecuTorchModel = web.ExecuTorchModelWeb;
+/// Load model from file path (not supported on web)
+Future<ExecuTorchModelWeb> load(String filePath) {
+  throw UnsupportedError(
+    'ExecuTorchModel.load() from file path is not supported on web. '
+    'Use loadFromAsset() or loadFromBytes() instead.',
+  );
+}
+
+/// Load model from bytes
+Future<ExecuTorchModelWeb> loadFromBytes(Uint8List modelBytes) =>
+    ExecuTorchModelWeb.loadFromBytes(modelBytes);
+
+/// Load model from asset bundle
+Future<ExecuTorchModelWeb> loadFromAsset(String assetPath) =>
+    ExecuTorchModelWeb.loadFromAsset(assetPath);

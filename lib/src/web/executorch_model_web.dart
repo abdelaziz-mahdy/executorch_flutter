@@ -7,7 +7,10 @@ library;
 import 'dart:js_interop';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
+
 import '../executorch_errors.dart';
+import '../executorch_model.dart';
 import '../generated/executorch_api.dart';
 import 'js_interop.dart' as js;
 import 'wasm_module_loader.dart';
@@ -18,14 +21,14 @@ import 'wasm_module_loader.dart';
 /// - Loads models into the Wasm virtual filesystem
 /// - Runs inference via JavaScript interop
 /// - Manages model lifecycle using JavaScript wrapper
-class ExecuTorchModelWeb {
+class ExecuTorchModelWeb implements ExecuTorchModel {
   ExecuTorchModelWeb._({
     required this.modelId,
     required this.inputShapes,
     required this.outputShapes,
   });
 
-  /// Unique identifier for this model instance
+  @override
   final String modelId;
 
   /// Expected input tensor shapes
@@ -43,7 +46,17 @@ class ExecuTorchModelWeb {
   /// Returns an [ExecuTorchModelWeb] instance ready for inference
   ///
   /// Throws [ExecuTorchModelException] if loading fails
-  static Future<ExecuTorchModelWeb> load(Uint8List modelBytes) async {
+  static Future<ExecuTorchModelWeb> load(Uint8List modelBytes) async =>
+      loadFromBytes(modelBytes);
+
+  /// Load a model from bytes (alias for [load])
+  ///
+  /// [modelBytes] - Model file bytes (.pte format)
+  ///
+  /// Returns an [ExecuTorchModelWeb] instance ready for inference
+  ///
+  /// Throws [ExecuTorchModelException] if loading fails
+  static Future<ExecuTorchModelWeb> loadFromBytes(Uint8List modelBytes) async {
     try {
       // Ensure Wasm module is initialized
       await WasmModuleLoader.ensureInitialized();
@@ -74,6 +87,24 @@ class ExecuTorchModelWeb {
     }
   }
 
+  /// Load a model from Flutter asset bundle
+  ///
+  /// [assetPath] - Path to the model in the asset bundle
+  ///
+  /// Returns an [ExecuTorchModelWeb] instance ready for inference
+  ///
+  /// Throws [ExecuTorchModelException] if asset is not found or loading fails
+  static Future<ExecuTorchModelWeb> loadFromAsset(String assetPath) async {
+    try {
+      final byteData = await rootBundle.load(assetPath);
+      return loadFromBytes(byteData.buffer.asUint8List());
+    } catch (e) {
+      throw ExecuTorchModelException(
+        'Failed to load model from asset $assetPath: $e',
+      );
+    }
+  }
+
   /// Execute inference on the model
   ///
   /// [inputs] - List of input tensors matching model's input specification
@@ -81,6 +112,7 @@ class ExecuTorchModelWeb {
   /// Returns list of output tensors from the model
   ///
   /// Throws [ExecuTorchInferenceException] if inference fails
+@override
   Future<List<TensorData>> forward(List<TensorData> inputs) async {
     if (_isDisposed) {
       throw const ExecuTorchModelException(
@@ -116,6 +148,7 @@ class ExecuTorchModelWeb {
   /// Dispose this model and free its resources
   ///
   /// Call this when you're done with the model to free platform resources
+@override
   Future<void> dispose() async {
     if (_isDisposed) {
       return;
@@ -137,12 +170,12 @@ class ExecuTorchModelWeb {
   }
 
   /// Check if this model has been disposed
+@override
   bool get isDisposed => _isDisposed;
 
   /// Convert Dart TensorData list to JavaScript TensorData array
-  List<js.TensorData> _convertTensorsToJS(List<TensorData> tensors) {
-    return tensors.map((tensor) {
-      return js.TensorData(
+  List<js.TensorData> _convertTensorsToJS(List<TensorData> tensors) =>
+      tensors.map((tensor) => js.TensorData(
         shape: tensor.shape
             .map((dim) => (dim ?? 0).toJS)
             .toList()
@@ -150,9 +183,7 @@ class ExecuTorchModelWeb {
         dataType: _tensorTypeToString(tensor.dataType),
         data: tensor.data.toJSUint8Array(),
         name: tensor.name,
-      );
-    }).toList();
-  }
+      )).toList();
 
   /// Convert JavaScript TensorData array to Dart TensorData list
   List<TensorData> _convertTensorsFromJS(JSArray<js.TensorData> jsTensors) {

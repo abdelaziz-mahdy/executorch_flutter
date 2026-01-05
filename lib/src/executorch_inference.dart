@@ -2,10 +2,10 @@
 library;
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'executorch_errors.dart';
+import 'executorch_manager_native_stub.dart' as stub
+    if (dart.library.js_interop) 'executorch_manager_web_stub.dart';
 import 'executorch_model.dart';
 import 'generated/executorch_api.dart';
 
@@ -13,48 +13,25 @@ import 'generated/executorch_api.dart';
 ///
 /// This class provides the main API for ExecuTorch Flutter integration,
 /// managing model lifecycle, inference execution, and resource management.
-/// It acts as a facade over the lower-level Pigeon APIs and model wrappers.
-class ExecutorchManager {
-  ExecutorchManager._();
-
-  static ExecutorchManager? _instance;
-
+/// It acts as a facade over the lower-level platform-specific implementations.
+///
+/// Platform-specific implementations:
+/// - **Native (Android, iOS, macOS)**: Uses Pigeon for platform communication
+/// - **Web**: Uses WebAssembly via JavaScript interop
+abstract class ExecutorchManager {
   /// Get the singleton instance of ExecutorchManager
-  // ignore: prefer_constructors_over_static_methods
-  static ExecutorchManager get instance {
-    _instance ??= ExecutorchManager._();
-    return _instance!;
-  }
-
-  /// Internal reference to the Pigeon host API
-  late final ExecutorchHostApi _hostApi = ExecutorchHostApi();
-
-  /// Cache of loaded models by model ID
-  final Map<String, ExecuTorchModel> _loadedModels = {};
-
-  /// Whether the manager has been initialized
-  bool _initialized = false;
+  ///
+  /// The actual implementation is platform-specific:
+  /// - Native platforms use ExecutorchManagerNative
+  /// - Web platform uses ExecutorchManagerWeb
+  static ExecutorchManager get instance => stub.instance;
 
   /// Initialize the ExecutorchManager
   ///
   /// This should be called once before using any other methods.
   /// It sets up the platform communication channels and verifies
-  /// that the native ExecuTorch libraries are available.
-  Future<void> initialize() async {
-    if (_initialized) return;
-
-    try {
-      // Test connectivity by trying to get loaded models
-      await _hostApi.getLoadedModels();
-      _initialized = true;
-    } catch (e) {
-      throw ExecuTorchPlatformException(
-        'Failed to initialize ExecutorchManager: $e\n'
-        'Make sure ExecuTorch native libraries are properly installed.',
-        e.toString(),
-      );
-    }
-  }
+  /// that the ExecuTorch libraries are available.
+  Future<void> initialize();
 
   /// Enable or disable ExecuTorch debug logging
   ///
@@ -63,19 +40,10 @@ class ExecutorchManager {
   ///
   /// Note: Debug logging only works in debug builds of the native libraries.
   /// In release builds, this method has no effect.
+  /// On web platform, logs will be printed to the browser console.
   ///
   /// [enabled] - true to enable logging, false to disable
-  Future<void> setDebugLogging(bool enabled) async {
-    _ensureInitialized();
-    try {
-      await _hostApi.setDebugLogging(enabled);
-    } catch (e) {
-      throw ExecuTorchPlatformException(
-        'Failed to set debug logging: $e',
-        e.toString(),
-      );
-    }
-  }
+  Future<void> setDebugLogging(bool enabled);
 
   /// Load an ExecuTorch model from a file path
   ///
@@ -83,139 +51,64 @@ class ExecutorchManager {
   /// Returns the loaded model instance that can be used for inference.
   ///
   /// The model will be cached and accessed later via [getLoadedModel].
-  /// If a model with the same file path is loaded, returns cached instance.
-  Future<ExecuTorchModel> loadModel(String filePath) async {
-    _ensureInitialized();
-
-    // Validate file path
-    if (!File(filePath).existsSync()) {
-      throw ExecuTorchModelException(
-        'Model file not found: $filePath',
-        'file_path: $filePath',
-      );
-    }
-
-    try {
-      final model = await ExecuTorchModel.load(filePath);
-      _loadedModels[model.modelId] = model;
-      return model;
-    } catch (e) {
-      if (e is ExecuTorchException) rethrow;
-      throw ExecuTorchModelException(
-        'Failed to load model from $filePath: $e',
-        'file_path: $filePath, error: ${e.toString()}',
-      );
-    }
-  }
+  ///
+  /// Note: On web platform, use [loadModelFromAssets] or [loadModelFromBytes] instead.
+  Future<ExecuTorchModel> loadModel(String filePath);
 
   /// Load an ExecuTorch model from asset bundle
   ///
   /// [assetPath] should be the path to the model in the Flutter assets bundle.
   /// This is a convenience method for loading models packaged with the app.
-  Future<ExecuTorchModel> loadModelFromAssets(String assetPath) async {
-    _ensureInitialized();
+  /// Works on all platforms including web.
+  Future<ExecuTorchModel> loadModelFromAssets(String assetPath);
 
-    // For now, delegate to loadModel - in a full implementation,
-    // this would extract the asset to a temporary file first
-    throw UnimplementedError(
-      'Asset loading not yet implemented. '
-      'Use loadModel() with file path instead.',
-    );
-  }
+  /// Load an ExecuTorch model from bytes
+  ///
+  /// [modelBytes] should contain the raw .pte model data.
+  /// This is useful for loading models downloaded from network or generated dynamically.
+  /// Works on all platforms including web.
+  Future<ExecuTorchModel> loadModelFromBytes(Uint8List modelBytes);
 
   /// Get a loaded model by its ID
   ///
   /// Returns null if no model with the given ID is loaded.
-  ExecuTorchModel? getLoadedModel(String modelId) => _loadedModels[modelId];
+  ExecuTorchModel? getLoadedModel(String modelId);
 
   /// Get all currently loaded models
   ///
   /// Returns a list of all ExecuTorchModel instances that are currently loaded
   /// and available for inference via [ExecuTorchModel.forward].
-  List<ExecuTorchModel> getLoadedModels() =>
-      List.unmodifiable(_loadedModels.values);
+  List<ExecuTorchModel> getLoadedModels();
 
   /// Get the IDs of all loaded models
   ///
-  /// This queries the platform side for the most up-to-date list.
-  Future<List<String>> getLoadedModelIds() async {
-    _ensureInitialized();
-
-    try {
-      final ids = await _hostApi.getLoadedModels();
-      return ids.whereType<String>().toList();
-    } catch (e) {
-      throw ExecuTorchPlatformException(
-        'Failed to get loaded model IDs: $e',
-        e.toString(),
-      );
-    }
-  }
+  /// This queries the platform side for the most up-to-date list on native platforms.
+  /// On web, returns the cached list of model IDs.
+  Future<List<String>> getLoadedModelIds();
 
   /// Dispose a loaded model and free its resources
   ///
   /// After calling this method, the model cannot be used for inference.
   /// The model is removed from the loaded models cache.
-  Future<void> disposeModel(String modelId) async {
-    _ensureInitialized();
-
-    final model = _loadedModels.remove(modelId);
-    if (model != null) {
-      await model.dispose();
-    } else {
-      // Try to dispose on platform side even if not in our cache
-      try {
-        await _hostApi.dispose(modelId);
-      } catch (e) {
-        // Ignore errors for unknown models
-      }
-    }
-  }
+  Future<void> disposeModel(String modelId);
 
   /// Dispose all loaded models and free their resources
   ///
   /// This is useful for cleanup when the app is shutting down or
   /// when you want to free all model memory at once.
-  Future<void> disposeAllModels() async {
-    _ensureInitialized();
-
-    final modelIds = List<String>.from(_loadedModels.keys);
-    for (final modelId in modelIds) {
-      await disposeModel(modelId);
-    }
-  }
+  Future<void> disposeAllModels();
 
   /// Get detailed information about system memory usage
   ///
   /// Returns a map with memory statistics, if available on the platform.
   /// This is useful for monitoring memory usage and detecting leaks.
-  Future<Map<String, Object>> getMemoryInfo() async {
-    _ensureInitialized();
-
-    // This would be implemented with platform-specific memory queries
-    // For now, return basic information
-    return {
-      'loaded_models_count': _loadedModels.length,
-      'loaded_model_ids': _loadedModels.keys.toList(),
-      'platform': Platform.operatingSystem,
-      'timestamp': DateTime.now().toIso8601String(),
-    };
-  }
+  Future<Map<String, Object>> getMemoryInfo();
 
   /// Check if ExecuTorch is properly initialized and available
   ///
   /// Returns true if the manager is initialized and can communicate
-  /// with the native ExecuTorch libraries.
-  Future<bool> isAvailable() async {
-    if (!_initialized) return false;
-
-    try {
-      await _hostApi.getLoadedModels();
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  /// with the native ExecuTorch libraries or web Wasm module.
+  Future<bool> isAvailable();
 
   /// Create tensor data with validation
   ///
@@ -226,64 +119,13 @@ class ExecutorchManager {
     required TensorType dataType,
     required List<num> data,
     String? name,
-  }) {
-    // Convert numeric data to bytes based on data type
-    final bytes = _convertNumericDataToBytes(data, dataType);
-
-    final tensor = TensorData(
-      shape: shape.cast<int?>(),
-      dataType: dataType,
-      data: bytes,
-      name: name,
-    );
-
-    return tensor;
-  }
-
-  /// Utility method to convert numeric data to bytes
-  static Uint8List _convertNumericDataToBytes(
-      List<num> data, TensorType dataType) {
-    switch (dataType) {
-      case TensorType.float32:
-        final float32List =
-            Float32List.fromList(data.map((e) => e.toDouble()).toList());
-        return float32List.buffer.asUint8List();
-
-      case TensorType.int32:
-        final int32List =
-            Int32List.fromList(data.map((e) => e.toInt()).toList());
-        return int32List.buffer.asUint8List();
-
-      case TensorType.int8:
-        return Uint8List.fromList(
-            data.map((e) => e.toInt().clamp(-128, 127) + 128).toList());
-
-      case TensorType.uint8:
-        return Uint8List.fromList(
-            data.map((e) => e.toInt().clamp(0, 255)).toList());
-    }
-  }
-
-  /// Ensure the manager has been initialized
-  void _ensureInitialized() {
-    if (!_initialized) {
-      throw const ExecuTorchPlatformException(
-        'ExecutorchManager not initialized. Call initialize() first.',
-      );
-    }
-  }
+  });
 
   /// Cleanup resources when the manager is no longer needed
   ///
   /// This should be called when the app is shutting down to ensure
   /// proper cleanup of all loaded models and platform resources.
-  Future<void> shutdown() async {
-    if (!_initialized) return;
-
-    await disposeAllModels();
-    _initialized = false;
-    _instance = null;
-  }
+  Future<void> shutdown();
 }
 
 /// Utility class for working with ExecuTorch tensors

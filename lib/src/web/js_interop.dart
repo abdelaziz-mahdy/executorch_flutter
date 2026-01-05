@@ -18,6 +18,11 @@ extension type ExecuTorchRunner._(JSObject _) implements JSObject {
   /// Initialize the Wasm module (call once before using)
   external JSPromise<JSAny?> initialize();
 
+  /// Enable or disable debug logging
+  ///
+  /// When enabled, ExecuTorch operations will log to browser console
+  external void setDebugLogging(bool enabled);
+
   /// Load a model from bytes
   ///
   /// Returns a Promise that resolves to a ModelLoadResult
