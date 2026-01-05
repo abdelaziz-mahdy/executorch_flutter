@@ -8,7 +8,7 @@ import 'gemma_model_definition.dart';
 /// Central registry of all available models
 /// To add a new model, just add it to this list!
 /// Each model is completely self-contained and knows:
-/// - Where its model file is
+/// - Where to download its model file from (GitHub)
 /// - Where its labels are (if applicable)
 /// - How to process its inputs/outputs
 /// - How to render its results
@@ -19,7 +19,16 @@ import 'gemma_model_definition.dart';
 /// - CoreML: Apple Neural Engine optimization (iOS, macOS)
 /// - MPS: Metal Performance Shaders for GPU acceleration (iOS, macOS)
 /// - Vulkan: Cross-platform GPU acceleration (Android, Linux)
+///
+/// Model Hosting:
+/// Models are hosted on GitHub Releases to reduce app bundle size.
+/// They are downloaded on first use and cached locally.
 class ModelRegistry {
+  /// Base URL for model downloads from GitHub Releases
+  /// Update this to point to your release hosting location
+  static const String _baseUrl =
+      'https://github.com/pybind/executorch_flutter/releases/download/models-v1.0.0';
+
   static Future<List<ModelDefinition>> loadAll() async {
     // Web platform uses portable backend models
     if (UniversalPlatform.isWeb) {
@@ -34,42 +43,46 @@ class ModelRegistry {
   static List<ModelDefinition> _webModels() {
     return [
       // ========== MobileNet Models (Web) ==========
-      const MobileNetModelDefinition(
+      MobileNetModelDefinition(
         name: 'mobilenet_v3_small_portable',
         displayName: 'MobileNet V3 Small (Web)',
         description: 'Web-compatible image classification - portable backend',
-        assetPath: 'assets/models/mobilenet_v3_small_portable.pte',
+        remoteUrl: '$_baseUrl/mobilenet_v3_small_portable.pte',
         inputSize: 224,
+        fileSizeMB: 9.5,
         labelsAssetPath: 'assets/imagenet_classes.txt',
       ),
 
       // ========== YOLO11 Nano Models (Web) ==========
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolo11n_portable',
         displayName: 'YOLO11 Nano (Web)',
         description: 'Web-compatible object detection - portable backend',
-        assetPath: 'assets/models/yolo11n_portable.pte',
+        remoteUrl: '$_baseUrl/yolo11n_portable.pte',
         inputSize: 640,
+        fileSizeMB: 5.4,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // ========== YOLOv8 Nano Models (Web) ==========
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov8n_portable',
         displayName: 'YOLOv8 Nano (Web)',
         description: 'Web-compatible object detection - portable backend',
-        assetPath: 'assets/models/yolov8n_portable.pte',
+        remoteUrl: '$_baseUrl/yolov8n_portable.pte',
         inputSize: 640,
+        fileSizeMB: 6.2,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // ========== YOLOv5 Nano Models (Web) ==========
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov5n_portable',
         displayName: 'YOLOv5 Nano (Web)',
         description: 'Web-compatible object detection - portable backend',
-        assetPath: 'assets/models/yolov5n_portable.pte',
+        remoteUrl: '$_baseUrl/yolov5n_portable.pte',
         inputSize: 640,
+        fileSizeMB: 3.9,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
     ];
@@ -80,177 +93,194 @@ class ModelRegistry {
     return [
       // ========== MobileNet Models ==========
       // MobileNet V3 Small - XNNPACK (CPU)
-      const MobileNetModelDefinition(
+      MobileNetModelDefinition(
         name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (XNNPACK)',
         description:
             'CPU-optimized image classification - works on all platforms',
-        assetPath: 'assets/models/mobilenet_v3_small_xnnpack.pte',
+        remoteUrl: '$_baseUrl/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
+        fileSizeMB: 9.5,
         labelsAssetPath: 'assets/imagenet_classes.txt',
       ),
 
       // MobileNet V3 Small - CoreML (Apple NPU)
-      const MobileNetModelDefinition(
+      MobileNetModelDefinition(
         name: 'mobilenet_v3_small_coreml',
         displayName: 'MobileNet V3 Small (CoreML)',
         description: 'Apple Neural Engine optimization - iOS/macOS only',
-        assetPath: 'assets/models/mobilenet_v3_small_coreml.pte',
+        remoteUrl: '$_baseUrl/mobilenet_v3_small_coreml.pte',
         inputSize: 224,
+        fileSizeMB: 10.2,
         labelsAssetPath: 'assets/imagenet_classes.txt',
       ),
 
       // MobileNet V3 Small - MPS (Apple GPU)
-      const MobileNetModelDefinition(
+      MobileNetModelDefinition(
         name: 'mobilenet_v3_small_mps',
         displayName: 'MobileNet V3 Small (MPS)',
         description: 'Metal GPU acceleration - iOS/macOS only',
-        assetPath: 'assets/models/mobilenet_v3_small_mps.pte',
+        remoteUrl: '$_baseUrl/mobilenet_v3_small_mps.pte',
         inputSize: 224,
+        fileSizeMB: 9.8,
         labelsAssetPath: 'assets/imagenet_classes.txt',
       ),
 
       // MobileNet V3 Small - Vulkan (GPU)
-      const MobileNetModelDefinition(
+      MobileNetModelDefinition(
         name: 'mobilenet_v3_small_vulkan',
         displayName: 'MobileNet V3 Small (Vulkan)',
         description: 'GPU acceleration - Android/Linux',
-        assetPath: 'assets/models/mobilenet_v3_small_vulkan.pte',
+        remoteUrl: '$_baseUrl/mobilenet_v3_small_vulkan.pte',
         inputSize: 224,
+        fileSizeMB: 9.6,
         labelsAssetPath: 'assets/imagenet_classes.txt',
       ),
 
       // ========== YOLO11 Nano Models ==========
       // YOLO11n - XNNPACK (CPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolo11n_xnnpack',
         displayName: 'YOLO11 Nano (XNNPACK)',
         description: 'CPU-optimized object detection - works on all platforms',
-        assetPath: 'assets/models/yolo11n_xnnpack.pte',
+        remoteUrl: '$_baseUrl/yolo11n_xnnpack.pte',
         inputSize: 640,
+        fileSizeMB: 5.4,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLO11n - CoreML (Apple NPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolo11n_coreml',
         displayName: 'YOLO11 Nano (CoreML)',
         description: 'Apple Neural Engine optimization - iOS/macOS only',
-        assetPath: 'assets/models/yolo11n_coreml.pte',
+        remoteUrl: '$_baseUrl/yolo11n_coreml.pte',
         inputSize: 640,
+        fileSizeMB: 5.8,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLO11n - MPS (Apple GPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolo11n_mps',
         displayName: 'YOLO11 Nano (MPS)',
         description: 'Metal GPU acceleration - iOS/macOS only',
-        assetPath: 'assets/models/yolo11n_mps.pte',
+        remoteUrl: '$_baseUrl/yolo11n_mps.pte',
         inputSize: 640,
+        fileSizeMB: 5.6,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLO11n - Vulkan (GPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolo11n_vulkan',
         displayName: 'YOLO11 Nano (Vulkan)',
         description: 'GPU acceleration - Android/Linux',
-        assetPath: 'assets/models/yolo11n_vulkan.pte',
+        remoteUrl: '$_baseUrl/yolo11n_vulkan.pte',
         inputSize: 640,
+        fileSizeMB: 5.5,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // ========== YOLOv8 Nano Models ==========
       // YOLOv8n - XNNPACK (CPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov8n_xnnpack',
         displayName: 'YOLOv8 Nano (XNNPACK)',
         description: 'CPU-optimized object detection - works on all platforms',
-        assetPath: 'assets/models/yolov8n_xnnpack.pte',
+        remoteUrl: '$_baseUrl/yolov8n_xnnpack.pte',
         inputSize: 640,
+        fileSizeMB: 6.2,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLOv8n - CoreML (Apple NPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov8n_coreml',
         displayName: 'YOLOv8 Nano (CoreML)',
         description: 'Apple Neural Engine optimization - iOS/macOS only',
-        assetPath: 'assets/models/yolov8n_coreml.pte',
+        remoteUrl: '$_baseUrl/yolov8n_coreml.pte',
         inputSize: 640,
+        fileSizeMB: 6.6,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLOv8n - MPS (Apple GPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov8n_mps',
         displayName: 'YOLOv8 Nano (MPS)',
         description: 'Metal GPU acceleration - iOS/macOS only',
-        assetPath: 'assets/models/yolov8n_mps.pte',
+        remoteUrl: '$_baseUrl/yolov8n_mps.pte',
         inputSize: 640,
+        fileSizeMB: 6.4,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLOv8n - Vulkan (GPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov8n_vulkan',
         displayName: 'YOLOv8 Nano (Vulkan)',
         description: 'GPU acceleration - Android/Linux',
-        assetPath: 'assets/models/yolov8n_vulkan.pte',
+        remoteUrl: '$_baseUrl/yolov8n_vulkan.pte',
         inputSize: 640,
+        fileSizeMB: 6.3,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // ========== YOLOv5 Nano Models ==========
       // YOLOv5n - XNNPACK (CPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov5n_xnnpack',
         displayName: 'YOLOv5 Nano (XNNPACK)',
         description: 'CPU-optimized object detection - works on all platforms',
-        assetPath: 'assets/models/yolov5n_xnnpack.pte',
+        remoteUrl: '$_baseUrl/yolov5n_xnnpack.pte',
         inputSize: 640,
+        fileSizeMB: 3.9,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLOv5n - CoreML (Apple NPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov5n_coreml',
         displayName: 'YOLOv5 Nano (CoreML)',
         description: 'Apple Neural Engine optimization - iOS/macOS only',
-        assetPath: 'assets/models/yolov5n_coreml.pte',
+        remoteUrl: '$_baseUrl/yolov5n_coreml.pte',
         inputSize: 640,
+        fileSizeMB: 4.2,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLOv5n - MPS (Apple GPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov5n_mps',
         displayName: 'YOLOv5 Nano (MPS)',
         description: 'Metal GPU acceleration - iOS/macOS only',
-        assetPath: 'assets/models/yolov5n_mps.pte',
+        remoteUrl: '$_baseUrl/yolov5n_mps.pte',
         inputSize: 640,
+        fileSizeMB: 4.0,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // YOLOv5n - Vulkan (GPU)
-      const YoloModelDefinition(
+      YoloModelDefinition(
         name: 'yolov5n_vulkan',
         displayName: 'YOLOv5 Nano (Vulkan)',
         description: 'GPU acceleration - Android/Linux',
-        assetPath: 'assets/models/yolov5n_vulkan.pte',
+        remoteUrl: '$_baseUrl/yolov5n_vulkan.pte',
         inputSize: 640,
+        fileSizeMB: 4.0,
         labelsAssetPath: 'assets/coco_labels.txt',
       ),
 
       // ========== Text Generation Models ==========
       // Note: Text generation models currently only support XNNPACK backend
-      const GemmaModelDefinition(
+      GemmaModelDefinition(
         name: 'gemma-3-270m',
         displayName: 'Gemma 3 270M (Not Working Yet)',
         description: 'Google Gemma 3 text generation model (270M parameters)',
-        assetPath: 'assets/models/gemma-3-270m_xnnpack.pte',
+        remoteUrl: '$_baseUrl/gemma-3-270m_xnnpack.pte',
         inputSize: 128, // Sequence length
+        fileSizeMB: 540.0,
         vocabAssetPath: 'assets/models/gemma-3-270m_vocab.json',
       ),
     ];

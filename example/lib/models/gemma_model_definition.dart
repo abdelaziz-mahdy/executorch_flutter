@@ -18,8 +18,9 @@ class GemmaModelDefinition
     required super.name,
     required super.displayName,
     required super.description,
-    required super.assetPath,
+    required super.remoteUrl,
     required super.inputSize, // Sequence length (e.g., 128)
+    super.fileSizeMB,
     required this.vocabAssetPath,
   }) : super(icon: Icons.auto_awesome);
 

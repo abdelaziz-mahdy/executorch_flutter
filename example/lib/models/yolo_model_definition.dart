@@ -20,8 +20,9 @@ class YoloModelDefinition
     required super.name,
     required super.displayName,
     required super.description,
-    required super.assetPath,
+    required super.remoteUrl,
     required super.inputSize,
+    super.fileSizeMB,
     required this.labelsAssetPath,
   }) : super(icon: Icons.center_focus_strong);
 

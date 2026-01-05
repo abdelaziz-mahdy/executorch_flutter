@@ -29,7 +29,7 @@ dependencies:
   camera: ^0.10.6
 
   # HTTP client for downloading models from network
-  http: ^1.2.1
+  http: ^1.6.0
 
   # Path provider for file system access
   path_provider: ^2.1.3

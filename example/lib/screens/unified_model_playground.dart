@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:universal_platform/universal_platform.dart';
 
-import 'unified_model_playground_native.dart'
-    if (dart.library.js_interop) 'unified_model_playground_web.dart' as platform;
 import '../models/model_definition.dart';
 import '../models/model_registry.dart';
 import '../services/model_controller.dart';
+import '../services/model_download_service.dart';
 import '../ui/widgets/performance_monitor.dart';
 
 /// Unified Model Playground - works with any model type through ModelDefinition
@@ -26,6 +24,10 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   // Loading state
   bool _isLoadingModels = true;
   bool _isLoadingModel = false;
+
+  // Download state
+  double _downloadProgress = 0.0;
+  bool _isDownloading = false;
 
   // UI state
   bool _isInputExpanded = true;
@@ -74,23 +76,56 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     setState(() {
       _controller = null; // Clear controller immediately to avoid stale state
       _isLoadingModel = true;
+      _isDownloading = false;
+      _downloadProgress = 0.0;
     });
 
     // Dispose after clearing reference to prevent race conditions
     await oldController?.dispose();
 
     try {
+      // Download model from remote URL (or use cached version)
+      final downloadService = ModelDownloadService.instance;
+
+      // Check if model needs to be downloaded
+      final isCached = await downloadService.isModelCached(model.name);
+      if (!isCached) {
+        setState(() {
+          _isDownloading = true;
+          _downloadProgress = 0.0;
+        });
+      }
+
+      final downloadInfo = await downloadService.downloadModel(
+        modelName: model.name,
+        remoteUrl: model.remoteUrl,
+        onProgress: (progress, received, total) {
+          if (mounted) {
+            setState(() {
+              _downloadProgress = progress;
+            });
+          }
+        },
+      );
+
+      if (downloadInfo.state == ModelDownloadState.error) {
+        throw Exception(downloadInfo.errorMessage ?? 'Download failed');
+      }
+
+      setState(() {
+        _isDownloading = false;
+      });
+
+      // Load the model
       final ExecuTorchModel execuTorchModel;
       if (UniversalPlatform.isWeb) {
-        // Web: Load bytes directly (no file system access)
-        final byteData = await rootBundle.load(model.assetPath);
+        // Web: Load from downloaded bytes (in memory)
         execuTorchModel = await ExecuTorchModel.loadFromBytes(
-          byteData.buffer.asUint8List(),
+          downloadInfo.bytes!,
         );
       } else {
-        // Native: Write to cache directory then load from path
-        final modelPath = await platform.loadAssetToFile(model.assetPath);
-        execuTorchModel = await ExecuTorchModel.load(modelPath);
+        // Native: Load from cached file path
+        execuTorchModel = await ExecuTorchModel.load(downloadInfo.localPath!);
       }
       final settings = model.createDefaultSettings();
 
@@ -116,14 +151,14 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         setState(() {
           _controller = null; // Ensure controller is null on failure
           _isLoadingModel = false;
+          _isDownloading = false;
         });
 
-        // Show helpful error dialog only if the asset file is missing
+        // Show download error or model load error
         final errorString = e.toString();
-        final isAssetNotFound = errorString.contains('Unable to load asset') ||
-            (errorString.contains('asset') && errorString.contains('.pte'));
-        if (isAssetNotFound) {
-          _showModelNotFoundError(model);
+        if (errorString.contains('Failed to download') ||
+            errorString.contains('HTTP')) {
+          _showDownloadError(model, errorString);
         } else {
           _showModelLoadError(model, errorString);
         }
@@ -131,22 +166,18 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     }
   }
 
-  void _showModelNotFoundError(ModelDefinition model) {
-    // Get export command from model definition
-    final exportCommand = model.getExportCommand();
-    final specialSetup = model.getSpecialSetupRequirements();
-
+  void _showDownloadError(ModelDefinition model, String error) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
             Icon(
-              Icons.warning_amber,
+              Icons.cloud_off,
               color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(width: 8),
-            const Text('Model Not Found'),
+            const Text('Download Failed'),
           ],
         ),
         content: SingleChildScrollView(
@@ -155,12 +186,12 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'The ${model.displayName} model file is missing.',
+                'Failed to download ${model.displayName}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
               Text(
-                'Expected file:',
+                'Model URL:',
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               Container(
@@ -170,63 +201,62 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(
-                  model.assetPath,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                child: SelectableText(
+                  model.remoteUrl,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(fontFamily: 'monospace'),
                 ),
               ),
               Text(
-                'To export this model, run:',
+                'Error:',
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               Container(
                 padding: const EdgeInsets.all(8),
-                margin: const EdgeInsets.only(top: 4, bottom: 8),
+                margin: const EdgeInsets.only(top: 4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  color: Theme.of(context).colorScheme.errorContainer,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: SelectableText(
-                  'cd example/python\n$exportCommand',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                  error,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontFamily: 'monospace',
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
                 ),
               ),
-              if (specialSetup != null) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          specialSetup,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onPrimaryContainer,
-                          ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Check your internet connection and try again. Models are downloaded from GitHub on first use.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -450,9 +480,23 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 const SizedBox(width: 12),
                 Flexible(
                   fit: FlexFit.loose,
-                  child: Text(
-                    model.displayName,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        model.displayName,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (model.fileSizeMB > 0)
+                        Text(
+                          '${model.fileSizeMB.toStringAsFixed(1)} MB',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -469,6 +513,60 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   }
 
   Widget _buildEmptyState() {
+    // Show download/loading progress
+    if (_isLoadingModel) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_isDownloading) ...[
+              Icon(
+                Icons.cloud_download,
+                size: 64,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Downloading model...',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${(_downloadProgress * 100).toStringAsFixed(0)}%',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: 200,
+                child: LinearProgressIndicator(
+                  value: _downloadProgress,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Models are downloaded from GitHub on first use',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ] else ...[
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Loading model...',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -482,6 +580,13 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           Text(
             'Select a model to get started',
             style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Models are downloaded from GitHub on first use',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
         ],
       ),
