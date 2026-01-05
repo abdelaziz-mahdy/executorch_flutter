@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:universal_platform/universal_platform.dart';
 
 /// Camera provider options (how to capture frames)
 /// Only used by models that support camera input (e.g., image models)
@@ -15,7 +15,7 @@ enum CameraProvider {
   /// Returns available camera providers for the current platform
   /// OpenCV is not available on web
   static List<CameraProvider> get availableProviders {
-    if (kIsWeb) {
+    if (UniversalPlatform.isWeb) {
       return values.where((p) => p != CameraProvider.opencv).toList();
     }
     return values.toList();
@@ -23,7 +23,7 @@ enum CameraProvider {
 
   /// Whether this provider is available on the current platform
   bool get isAvailable {
-    if (kIsWeb && this == CameraProvider.opencv) {
+    if (UniversalPlatform.isWeb && this == CameraProvider.opencv) {
       return false;
     }
     return true;
@@ -45,7 +45,7 @@ enum PreprocessingProvider {
   /// Returns available preprocessing providers for the current platform
   /// OpenCV is not available on web
   static List<PreprocessingProvider> get availableProviders {
-    if (kIsWeb) {
+    if (UniversalPlatform.isWeb) {
       return values.where((p) => p != PreprocessingProvider.opencv).toList();
     }
     return values.toList();
@@ -53,7 +53,7 @@ enum PreprocessingProvider {
 
   /// Whether this provider is available on the current platform
   bool get isAvailable {
-    if (kIsWeb && this == PreprocessingProvider.opencv) {
+    if (UniversalPlatform.isWeb && this == PreprocessingProvider.opencv) {
       return false;
     }
     return true;

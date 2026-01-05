@@ -1,7 +1,7 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:universal_platform/universal_platform.dart';
+
 import '../processors/base_processor.dart';
 import '../processors/yolo_processor.dart';
 import '../processors/yolo_input_processor.dart';
@@ -65,7 +65,8 @@ class YoloModelDefinition
     bool isCameraMode = false,
   }) {
     return ImageInputWidget(
-      onImageSelected: (File file) => onInputSelected(ImageFileInput(file)),
+      onImageSelected: (Uint8List bytes) =>
+          onInputSelected(ImageBytesInput(bytes)),
       onCameraModeToggle: onCameraModeToggle,
       isCameraMode: isCameraMode,
     );
@@ -181,7 +182,7 @@ class YoloModelDefinition
         : YoloModelSettings();
 
     // Check if we're on a platform that supports multiple camera providers
-    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    final isMobile = UniversalPlatform.isAndroid || UniversalPlatform.isIOS;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

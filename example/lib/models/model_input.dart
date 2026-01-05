@@ -1,15 +1,15 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 /// Base class for all model input types
 /// This allows the architecture to support multiple input modes without breaking changes
 abstract class ModelInput {}
 
-/// Input for static image files (e.g., gallery selection)
-class ImageFileInput extends ModelInput {
-  final File file;
+/// Input for images from bytes (works on all platforms including web)
+/// This is the recommended input type for cross-platform compatibility.
+class ImageBytesInput extends ModelInput {
+  final Uint8List imageBytes;
 
-  ImageFileInput(this.file);
+  ImageBytesInput(this.imageBytes);
 }
 
 /// Input for live camera frames

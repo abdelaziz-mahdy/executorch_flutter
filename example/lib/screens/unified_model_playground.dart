@@ -1,7 +1,8 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
+import 'package:universal_platform/universal_platform.dart';
+
 import 'unified_model_playground_native.dart'
     if (dart.library.js_interop) 'unified_model_playground_web.dart' as platform;
 import '../models/model_definition.dart';
@@ -80,7 +81,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
 
     try {
       final ExecuTorchModel execuTorchModel;
-      if (kIsWeb) {
+      if (UniversalPlatform.isWeb) {
         // Web: Load bytes directly (no file system access)
         final byteData = await rootBundle.load(model.assetPath);
         execuTorchModel = await ExecuTorchModel.loadFromBytes(

@@ -22,8 +22,8 @@ class YoloInputProcessor extends InputProcessor<ModelInput> {
   Future<List<TensorData>> process(ModelInput input) async {
     // Extract bytes from input
     final Uint8List bytes;
-    if (input is ImageFileInput) {
-      bytes = await input.file.readAsBytes();
+    if (input is ImageBytesInput) {
+      bytes = input.imageBytes;
     } else if (input is LiveCameraInput) {
       bytes = input.frameBytes;
     } else {
