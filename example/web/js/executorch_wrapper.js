@@ -93,8 +93,9 @@ class ExecuTorchRunner {
       };
 
       // Load executor_runner.js (which loads the Wasm)
+      // Path is relative to app's web directory
       const script = document.createElement('script');
-      script.src = 'packages/executorch_flutter/web/wasm/executor_runner.js';
+      script.src = 'wasm/executor_runner.js';
       script.async = true;
       script.onload = () => {
         this._log('executor_runner.js loaded');
