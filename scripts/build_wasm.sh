@@ -180,14 +180,14 @@ fi
 # Verify output files
 echo ""
 echo "Verifying build outputs..."
-if [ -f "${WEB_WASM_DIR}/executor_runner.js" ] && [ -f "${WEB_WASM_DIR}/executor_runner.wasm" ]; then
-    echo -e "${GREEN}✅ Wasm binaries successfully generated:${NC}"
+if [ -f "${WEB_WASM_DIR}/executorch.js" ] && [ -f "${WEB_WASM_DIR}/executorch.wasm" ]; then
+    echo -e "${GREEN}✅ Wasm library binaries successfully generated:${NC}"
     echo ""
-    ls -lh "${WEB_WASM_DIR}/executor_runner.js" "${WEB_WASM_DIR}/executor_runner.wasm"
+    ls -lh "${WEB_WASM_DIR}/executorch.js" "${WEB_WASM_DIR}/executorch.wasm"
     echo ""
     echo -e "${BLUE}Files are ready at: ${WEB_WASM_DIR}${NC}"
 else
-    echo -e "${RED}❌ Error: Wasm binaries not found in ${WEB_WASM_DIR}${NC}"
+    echo -e "${RED}❌ Error: Wasm library binaries not found in ${WEB_WASM_DIR}${NC}"
     exit 1
 fi
 

@@ -1,20 +1,25 @@
 /**
  * ExecuTorch Wasm JavaScript Wrapper
  *
- * Provides a clean JavaScript API around the Emscripten-generated Module
+ * Provides a clean JavaScript API around the Emscripten Embind-generated Module
  * for loading models, running inference, and managing resources.
+ *
+ * This wrapper uses the official ExecuTorch Wasm bindings which expose:
+ * - Module.load(data) - Load model from Uint8Array/ArrayBuffer
+ * - module.forward(inputs) - Run forward pass
+ * - Tensor.fromArray(sizes, data, type) - Create tensors
  *
  * This wrapper is designed to be called from Dart via dart:js_interop.
  */
 
 class ExecuTorchRunner {
   constructor() {
-    this.module = null;
+    this.wasmModule = null;
     this.isInitialized = false;
+    this.loadedModels = new Map(); // modelId -> JsModule instance
     this.nextModelId = 0;
-    this.loadedModels = new Map(); // modelId -> { path, metadata }
     this.initPromise = null;
-    this.debugLoggingEnabled = false; // Debug logging flag
+    this.debugLoggingEnabled = false;
   }
 
   /**
@@ -25,8 +30,6 @@ class ExecuTorchRunner {
     this.debugLoggingEnabled = enabled;
     if (enabled) {
       console.log('[ExecuTorch] Debug logging enabled');
-    } else {
-      console.log('[ExecuTorch] Debug logging disabled');
     }
   }
 
@@ -62,48 +65,42 @@ class ExecuTorchRunner {
     }
 
     this.initPromise = new Promise((resolve, reject) => {
-      // Configure Module before loading executor_runner.js
-      window.Module = {
-        // Redirect stdout/stderr to console
-        print: (text) => {
-          this._log(text);
-        },
-        printErr: (text) => {
-          this._logError(text);
-        },
-
-        // Called when Wasm is ready
-        onRuntimeInitialized: () => {
-          this.module = window.Module;
-          this.isInitialized = true;
-          this._log('Wasm runtime initialized');
-          resolve();
-        },
-
-        // Error handler
-        onAbort: (error) => {
-          this._logError('Wasm initialization failed:', error);
-          reject(new Error(`Wasm initialization failed: ${error}`));
-        },
-
-        // Disable default UI elements
-        canvas: null,
-        setStatus: () => {},
-        monitorRunDependencies: () => {},
-      };
-
-      // Load executor_runner.js (which loads the Wasm)
-      // Path is relative to app's web directory
+      // Load the modular executorch.js which exports createExecuTorchModule
       const script = document.createElement('script');
-      script.src = 'wasm/executor_runner.js';
+      script.src = 'wasm/executorch.js';
       script.async = true;
-      script.onload = () => {
-        this._log('executor_runner.js loaded');
-        // Module.onRuntimeInitialized will be called when ready
+
+      script.onload = async () => {
+        this._log('executorch.js loaded, initializing module...');
+
+        try {
+          // createExecuTorchModule is the factory function from MODULARIZE
+          if (typeof createExecuTorchModule !== 'function') {
+            throw new Error('createExecuTorchModule not found. Make sure executorch.js is built with -sMODULARIZE=1');
+          }
+
+          // Initialize the Wasm module
+          this.wasmModule = await createExecuTorchModule();
+          this.isInitialized = true;
+          this._log('Wasm module initialized successfully');
+
+          // Log available exports for debugging
+          if (this.debugLoggingEnabled) {
+            this._log('Available exports:', Object.keys(this.wasmModule));
+          }
+
+          resolve();
+        } catch (error) {
+          this._logError('Failed to initialize Wasm module:', error);
+          reject(new Error(`Failed to initialize ExecuTorch Wasm: ${error.message}`));
+        }
       };
+
       script.onerror = (error) => {
-        reject(new Error(`Failed to load executor_runner.js: ${error}`));
+        this._logError('Failed to load executorch.js:', error);
+        reject(new Error('Failed to load executorch.js. Make sure the file exists at wasm/executorch.js'));
       };
+
       document.head.appendChild(script);
     });
 
@@ -122,40 +119,59 @@ class ExecuTorchRunner {
 
     try {
       const modelId = this.nextModelId++;
-      const modelPath = `/models/model_${modelId}.pte`;
+      this._log(`Loading model ${modelId} (${modelBytes.length} bytes)...`);
 
-      // Create /models directory in virtual filesystem if it doesn't exist
+      // Use the Embind Module.load() API
+      // It accepts Uint8Array directly
+      const jsModule = this.wasmModule.Module.load(modelBytes);
+
+      // Get method metadata for shapes
+      let inputShapes = [];
+      let outputShapes = [];
+
       try {
-        this.module.FS.mkdir('/models');
-      } catch (e) {
-        // Directory already exists, ignore
+        // Get available methods
+        const methods = jsModule.getMethods();
+        this._log(`Model methods: ${JSON.stringify(methods)}`);
+
+        // Get metadata for 'forward' method if available
+        if (methods.includes('forward')) {
+          jsModule.loadMethod('forward');
+          const meta = jsModule.getMethodMeta('forward');
+
+          // Extract input shapes
+          if (meta.inputTensorMeta) {
+            inputShapes = meta.inputTensorMeta
+              .filter(t => t !== undefined)
+              .map(t => Array.from(t.sizes));
+          }
+
+          // Extract output shapes
+          if (meta.outputTensorMeta) {
+            outputShapes = meta.outputTensorMeta
+              .filter(t => t !== undefined)
+              .map(t => Array.from(t.sizes));
+          }
+        }
+      } catch (metaError) {
+        this._log(`Could not get method metadata: ${metaError.message}`);
       }
 
-      // Write model bytes to virtual filesystem
-      this.module.FS.writeFile(modelPath, modelBytes);
-      this._log(`Wrote model to virtual FS: ${modelPath} (${modelBytes.length} bytes)`);
-
-      // TODO: Actually load the model using ExecuTorch C++ API via Emscripten bindings
-      // For now, we just store the path and return metadata
-      // In a complete implementation, this would call:
-      // this.module._loadModel(modelPath) or similar C++ function
-
+      // Store the module
       this.loadedModels.set(modelId, {
-        path: modelPath,
-        metadata: {
-          // TODO: Extract actual shapes from loaded model
-          // For now, return empty arrays (will be populated when C++ bindings are added)
-          inputShapes: [],
-          outputShapes: [],
-        }
+        module: jsModule,
+        inputShapes: inputShapes,
+        outputShapes: outputShapes,
       });
 
       this._log(`Model ${modelId} loaded successfully`);
+      this._log(`Input shapes: ${JSON.stringify(inputShapes)}`);
+      this._log(`Output shapes: ${JSON.stringify(outputShapes)}`);
 
       return {
         modelId: modelId,
-        inputShapes: [],
-        outputShapes: [],
+        inputShapes: inputShapes,
+        outputShapes: outputShapes,
       };
 
     } catch (error) {
@@ -170,8 +186,8 @@ class ExecuTorchRunner {
    * @param {Array} inputs - Array of input tensors, each tensor is:
    *   {
    *     shape: Array<number>,
-   *     dataType: string ('float32', 'int32', 'int8', 'uint8'),
-   *     data: Uint8Array (raw bytes),
+   *     dataType: string ('float32', 'int64'),
+   *     data: Uint8Array (raw bytes) or Float32Array/BigInt64Array,
    *     name: string (optional)
    *   }
    * @returns {Promise<Array>} Array of output tensors (same format as inputs)
@@ -185,32 +201,107 @@ class ExecuTorchRunner {
       throw new Error(`Model ${modelId} not loaded`);
     }
 
+    const modelInfo = this.loadedModels.get(modelId);
+    const jsModule = modelInfo.module;
+
     try {
       this._log(`Running inference on model ${modelId} with ${inputs.length} inputs`);
 
-      // TODO: Actual inference implementation using ExecuTorch C++ API
-      // For now, return mock outputs (will be replaced when C++ bindings are added)
-      // In a complete implementation, this would:
-      // 1. Convert JS tensors to C++ format
-      // 2. Call this.module._forward(modelId, inputTensors)
-      // 3. Convert C++ output tensors back to JS format
+      // Convert input tensors to Embind Tensor objects
+      const embindInputs = inputs.map((input, idx) => {
+        return this._createEmbindTensor(input);
+      });
 
-      // Mock output for testing (returns same shape as first input)
-      const mockOutputs = inputs.map((input, index) => ({
-        shape: input.shape,
-        dataType: input.dataType,
-        data: new Uint8Array(input.data.length), // Zero-filled for now
-        name: `output_${index}`,
-      }));
+      // Run forward pass
+      const outputs = jsModule.forward(embindInputs);
 
-      this._log(`Inference completed, returning ${mockOutputs.length} outputs`);
+      // Convert output Embind Tensors back to our format
+      const result = [];
+      for (let i = 0; i < outputs.length; i++) {
+        const tensor = outputs[i];
+        result.push(this._embindTensorToOutput(tensor, `output_${i}`));
+      }
 
-      return mockOutputs;
+      this._log(`Inference completed, returning ${result.length} outputs`);
+
+      return result;
 
     } catch (error) {
       this._logError('Inference failed:', error);
       throw new Error(`Inference failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Create an Embind Tensor from our input format
+   * @private
+   */
+  _createEmbindTensor(input) {
+    const { shape, dataType, data } = input;
+    const Tensor = this.wasmModule.Tensor;
+    const ScalarType = this.wasmModule.ScalarType;
+
+    // Convert raw bytes to typed array based on dataType
+    let typedData;
+    let scalarType;
+
+    switch (dataType) {
+      case 'float32':
+        typedData = data instanceof Float32Array
+          ? Array.from(data)
+          : Array.from(new Float32Array(data.buffer, data.byteOffset, data.byteLength / 4));
+        scalarType = ScalarType.Float;
+        break;
+
+      case 'int64':
+        // BigInt64Array for int64
+        typedData = data instanceof BigInt64Array
+          ? Array.from(data)
+          : Array.from(new BigInt64Array(data.buffer, data.byteOffset, data.byteLength / 8));
+        scalarType = ScalarType.Long;
+        break;
+
+      default:
+        throw new Error(`Unsupported tensor type: ${dataType}. Supported: float32, int64`);
+    }
+
+    // Create tensor using Embind API
+    return Tensor.fromArray(shape, typedData, scalarType);
+  }
+
+  /**
+   * Convert an Embind Tensor to our output format
+   * @private
+   */
+  _embindTensorToOutput(tensor, name) {
+    const scalarType = tensor.scalarType;
+    const sizes = Array.from(tensor.sizes);
+    const data = tensor.data; // Returns typed memory view
+
+    // Determine dataType string from ScalarType
+    let dataType;
+    let outputData;
+
+    const ScalarType = this.wasmModule.ScalarType;
+
+    if (scalarType === ScalarType.Float) {
+      dataType = 'float32';
+      // Copy the data to a new Uint8Array (data is a Float32Array view)
+      outputData = new Uint8Array(new Float32Array(data).buffer);
+    } else if (scalarType === ScalarType.Long) {
+      dataType = 'int64';
+      // Copy the data to a new Uint8Array
+      outputData = new Uint8Array(new BigInt64Array(data).buffer);
+    } else {
+      throw new Error(`Unsupported output tensor type: ${scalarType.name || scalarType}`);
+    }
+
+    return {
+      shape: sizes,
+      dataType: dataType,
+      data: outputData,
+      name: name,
+    };
   }
 
   /**
@@ -220,7 +311,7 @@ class ExecuTorchRunner {
    */
   async dispose(modelId) {
     if (!this.isInitialized) {
-      return; // Already disposed or never initialized
+      return;
     }
 
     if (!this.loadedModels.has(modelId)) {
@@ -230,20 +321,9 @@ class ExecuTorchRunner {
 
     try {
       const modelInfo = this.loadedModels.get(modelId);
-      const modelPath = modelInfo.path;
 
-      // TODO: Call C++ dispose function
-      // this.module._disposeModel(modelId);
-
-      // Remove model file from virtual filesystem
-      try {
-        this.module.FS.unlink(modelPath);
-        this._log(`Removed model file from virtual FS: ${modelPath}`);
-      } catch (e) {
-        this._log(`Failed to remove model file: ${e.message}`);
-      }
-
-      // Remove from loaded models map
+      // The JsModule will be garbage collected
+      // Embind handles cleanup automatically
       this.loadedModels.delete(modelId);
 
       this._log(`Model ${modelId} disposed successfully`);
@@ -264,7 +344,11 @@ class ExecuTorchRunner {
       throw new Error(`Model ${modelId} not loaded`);
     }
 
-    return this.loadedModels.get(modelId).metadata;
+    const modelInfo = this.loadedModels.get(modelId);
+    return {
+      inputShapes: modelInfo.inputShapes,
+      outputShapes: modelInfo.outputShapes,
+    };
   }
 
   /**
@@ -294,4 +378,4 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 // Always log wrapper loaded (not affected by debug flag)
-console.log('[ExecuTorch] JavaScript wrapper loaded');
+console.log('[ExecuTorch] JavaScript wrapper loaded (Embind version)');

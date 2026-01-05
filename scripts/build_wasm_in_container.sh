@@ -1,11 +1,11 @@
 #!/bin/bash
-# Script to build ExecuTorch Wasm binaries inside Docker container or natively
-# This script is called by the Docker container or by build_wasm.sh for native builds
+# Script to build ExecuTorch Wasm library inside Docker container or natively
+# This builds executorch_wasm as an embeddable library using Embind
 
 set -e  # Exit on error
 
 echo "========================================"
-echo "ExecuTorch Wasm Build Script"
+echo "ExecuTorch Wasm Library Build Script"
 echo "========================================"
 echo ""
 
@@ -13,6 +13,7 @@ echo ""
 if [ -f /.dockerenv ]; then
     echo "Running in Docker container"
     EXECUTORCH_ROOT="/workspace/executorch"
+    SCRIPT_DIR="/workspace/scripts"
 else
     echo "Running natively"
     # Assume we're in the scripts/ directory
@@ -21,6 +22,7 @@ else
 fi
 
 echo "ExecuTorch root: ${EXECUTORCH_ROOT}"
+echo "Script dir: ${SCRIPT_DIR}"
 echo ""
 
 # Navigate to ExecuTorch directory
@@ -52,13 +54,11 @@ echo "Emscripten version: $(emcc --version | head -n 1)"
 echo ""
 
 # Clean previous build (optional)
-if [ -d "cmake-out-wasm" ]; then
+BUILD_DIR="cmake-out-wasm-lib"
+if [ -d "${BUILD_DIR}" ]; then
     echo "Cleaning previous build..."
-    rm -rf cmake-out-wasm
+    rm -rf "${BUILD_DIR}"
 fi
-
-# Note: We skip ./install_executorch.sh for Wasm builds
-# The Python package isn't needed - we only build the C++ runtime
 
 # Create models directory with dummy file (prevents Emscripten file_packager error)
 # We'll load models at runtime via HTTP, not embed them
@@ -66,70 +66,131 @@ echo "Creating models directory with placeholder..."
 mkdir -p models
 echo "# Placeholder for Emscripten file_packager" > models/.placeholder
 
-# Configure CMake with Emscripten
+# Create a custom CMakeLists.txt for building the library executable
+echo ""
+echo "Creating custom CMakeLists.txt for library build..."
+mkdir -p "${BUILD_DIR}"
+
+cat > "${BUILD_DIR}/CMakeLists.txt" << 'EOF'
+# Custom CMakeLists.txt for building ExecuTorch Wasm library
+cmake_minimum_required(VERSION 3.29)
+project(executorch_flutter_wasm)
+
+# Include the main ExecuTorch CMakeLists.txt
+# This sets up all the targets we need
+set(EXECUTORCH_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
+add_subdirectory(${EXECUTORCH_ROOT} executorch_build EXCLUDE_FROM_ALL)
+
+# Create the final executable that links executorch_wasm
+add_executable(executorch_lib)
+
+# Empty main - Embind handles all the exports
+target_sources(executorch_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+
+# Link to executorch_wasm (the object library with Embind bindings)
+target_link_libraries(executorch_lib PRIVATE executorch_wasm)
+
+# Emscripten-specific link options for embeddable library
+target_link_options(
+  executorch_lib
+  PRIVATE
+  -sALLOW_MEMORY_GROWTH=1
+  -sMODULARIZE=1
+  -sEXPORT_NAME=createExecuTorchModule
+  -sENVIRONMENT=web,worker
+  -sNO_EXIT_RUNTIME=1
+  -sASSERTIONS=1
+  -sFORCE_FILESYSTEM=1
+  -sINITIAL_MEMORY=67108864
+  "-sEXPORTED_RUNTIME_METHODS=['FS']"
+  -fexceptions
+)
+
+set_target_properties(
+  executorch_lib
+  PROPERTIES
+  OUTPUT_NAME "executorch"
+  SUFFIX ".js"
+)
+EOF
+
+# Create empty main.cpp (Embind handles everything)
+cat > "${BUILD_DIR}/main.cpp" << 'EOF'
+// Empty main - Embind handles all the exports via EMSCRIPTEN_BINDINGS
+// The wasm_bindings.cpp registers all exports automatically
+int main() {
+    return 0;
+}
+EOF
+
+# Configure and build
 echo ""
 echo "Configuring CMake with Emscripten..."
-mkdir -p cmake-out-wasm
-cd cmake-out-wasm
+cd "${BUILD_DIR}"
+
 emcmake cmake \
     -DEXECUTORCH_PAL_DEFAULT=posix \
     -DCMAKE_BUILD_TYPE=Release \
-    -DEXECUTORCH_BUILD_EXECUTOR_RUNNER=ON \
-    ..
+    -DEXECUTORCH_BUILD_WASM=ON \
+    -DEXECUTORCH_BUILD_EXTENSION_DATA_LOADER=ON \
+    -DEXECUTORCH_BUILD_EXTENSION_MODULE=ON \
+    -DEXECUTORCH_BUILD_EXTENSION_TENSOR=ON \
+    -DEXECUTORCH_BUILD_EXTENSION_RUNNER_UTIL=ON \
+    -DEXECUTORCH_BUILD_EXTENSION_FLAT_TENSOR=ON \
+    -DEXECUTORCH_BUILD_EXTENSION_NAMED_DATA_MAP=ON \
+    -DEXECUTORCH_BUILD_KERNELS_PORTABLE=ON \
+    .
 
-# Build executor_runner target
+# Build the library target
 echo ""
-echo "Building executor_runner target..."
-cmake --build . -j$(nproc) --target executor_runner
+echo "Building executorch_lib target..."
+cmake --build . -j$(nproc) --target executorch_lib
 
 # Verify outputs
 echo ""
 echo "Verifying build outputs..."
-if [ -f "executor_runner.js" ] && [ -f "executor_runner.wasm" ]; then
-    echo "✅ Build successful!"
+if [ -f "executorch.js" ] && [ -f "executorch.wasm" ]; then
+    echo "✅ Library build successful!"
     echo ""
     echo "Generated files:"
-    ls -lh executor_runner.js executor_runner.wasm
+    ls -lh executorch.js executorch.wasm
     echo ""
 
     # Copy to output directory if specified
     if [ -n "${OUTPUT_DIR}" ]; then
         echo "Copying binaries to ${OUTPUT_DIR}..."
         mkdir -p "${OUTPUT_DIR}"
-        cp executor_runner.js "${OUTPUT_DIR}/"
-        cp executor_runner.wasm "${OUTPUT_DIR}/"
-
-        # Also copy HTML example for reference
-        if [ -f "executor_runner.html" ]; then
-            mkdir -p "${OUTPUT_DIR}/tmp"
-            cp executor_runner.html "${OUTPUT_DIR}/tmp/"
-            echo "✅ Copied executor_runner.html to ${OUTPUT_DIR}/tmp/ for reference"
-        fi
-
+        cp executorch.js "${OUTPUT_DIR}/"
+        cp executorch.wasm "${OUTPUT_DIR}/"
         echo "✅ Copied to ${OUTPUT_DIR}"
     fi
 
     # If running in Docker, also copy to /output volume
     if [ -f /.dockerenv ] && [ -d /output ]; then
         echo "Copying binaries to /output volume..."
-        cp executor_runner.js /output/
-        cp executor_runner.wasm /output/
-
-        # Also copy HTML example to output/tmp for reference
-        if [ -f "executor_runner.html" ]; then
-            mkdir -p /output/tmp
-            cp executor_runner.html /output/tmp/
-            echo "✅ Copied executor_runner.html to web/wasm/tmp/ for reference"
-        fi
-
+        cp executorch.js /output/
+        cp executorch.wasm /output/
         echo "✅ Copied to /output"
     fi
 else
-    echo "❌ Build failed: executor_runner.js or executor_runner.wasm not found"
+    echo "❌ Build failed: executorch.js or executorch.wasm not found"
+    echo "Contents of build dir:"
+    ls -la
     exit 1
 fi
 
 echo ""
 echo "========================================"
-echo "Build completed successfully!"
+echo "Library build completed successfully!"
 echo "========================================"
+echo ""
+echo "The library exports the following via Embind:"
+echo "  - Module.load(data)   - Load model from Uint8Array/ArrayBuffer/path"
+echo "  - module.forward(inputs) - Run inference"
+echo "  - module.execute(method, inputs) - Execute specific method"
+echo "  - Tensor.fromArray(sizes, data) - Create tensor from JS array"
+echo ""
+echo "Usage in JavaScript:"
+echo "  const Module = await createExecuTorchModule();"
+echo "  const model = Module.Module.load(modelBytes);"
+echo "  const output = model.forward([inputTensor]);"

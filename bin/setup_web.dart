@@ -88,8 +88,11 @@ void main(List<String> args) {
   print('   <script src="js/executorch_wrapper.js"></script>');
   print('');
   print('2. If you have a custom Wasm build, place these files in web/wasm/:');
-  print('   - executor_runner.js');
-  print('   - executor_runner.wasm');
+  print('   - executorch.js');
+  print('   - executorch.wasm');
+  print('');
+  print('   To build the Wasm module, run from the executorch_flutter package:');
+  print('   ./scripts/build_wasm.sh');
   print('');
   print('✅ Web setup complete!');
 }
