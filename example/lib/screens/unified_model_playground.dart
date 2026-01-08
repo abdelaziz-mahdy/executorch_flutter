@@ -480,23 +480,11 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 const SizedBox(width: 12),
                 Flexible(
                   fit: FlexFit.loose,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        model.displayName,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (model.fileSizeMB > 0)
-                        Text(
-                          '${model.fileSizeMB.toStringAsFixed(1)} MB',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
+                  child: Text(
+                    model.fileSizeMB > 0
+                        ? '${model.displayName} (${model.fileSizeMB.toStringAsFixed(1)} MB)'
+                        : model.displayName,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
