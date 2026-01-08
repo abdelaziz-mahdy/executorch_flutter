@@ -101,7 +101,7 @@ class ExecuTorchExporter:
         backend_imports = {
             "coreml": "executorch.backends.apple.coreml.partition.CoreMLPartitioner",
             "xnnpack": "executorch.backends.xnnpack.partition.xnnpack_partitioner.XnnpackPartitioner",
-            "vulkan": "executorch.backends.vulkan.partition.vulkan_partitioner.VulkanPartitioner",
+            "vulkan": "executorch.backends.vulkan.partitioner.vulkan_partitioner.VulkanPartitioner",
             "qnn": "executorch.backends.qualcomm.partition.qnn_partitioner.QnnPartitioner",
             "arm": "executorch.backends.arm.partition.arm_partitioner.ArmPartitioner"
         }
@@ -134,7 +134,7 @@ class ExecuTorchExporter:
                 from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
                 return [XnnpackPartitioner()]
             elif backend == "vulkan":
-                from executorch.backends.vulkan.partition.vulkan_partitioner import VulkanPartitioner
+                from executorch.backends.vulkan.partitioner.vulkan_partitioner import VulkanPartitioner
                 return [VulkanPartitioner()]
             elif backend == "qnn":
                 from executorch.backends.qualcomm.partition.qnn_partitioner import QnnPartitioner
