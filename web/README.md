@@ -1,4 +1,4 @@
-##  ExecuTorch Flutter Web Platform
+## ExecuTorch Flutter Web Platform
 
 This directory contains the WebAssembly implementation of ExecuTorch for Flutter web applications.
 
@@ -11,9 +11,9 @@ lib/src/web/executorch_model_web.dart (Dart web plugin)
     ↓ (dart:js_interop)
 web/js/executorch_wrapper.js (JavaScript wrapper)
     ↓
-web/wasm/executor_runner.js (Emscripten glue code)
+web/wasm/executorch.js (Emscripten glue code)
     ↓
-web/wasm/executor_runner.wasm (ExecuTorch WebAssembly binary)
+web/wasm/executorch.wasm (ExecuTorch WebAssembly binary with XNNPACK)
 ```
 
 ## Directory Structure
@@ -24,10 +24,8 @@ web/
 │   ├── executorch_wrapper.js     # JavaScript API wrapper
 │   └── README.md                  # JavaScript wrapper documentation
 ├── wasm/
-│   ├── executor_runner.js         # Emscripten-generated JavaScript (73 KB)
-│   ├── executor_runner.wasm       # WebAssembly binary (2.4 MB)
-│   └── tmp/                       # Gitignored - contains HTML example
-│       └── executor_runner.html   # Reference implementation
+│   ├── executorch.js              # Emscripten-generated JavaScript (~140 KB)
+│   └── executorch.wasm            # WebAssembly binary with XNNPACK (~3.3 MB)
 └── README.md                      # This file
 ```
 
@@ -77,80 +75,51 @@ The WebAssembly binaries are pre-built and included in this directory. To rebuil
 ./scripts/build_wasm.sh
 
 # This will:
-# 1. Build ExecuTorch C++ → WebAssembly using Docker or native Emscripten
-# 2. Output executor_runner.js and executor_runner.wasm to web/wasm/
-# 3. Include reference HTML example in web/wasm/tmp/
+# 1. Build ExecuTorch C++ → WebAssembly using Docker (with XNNPACK)
+# 2. Output executorch.js and executorch.wasm to web/wasm/
+# 3. Run setup_web.dart to copy files to example project
 ```
 
 ## Implementation Status
 
-### ✅ Completed
+### ✅ Fully Working
 - JavaScript wrapper API (`web/js/executorch_wrapper.js`)
 - Dart web plugin with dart:js_interop bindings
-- WebAssembly module initialization
+- WebAssembly module with XNNPACK backend (Wasm SIMD)
 - Virtual filesystem management (Emscripten FS)
-- Model loading from bytes
+- Model loading from bytes or remote URLs
+- Real inference with actual tensor outputs
 - Platform detection with conditional imports
 - Web plugin registration
-
-### ⏳ C++ Bindings Needed
-
-The current implementation **returns mock tensor data** from `forward()` because the C++ bindings are not yet complete. To enable real inference:
-
-1. Add Emscripten bindings to ExecuTorch C++ code:
-   ```cpp
-   // In ExecuTorch source (not this package)
-   EMSCRIPTEN_BINDINGS(executorch) {
-     emscripten::function("loadModel", &loadModel);
-     emscripten::function("forward", &forward);
-     emscripten::function("dispose", &dispose);
-     emscripten::function("getInputShapes", &getInputShapes);
-     emscripten::function("getOutputShapes", &getOutputShapes);
-   }
-   ```
-
-2. Rebuild WebAssembly with new bindings:
-   ```bash
-   ./scripts/build_wasm.sh
-   ```
-
-3. Update JavaScript wrapper to call C++ functions instead of returning mocks
-
-## Current Behavior
-
-**Without C++ bindings**, the web implementation:
-
-- ✅ Initializes WebAssembly module correctly
-- ✅ Writes model bytes to virtual filesystem
-- ✅ Manages model lifecycle (load/dispose)
-- ⚠️ Returns mock zero-filled tensors from `forward()`
-- ⚠️ Cannot extract real input/output shapes
-
-**This is sufficient for**:
-- Testing Dart ↔ JavaScript ↔ Wasm communication
-- Developing UI and preprocessing logic
-- Verifying web deployment works
-
-**This is NOT sufficient for**:
-- Real inference
-- Production use
 
 ## Performance Characteristics
 
 ### File Sizes
 
-- **executor_runner.wasm**: 2.4 MB uncompressed
-- **executor_runner.js**: 73 KB
+- **executorch.wasm**: ~3.3 MB uncompressed (includes XNNPACK)
+- **executorch.js**: ~140 KB
 - **executorch_wrapper.js**: ~8 KB
-- **Total download**: ~2.5 MB (compresses to ~1 MB with gzip/brotli)
+- **Total download**: ~3.5 MB (compresses to ~1.2 MB with gzip/brotli)
 
-### Inference Performance
+### Inference Performance (YOLO11n)
 
-Expected performance (once C++ bindings are complete):
+| Stage | Time | % of Total |
+|-------|------|------------|
+| Preprocessing | ~154ms | 18% |
+| Inference | ~622ms | 73% |
+| Postprocessing | ~79ms | 9% |
+| **Total** | **~855ms** | 100% |
 
-- **Model loading**: 100-300ms (depends on model size and network)
-- **Inference**: 20-100ms (depends on model complexity)
+- **Model loading**: 100-500ms (depends on model size and network)
 - **Memory**: ~50-100MB per loaded model
+
+**Comparison to Native**:
+| Platform | Inference Time |
+|----------|----------------|
+| Native (XNNPACK) | ~50-100ms |
+| Web (XNNPACK Wasm SIMD) | ~622ms |
+
+Web is ~6-10x slower than native but fully functional for interactive use.
 
 ## Browser Compatibility
 
@@ -228,15 +197,14 @@ Header set Access-Control-Allow-Origin "*"
 
 ## Known Limitations
 
-1. **No Real Inference**: Currently returns mock data (C++ bindings needed)
-2. **Large Bundle Size**: 2.4 MB Wasm file (compresses to ~1 MB)
-3. **Browser Only**: Does not work in Flutter desktop web builds
-4. **No Streaming**: Models must be fully loaded before inference
-5. **Memory**: No automatic memory management (user must call `dispose()`)
+1. **Bundle Size**: ~3.3 MB Wasm file (compresses to ~1.2 MB with gzip)
+2. **No Streaming**: Models must be fully loaded before inference
+3. **Memory**: No automatic memory management (user must call `dispose()`)
+4. **No Camera**: Live camera inference not supported on web
+5. **Performance**: ~6-10x slower than native XNNPACK
 
 ## Future Enhancements
 
-- C++ bindings for real inference
 - Streaming model loading for large models
 - Web Worker support for background inference
 - Shared model caching across tabs
@@ -248,9 +216,8 @@ Header set Access-Control-Allow-Origin "*"
 - **Emscripten Bindings**: https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html
 - **Dart JS Interop**: https://dart.dev/web/js-interop
 - **Build System**: `scripts/WASM_BUILD_README.md`
-- **Design Document**: `WEB_PLATFORM_DESIGN.md`
 
 ---
 
-**Status**: Web plugin implementation complete, C++ bindings needed for inference
-**Last Updated**: 2026-01-04
+**Status**: Fully working with XNNPACK backend
+**Last Updated**: 2026-01-08

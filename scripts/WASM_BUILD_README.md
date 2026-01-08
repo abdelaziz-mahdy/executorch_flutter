@@ -1,6 +1,6 @@
 # ExecuTorch Wasm Build Guide
 
-This directory contains scripts to build ExecuTorch WebAssembly binaries for the `executorch_flutter` web platform.
+This directory contains scripts to build ExecuTorch WebAssembly binaries with XNNPACK backend for the `executorch_flutter` web platform.
 
 ## Quick Start
 
@@ -15,9 +15,10 @@ cd executorch_flutter
 
 This will:
 1. Auto-detect if Docker is available
-2. Build a Docker image with all dependencies
-3. Build `executor_runner.js` and `executor_runner.wasm`
+2. Build a Docker image with Emscripten 4.0.10 and ExecuTorch v1.0.1
+3. Build `executorch.js` and `executorch.wasm` with XNNPACK backend
 4. Copy outputs to `web/wasm/`
+5. Run `setup_web.dart` to copy files to example project
 
 **Prerequisites**: Docker installed and running
 
@@ -143,8 +144,8 @@ Successful build generates:
 
 ```
 web/wasm/
-├── executor_runner.js      (~500 KB)  - Emscripten JavaScript glue code
-└── executor_runner.wasm    (~2-5 MB) - WebAssembly binary
+├── executorch.js      (~140 KB)  - Emscripten JavaScript glue code
+└── executorch.wasm    (~3.3 MB)  - WebAssembly binary with XNNPACK
 ```
 
 These files are bundled with the package and loaded at runtime by the web plugin.
@@ -350,16 +351,17 @@ executorch_flutter/
 │   ├── build_wasm_in_container.sh       # Low-level build script
 │   └── WASM_BUILD_README.md             # This file
 └── web/
-    └── wasm/                            # Build outputs (gitignored in dev)
-        ├── executor_runner.js
-        └── executor_runner.wasm
+    └── wasm/                            # Build outputs
+        ├── executorch.js
+        └── executorch.wasm
 ```
 
 ## Version Information
 
 - **ExecuTorch**: v1.0.1 (configurable in Dockerfile.wasm)
-- **Emscripten**: 3.1.50 (configurable in Dockerfile.wasm)
-- **Target**: WebAssembly MVP + SIMD (if browser supports)
+- **Emscripten**: 4.0.10 (configurable in Dockerfile.wasm)
+- **Backend**: XNNPACK with Wasm SIMD
+- **Target**: WebAssembly with SIMD extensions
 
 ## FAQ
 
@@ -390,6 +392,6 @@ A: ~2-5 MB total (both files). Web servers will compress with gzip/brotli (typic
 
 ---
 
-**Last Updated**: 2026-01-04
+**Last Updated**: 2026-01-08
 **Package Version**: 0.0.5
 **ExecuTorch Version**: 1.0.1
