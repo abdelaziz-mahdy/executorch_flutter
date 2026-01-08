@@ -5,18 +5,15 @@ import 'package:universal_platform/universal_platform.dart';
 
 import 'model_download_service_stub.dart'
     if (dart.library.io) 'model_download_service_native.dart'
-    if (dart.library.js_interop) 'model_download_service_web.dart' as impl;
+    if (dart.library.js_interop) 'model_download_service_web.dart'
+    as impl;
 
 /// Download progress callback
-typedef DownloadProgressCallback = void Function(double progress, int received, int total);
+typedef DownloadProgressCallback =
+    void Function(double progress, int received, int total);
 
 /// Model download state
-enum ModelDownloadState {
-  notDownloaded,
-  downloading,
-  downloaded,
-  error,
-}
+enum ModelDownloadState { notDownloaded, downloading, downloaded, error }
 
 /// Model download info
 class ModelDownloadInfo {
@@ -54,7 +51,9 @@ class ModelDownloadInfo {
     );
   }
 
-  bool get isReady => state == ModelDownloadState.downloaded && (localPath != null || bytes != null);
+  bool get isReady =>
+      state == ModelDownloadState.downloaded &&
+      (localPath != null || bytes != null);
 }
 
 /// Service for downloading and caching models from remote URLs
@@ -70,7 +69,10 @@ class ModelDownloadService extends ChangeNotifier {
   /// Get download state for a model
   ModelDownloadInfo getDownloadInfo(String modelName) {
     return _downloadStates[modelName] ??
-        ModelDownloadInfo(modelName: modelName, state: ModelDownloadState.notDownloaded);
+        ModelDownloadInfo(
+          modelName: modelName,
+          state: ModelDownloadState.notDownloaded,
+        );
   }
 
   /// Check if a model is downloaded/cached
@@ -109,7 +111,9 @@ class ModelDownloadService extends ChangeNotifier {
         state: ModelDownloadState.downloaded,
         progress: 1.0,
         bytes: bytes,
-        localPath: UniversalPlatform.isWeb ? null : await impl.getLocalPath(modelName),
+        localPath: UniversalPlatform.isWeb
+            ? null
+            : await impl.getLocalPath(modelName),
       );
       _downloadStates[modelName] = info;
       notifyListeners();
@@ -149,12 +153,13 @@ class ModelDownloadService extends ChangeNotifier {
         state: ModelDownloadState.downloaded,
         progress: 1.0,
         bytes: bytes,
-        localPath: UniversalPlatform.isWeb ? null : await impl.getLocalPath(modelName),
+        localPath: UniversalPlatform.isWeb
+            ? null
+            : await impl.getLocalPath(modelName),
       );
       _downloadStates[modelName] = info;
       notifyListeners();
       return info;
-
     } catch (e) {
       final info = ModelDownloadInfo(
         modelName: modelName,

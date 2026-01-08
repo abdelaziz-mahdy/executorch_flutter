@@ -172,10 +172,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(
-              Icons.cloud_off,
-              color: Theme.of(context).colorScheme.error,
-            ),
+            Icon(Icons.cloud_off, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
             const Text('Download Failed'),
           ],
@@ -190,10 +187,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
-              Text(
-                'Model URL:',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
+              Text('Model URL:', style: Theme.of(context).textTheme.labelSmall),
               Container(
                 padding: const EdgeInsets.all(8),
                 margin: const EdgeInsets.only(top: 4, bottom: 16),
@@ -203,16 +197,12 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 ),
                 child: SelectableText(
                   model.remoteUrl,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(fontFamily: 'monospace'),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                 ),
               ),
-              Text(
-                'Error:',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
+              Text('Error:', style: Theme.of(context).textTheme.labelSmall),
               Container(
                 padding: const EdgeInsets.all(8),
                 margin: const EdgeInsets.only(top: 4),
@@ -223,9 +213,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                 child: SelectableText(
                   error,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontFamily: 'monospace',
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                      ),
+                    fontFamily: 'monospace',
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -249,8 +239,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                         'Check your internet connection and try again. Models are downloaded from GitHub on first use.',
                         style: TextStyle(
                           fontSize: 12,
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),
@@ -522,25 +513,26 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               Text(
                 '${(_downloadProgress * 100).toStringAsFixed(0)}%',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
                 width: 200,
                 child: LinearProgressIndicator(
                   value: _downloadProgress,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Models are downloaded from GitHub on first use',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ] else ...[
               const CircularProgressIndicator(),
@@ -573,8 +565,8 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
           Text(
             'Models are downloaded from GitHub on first use',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

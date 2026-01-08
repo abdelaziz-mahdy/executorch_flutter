@@ -17,9 +17,8 @@ class OpenCVCameraController implements CameraController {
   final Duration processingInterval;
 
   @override
-  Stream<Uint8List> get frameStream => throw UnsupportedError(
-        'OpenCV camera is not available on web.',
-      );
+  Stream<Uint8List> get frameStream =>
+      throw UnsupportedError('OpenCV camera is not available on web.');
 
   @override
   bool get isActive => false;

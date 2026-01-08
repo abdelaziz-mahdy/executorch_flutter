@@ -10,7 +10,8 @@ class ClassificationModelSettings extends ModelSettings {
     PreprocessingProvider? preprocessingProvider,
     int topK = 5,
   }) : _cameraProvider = cameraProvider ?? _defaultCameraProvider,
-       _preprocessingProvider = preprocessingProvider ?? _defaultPreprocessingProvider,
+       _preprocessingProvider =
+           preprocessingProvider ?? _defaultPreprocessingProvider,
        _topK = topK;
 
   /// Default camera provider based on platform

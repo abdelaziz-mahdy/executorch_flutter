@@ -59,7 +59,8 @@ class ModelRegistry {
       MobileNetModelDefinition(
         name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (Web)',
-        description: 'Web-optimized image classification - XNNPACK with WASM SIMD',
+        description:
+            'Web-optimized image classification - XNNPACK with WASM SIMD',
         remoteUrl: '$_mobilenetDir/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
         fileSizeMB: 9.5,

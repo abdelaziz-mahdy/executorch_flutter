@@ -4,7 +4,8 @@ library;
 import 'package:flutter/services.dart';
 import 'package:universal_platform/universal_platform.dart';
 
-import 'test_images_native.dart' if (dart.library.js_interop) 'test_images_web.dart'
+import 'test_images_native.dart'
+    if (dart.library.js_interop) 'test_images_web.dart'
     as platform;
 
 /// Pre-loaded test images available in the app assets

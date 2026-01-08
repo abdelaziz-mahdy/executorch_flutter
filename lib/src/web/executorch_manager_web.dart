@@ -57,8 +57,7 @@ class ExecutorchManagerWeb implements ExecutorchManager {
     _ensureInitialized();
 
     try {
-      final runner = js.execuTorchRunner;
-      runner.setDebugLogging(enabled);
+      js.execuTorchRunner.setDebugLogging(enabled);
     } catch (e) {
       throw ExecuTorchPlatformException(
         'Failed to set debug logging: $e',

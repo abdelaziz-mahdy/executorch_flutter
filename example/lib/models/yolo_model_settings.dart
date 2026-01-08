@@ -11,7 +11,8 @@ class YoloModelSettings extends ModelSettings {
     double confidenceThreshold = 0.5,
     double nmsThreshold = 0.45,
   }) : _cameraProvider = cameraProvider ?? _defaultCameraProvider,
-       _preprocessingProvider = preprocessingProvider ?? _defaultPreprocessingProvider,
+       _preprocessingProvider =
+           preprocessingProvider ?? _defaultPreprocessingProvider,
        _confidenceThreshold = confidenceThreshold,
        _nmsThreshold = nmsThreshold;
 

@@ -22,9 +22,9 @@ class WasmModuleLoader {
 
   /// Ensure the Wasm module is initialized
   ///
-  /// This method can be called multiple times safely - it will only initialize
-  /// the module once. Subsequent calls will wait for the existing initialization
-  /// to complete.
+  /// This method can be called multiple times safely - it will only
+  /// initialize the module once. Subsequent calls will wait for the
+  /// existing initialization to complete.
   ///
   /// Returns a Future that completes when the module is ready.
   ///

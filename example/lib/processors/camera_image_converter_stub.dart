@@ -37,8 +37,6 @@ class OpenCVCameraConverter implements CameraImageConverter {
     int quality = 85,
     int? sensorOrientation,
   }) {
-    throw UnsupportedError(
-      'OpenCV camera conversion is not available on web.',
-    );
+    throw UnsupportedError('OpenCV camera conversion is not available on web.');
   }
 }

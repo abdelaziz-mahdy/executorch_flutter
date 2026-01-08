@@ -13,10 +13,7 @@ Future<File> getFileFromAsset(String assetPath) async {
   final fileName = assetPath.split('/').last;
   final file = File('${tempDir.path}/$fileName');
   await file.writeAsBytes(
-    byteData.buffer.asUint8List(
-      byteData.offsetInBytes,
-      byteData.lengthInBytes,
-    ),
+    byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
   );
   return file;
 }

@@ -120,7 +120,9 @@ class ExecuTorchModelNative implements ExecuTorchModel {
   ///
   /// ### Throws:
   /// - [ExecuTorchException] if model format is invalid or loading fails
-  static Future<ExecuTorchModelNative> loadFromBytes(Uint8List modelBytes) async {
+  static Future<ExecuTorchModelNative> loadFromBytes(
+    Uint8List modelBytes,
+  ) async {
     final hostApi = ExecutorchHostApi();
 
     try {
@@ -147,10 +149,12 @@ class ExecuTorchModelNative implements ExecuTorchModel {
     }
   }
 
-  /// Load an ExecuTorch model from Flutter asset bundle (works on all platforms)
+  /// Load an ExecuTorch model from Flutter asset bundle
+  ///
+  /// Works on all platforms including web.
   ///
   /// This is a convenience method that loads model bytes from the asset bundle
-  /// and then calls [loadFromBytes]. Works on all platforms including web.
+  /// and then calls [loadFromBytes].
   ///
   /// ### Example:
   /// ```dart
@@ -168,7 +172,9 @@ class ExecuTorchModelNative implements ExecuTorchModel {
   ///
   /// ### Throws:
   /// - [ExecuTorchException] if asset is not found or loading fails
-  static Future<ExecuTorchModelNative> loadFromAsset(String assetPath) async {
+  static Future<ExecuTorchModelNative> loadFromAsset(
+    String assetPath,
+  ) async {
     try {
       final byteData = await rootBundle.load(assetPath);
       return loadFromBytes(byteData.buffer.asUint8List());
@@ -219,7 +225,7 @@ class ExecuTorchModelNative implements ExecuTorchModel {
   /// - Pre-allocate and reuse input tensors when possible
   /// - Ensure input shapes match model expectations exactly
   /// - Call [dispose] when done to free native resources immediately
-@override
+  @override
   Future<List<TensorData>> forward(List<TensorData> inputs) async {
     if (_isDisposed) {
       throw const ExecuTorchException(
@@ -242,7 +248,7 @@ class ExecuTorchModelNative implements ExecuTorchModel {
   /// Call this when you're done with the model to free platform resources.
   /// This also cleans up any temporary files created during byte-based loading.
   /// The user has full control over memory management.
-@override
+  @override
   Future<void> dispose() async {
     if (_isDisposed) return;
 
@@ -252,16 +258,14 @@ class ExecuTorchModelNative implements ExecuTorchModel {
     // Clean up temporary file if it was created for byte-based loading
     if (tempFile != null) {
       try {
-        if (await tempFile!.exists()) {
-          await tempFile!.delete();
-        }
+        await tempFile!.delete();
       } catch (_) {
-        // Ignore deletion errors
+        // Ignore deletion errors (file may already be deleted)
       }
     }
   }
 
   /// Check if this model has been disposed
-@override
+  @override
   bool get isDisposed => _isDisposed;
 }

@@ -38,8 +38,9 @@ Future<void> updateCameraConverterNative() async {
   }
 
   final useOpenCV = await ProcessorPreferences.getUseOpenCV();
-  final CameraImageConverter converter =
-      useOpenCV ? OpenCVCameraConverter() : ImageLibCameraConverter();
+  final CameraImageConverter converter = useOpenCV
+      ? OpenCVCameraConverter()
+      : ImageLibCameraConverter();
 
   // Recreate platform camera controller with new converter
   if (_getIt.isRegistered<CameraController>()) {

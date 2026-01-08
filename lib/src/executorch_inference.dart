@@ -7,8 +7,7 @@ import 'dart:typed_data';
 import 'executorch_manager_unsupported_stub.dart'
     if (dart.library.io) 'executorch_manager_native_stub.dart'
     if (dart.library.js_interop) 'executorch_manager_web_stub.dart'
-    if (dart.library.js) 'executorch_manager_web_stub.dart'
-    as stub;
+    if (dart.library.js) 'executorch_manager_web_stub.dart' as stub;
 import 'executorch_model.dart';
 import 'generated/executorch_api.dart';
 
@@ -55,7 +54,8 @@ abstract class ExecutorchManager {
   ///
   /// The model will be cached and accessed later via [getLoadedModel].
   ///
-  /// Note: On web platform, use [loadModelFromAssets] or [loadModelFromBytes] instead.
+  /// Note: On web platform, use [loadModelFromAssets] or
+  /// [loadModelFromBytes] instead.
   Future<ExecuTorchModel> loadModel(String filePath);
 
   /// Load an ExecuTorch model from asset bundle
@@ -68,8 +68,8 @@ abstract class ExecutorchManager {
   /// Load an ExecuTorch model from bytes
   ///
   /// [modelBytes] should contain the raw .pte model data.
-  /// This is useful for loading models downloaded from network or generated dynamically.
-  /// Works on all platforms including web.
+  /// This is useful for loading models downloaded from network or
+  /// generated dynamically. Works on all platforms including web.
   Future<ExecuTorchModel> loadModelFromBytes(Uint8List modelBytes);
 
   /// Get a loaded model by its ID
@@ -85,8 +85,8 @@ abstract class ExecutorchManager {
 
   /// Get the IDs of all loaded models
   ///
-  /// This queries the platform side for the most up-to-date list on native platforms.
-  /// On web, returns the cached list of model IDs.
+  /// This queries the platform side for the most up-to-date list on
+  /// native platforms. On web, returns the cached list of model IDs.
   Future<List<String>> getLoadedModelIds();
 
   /// Dispose a loaded model and free its resources

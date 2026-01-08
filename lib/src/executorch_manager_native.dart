@@ -77,8 +77,9 @@ class ExecutorchManagerNative implements ExecutorchManager {
   /// The model will be cached and accessed later via [getLoadedModel].
   /// If a model with the same file path is loaded, returns cached instance.
   ///
-  /// Note: On web platform, use [loadModelFromAssets] or [loadModelFromBytes] instead.
-@override
+  /// Note: On web platform, use [loadModelFromAssets] or
+  /// [loadModelFromBytes] instead.
+  @override
   Future<ExecuTorchModel> loadModel(String filePath) async {
     _ensureInitialized();
 
@@ -108,7 +109,7 @@ class ExecutorchManagerNative implements ExecutorchManager {
   /// [assetPath] should be the path to the model in the Flutter assets bundle.
   /// This is a convenience method for loading models packaged with the app.
   /// Works on all platforms including web.
-@override
+  @override
   Future<ExecuTorchModel> loadModelFromAssets(String assetPath) async {
     _ensureInitialized();
 
@@ -128,9 +129,9 @@ class ExecutorchManagerNative implements ExecutorchManager {
   /// Load an ExecuTorch model from bytes
   ///
   /// [modelBytes] should contain the raw .pte model data.
-  /// This is useful for loading models downloaded from network or generated dynamically.
-  /// Works on all platforms including web.
-@override
+  /// This is useful for loading models downloaded from network or
+  /// generated dynamically. Works on all platforms including web.
+  @override
   Future<ExecuTorchModel> loadModelFromBytes(Uint8List modelBytes) async {
     _ensureInitialized();
 
@@ -173,7 +174,7 @@ class ExecutorchManagerNative implements ExecutorchManager {
   ///
   /// After calling this method, the model cannot be used for inference.
   /// The model is removed from the loaded models cache.
-@override
+  @override
   Future<void> disposeModel(String modelId) async {
     _ensureInitialized();
 
@@ -194,7 +195,7 @@ class ExecutorchManagerNative implements ExecutorchManager {
   ///
   /// This is useful for cleanup when the app is shutting down or
   /// when you want to free all model memory at once.
-@override
+  @override
   Future<void> disposeAllModels() async {
     _ensureInitialized();
 
@@ -208,7 +209,7 @@ class ExecutorchManagerNative implements ExecutorchManager {
   ///
   /// Returns a map with memory statistics, if available on the platform.
   /// This is useful for monitoring memory usage and detecting leaks.
-@override
+  @override
   Future<Map<String, Object>> getMemoryInfo() async {
     _ensureInitialized();
 
@@ -238,7 +239,7 @@ class ExecutorchManagerNative implements ExecutorchManager {
   ///
   /// This is a convenience factory method for creating properly validated
   /// TensorData instances. It performs shape and data size validation.
-@override
+  @override
   TensorData createTensorData({
     required List<int> shape,
     required TensorType dataType,
@@ -295,7 +296,7 @@ class ExecutorchManagerNative implements ExecutorchManager {
   ///
   /// This should be called when the app is shutting down to ensure
   /// proper cleanup of all loaded models and platform resources.
-@override
+  @override
   Future<void> shutdown() async {
     if (!_initialized) return;
 

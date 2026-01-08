@@ -76,14 +76,20 @@ extension type ExecuTorchRunner._(JSObject _) implements JSObject {
 @JS()
 @anonymous
 extension type ModelLoadResult._(JSObject _) implements JSObject {
+  /// Creates a new ModelLoadResult.
   external factory ModelLoadResult({
     required int modelId,
     required JSArray<JSArray<JSNumber>> inputShapes,
     required JSArray<JSArray<JSNumber>> outputShapes,
   });
 
+  /// The unique ID of the loaded model.
   external int get modelId;
+
+  /// The input tensor shapes for this model.
   external JSArray<JSArray<JSNumber>> get inputShapes;
+
+  /// The output tensor shapes for this model.
   external JSArray<JSArray<JSNumber>> get outputShapes;
 }
 
@@ -93,7 +99,10 @@ extension type ModelLoadResult._(JSObject _) implements JSObject {
 @JS()
 @anonymous
 extension type ModelMetadata._(JSObject _) implements JSObject {
+  /// The input tensor shapes for this model.
   external JSArray<JSArray<JSNumber>> get inputShapes;
+
+  /// The output tensor shapes for this model.
   external JSArray<JSArray<JSNumber>> get outputShapes;
 }
 
@@ -103,6 +112,7 @@ extension type ModelMetadata._(JSObject _) implements JSObject {
 @JS()
 @anonymous
 extension type TensorData._(JSObject _) implements JSObject {
+  /// Creates a new TensorData for JavaScript interop.
   external factory TensorData({
     required JSArray<JSNumber> shape,
     required String dataType,
@@ -110,9 +120,16 @@ extension type TensorData._(JSObject _) implements JSObject {
     String? name,
   });
 
+  /// The shape of the tensor as a JS array.
   external JSArray<JSNumber> get shape;
+
+  /// The data type of the tensor (e.g., 'float32', 'int32').
   external String get dataType;
+
+  /// The raw tensor data as a JS Uint8Array.
   external JSUint8Array get data;
+
+  /// Optional name for the tensor.
   external String? get name;
 }
 
@@ -155,4 +172,3 @@ extension JSUint8ArrayToDartExtension on JSUint8Array {
   /// Convert JSUint8Array to Dart Uint8List
   Uint8List toUint8List() => toDart;
 }
-

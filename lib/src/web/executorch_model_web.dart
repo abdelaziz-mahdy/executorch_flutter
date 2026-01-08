@@ -112,7 +112,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
   /// Returns list of output tensors from the model
   ///
   /// Throws [ExecuTorchInferenceException] if inference fails
-@override
+  @override
   Future<List<TensorData>> forward(List<TensorData> inputs) async {
     if (_isDisposed) {
       throw const ExecuTorchModelException(
@@ -148,7 +148,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
   /// Dispose this model and free its resources
   ///
   /// Call this when you're done with the model to free platform resources
-@override
+  @override
   Future<void> dispose() async {
     if (_isDisposed) {
       return;
@@ -170,20 +170,19 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
   }
 
   /// Check if this model has been disposed
-@override
+  @override
   bool get isDisposed => _isDisposed;
 
   /// Convert Dart TensorData list to JavaScript TensorData array
-  List<js.TensorData> _convertTensorsToJS(List<TensorData> tensors) =>
-      tensors.map((tensor) => js.TensorData(
-        shape: tensor.shape
-            .map((dim) => (dim ?? 0).toJS)
-            .toList()
-            .jsify() as JSArray<JSNumber>,
-        dataType: _tensorTypeToString(tensor.dataType),
-        data: tensor.data.toJSUint8Array(),
-        name: tensor.name,
-      )).toList();
+  List<js.TensorData> _convertTensorsToJS(List<TensorData> tensors) => tensors
+      .map((tensor) => js.TensorData(
+            shape: tensor.shape.map((dim) => (dim ?? 0).toJS).toList().jsify()
+                as JSArray<JSNumber>,
+            dataType: _tensorTypeToString(tensor.dataType),
+            data: tensor.data.toJSUint8Array(),
+            name: tensor.name,
+          ))
+      .toList();
 
   /// Convert JavaScript TensorData array to Dart TensorData list
   List<TensorData> _convertTensorsFromJS(JSArray<js.TensorData> jsTensors) {

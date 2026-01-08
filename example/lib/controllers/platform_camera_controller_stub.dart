@@ -18,9 +18,8 @@ class PlatformCameraController implements CameraController {
   final Duration processingInterval;
 
   @override
-  Stream<Uint8List> get frameStream => throw UnsupportedError(
-        'Camera streaming is not supported on web.',
-      );
+  Stream<Uint8List> get frameStream =>
+      throw UnsupportedError('Camera streaming is not supported on web.');
 
   @override
   bool get isActive => false;

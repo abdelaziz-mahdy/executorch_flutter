@@ -1,4 +1,5 @@
 #!/usr/bin/env dart
+
 // ignore_for_file: avoid_print
 /// Setup script for ExecuTorch Flutter web support
 ///
@@ -94,7 +95,8 @@ void main(List<String> args) {
   print('   - executorch.js');
   print('   - executorch.wasm');
   print('');
-  print('   To build the Wasm module, run from the executorch_flutter package:');
+  print(
+      '   To build the Wasm module, run from the executorch_flutter package:');
   print('   ./scripts/build_wasm.sh');
   print('');
   print('✅ Web setup complete!');
@@ -155,7 +157,8 @@ String? _findPackageRoot() {
   if (currentPubspec.existsSync()) {
     final content = currentPubspec.readAsStringSync();
     // Use regex to match exact package name, not a substring
-    if (RegExp(r'name:\s*executorch_flutter\s*$', multiLine: true).hasMatch(content)) {
+    if (RegExp(r'name:\s*executorch_flutter\s*$', multiLine: true)
+        .hasMatch(content)) {
       return Directory.current.path;
     }
   }
