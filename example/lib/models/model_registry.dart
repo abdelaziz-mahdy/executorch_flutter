@@ -30,11 +30,17 @@ class ModelRegistry {
   static const String _baseUrl =
       'https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main';
 
-  /// URL for ImageNet class labels
-  static const String _imagenetLabelsUrl = '$_baseUrl/imagenet_classes.txt';
+  /// MobileNet models directory
+  static const String _mobilenetDir = '$_baseUrl/mobilenet';
 
-  /// URL for COCO class labels
-  static const String _cocoLabelsUrl = '$_baseUrl/coco_labels.txt';
+  /// YOLO models directory
+  static const String _yoloDir = '$_baseUrl/yolo';
+
+  /// URL for ImageNet class labels (for MobileNet)
+  static const String _imagenetLabelsUrl = '$_mobilenetDir/labels.txt';
+
+  /// URL for COCO class labels (for YOLO)
+  static const String _cocoLabelsUrl = '$_yoloDir/labels.txt';
 
   static Future<List<ModelDefinition>> loadAll() async {
     // Web platform uses portable backend models
@@ -54,7 +60,7 @@ class ModelRegistry {
         name: 'mobilenet_v3_small_portable',
         displayName: 'MobileNet V3 Small (Web)',
         description: 'Web-compatible image classification - portable backend',
-        remoteUrl: '$_baseUrl/mobilenet_v3_small_portable.pte',
+        remoteUrl: '$_mobilenetDir/mobilenet_v3_small_portable.pte',
         inputSize: 224,
         fileSizeMB: 9.5,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -65,7 +71,7 @@ class ModelRegistry {
         name: 'yolo11n_portable',
         displayName: 'YOLO11 Nano (Web)',
         description: 'Web-compatible object detection - portable backend',
-        remoteUrl: '$_baseUrl/yolo11n_portable.pte',
+        remoteUrl: '$_yoloDir/yolo11n_portable.pte',
         inputSize: 640,
         fileSizeMB: 5.4,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -76,7 +82,7 @@ class ModelRegistry {
         name: 'yolov8n_portable',
         displayName: 'YOLOv8 Nano (Web)',
         description: 'Web-compatible object detection - portable backend',
-        remoteUrl: '$_baseUrl/yolov8n_portable.pte',
+        remoteUrl: '$_yoloDir/yolov8n_portable.pte',
         inputSize: 640,
         fileSizeMB: 6.2,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -87,7 +93,7 @@ class ModelRegistry {
         name: 'yolov5n_portable',
         displayName: 'YOLOv5 Nano (Web)',
         description: 'Web-compatible object detection - portable backend',
-        remoteUrl: '$_baseUrl/yolov5n_portable.pte',
+        remoteUrl: '$_yoloDir/yolov5n_portable.pte',
         inputSize: 640,
         fileSizeMB: 3.9,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -105,7 +111,7 @@ class ModelRegistry {
         displayName: 'MobileNet V3 Small (XNNPACK)',
         description:
             'CPU-optimized image classification - works on all platforms',
-        remoteUrl: '$_baseUrl/mobilenet_v3_small_xnnpack.pte',
+        remoteUrl: '$_mobilenetDir/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
         fileSizeMB: 9.5,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -116,7 +122,7 @@ class ModelRegistry {
         name: 'mobilenet_v3_small_coreml',
         displayName: 'MobileNet V3 Small (CoreML)',
         description: 'Apple Neural Engine optimization - iOS/macOS only',
-        remoteUrl: '$_baseUrl/mobilenet_v3_small_coreml.pte',
+        remoteUrl: '$_mobilenetDir/mobilenet_v3_small_coreml.pte',
         inputSize: 224,
         fileSizeMB: 10.2,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -127,7 +133,7 @@ class ModelRegistry {
         name: 'mobilenet_v3_small_mps',
         displayName: 'MobileNet V3 Small (MPS)',
         description: 'Metal GPU acceleration - iOS/macOS only',
-        remoteUrl: '$_baseUrl/mobilenet_v3_small_mps.pte',
+        remoteUrl: '$_mobilenetDir/mobilenet_v3_small_mps.pte',
         inputSize: 224,
         fileSizeMB: 9.8,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -138,7 +144,7 @@ class ModelRegistry {
         name: 'mobilenet_v3_small_vulkan',
         displayName: 'MobileNet V3 Small (Vulkan)',
         description: 'GPU acceleration - Android/Linux',
-        remoteUrl: '$_baseUrl/mobilenet_v3_small_vulkan.pte',
+        remoteUrl: '$_mobilenetDir/mobilenet_v3_small_vulkan.pte',
         inputSize: 224,
         fileSizeMB: 9.6,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -150,7 +156,7 @@ class ModelRegistry {
         name: 'yolo11n_xnnpack',
         displayName: 'YOLO11 Nano (XNNPACK)',
         description: 'CPU-optimized object detection - works on all platforms',
-        remoteUrl: '$_baseUrl/yolo11n_xnnpack.pte',
+        remoteUrl: '$_yoloDir/yolo11n_xnnpack.pte',
         inputSize: 640,
         fileSizeMB: 5.4,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -161,7 +167,7 @@ class ModelRegistry {
         name: 'yolo11n_coreml',
         displayName: 'YOLO11 Nano (CoreML)',
         description: 'Apple Neural Engine optimization - iOS/macOS only',
-        remoteUrl: '$_baseUrl/yolo11n_coreml.pte',
+        remoteUrl: '$_yoloDir/yolo11n_coreml.pte',
         inputSize: 640,
         fileSizeMB: 5.8,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -172,7 +178,7 @@ class ModelRegistry {
         name: 'yolo11n_mps',
         displayName: 'YOLO11 Nano (MPS)',
         description: 'Metal GPU acceleration - iOS/macOS only',
-        remoteUrl: '$_baseUrl/yolo11n_mps.pte',
+        remoteUrl: '$_yoloDir/yolo11n_mps.pte',
         inputSize: 640,
         fileSizeMB: 5.6,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -183,7 +189,7 @@ class ModelRegistry {
         name: 'yolo11n_vulkan',
         displayName: 'YOLO11 Nano (Vulkan)',
         description: 'GPU acceleration - Android/Linux',
-        remoteUrl: '$_baseUrl/yolo11n_vulkan.pte',
+        remoteUrl: '$_yoloDir/yolo11n_vulkan.pte',
         inputSize: 640,
         fileSizeMB: 5.5,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -195,7 +201,7 @@ class ModelRegistry {
         name: 'yolov8n_xnnpack',
         displayName: 'YOLOv8 Nano (XNNPACK)',
         description: 'CPU-optimized object detection - works on all platforms',
-        remoteUrl: '$_baseUrl/yolov8n_xnnpack.pte',
+        remoteUrl: '$_yoloDir/yolov8n_xnnpack.pte',
         inputSize: 640,
         fileSizeMB: 6.2,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -206,7 +212,7 @@ class ModelRegistry {
         name: 'yolov8n_coreml',
         displayName: 'YOLOv8 Nano (CoreML)',
         description: 'Apple Neural Engine optimization - iOS/macOS only',
-        remoteUrl: '$_baseUrl/yolov8n_coreml.pte',
+        remoteUrl: '$_yoloDir/yolov8n_coreml.pte',
         inputSize: 640,
         fileSizeMB: 6.6,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -217,7 +223,7 @@ class ModelRegistry {
         name: 'yolov8n_mps',
         displayName: 'YOLOv8 Nano (MPS)',
         description: 'Metal GPU acceleration - iOS/macOS only',
-        remoteUrl: '$_baseUrl/yolov8n_mps.pte',
+        remoteUrl: '$_yoloDir/yolov8n_mps.pte',
         inputSize: 640,
         fileSizeMB: 6.4,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -228,7 +234,7 @@ class ModelRegistry {
         name: 'yolov8n_vulkan',
         displayName: 'YOLOv8 Nano (Vulkan)',
         description: 'GPU acceleration - Android/Linux',
-        remoteUrl: '$_baseUrl/yolov8n_vulkan.pte',
+        remoteUrl: '$_yoloDir/yolov8n_vulkan.pte',
         inputSize: 640,
         fileSizeMB: 6.3,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -240,7 +246,7 @@ class ModelRegistry {
         name: 'yolov5n_xnnpack',
         displayName: 'YOLOv5 Nano (XNNPACK)',
         description: 'CPU-optimized object detection - works on all platforms',
-        remoteUrl: '$_baseUrl/yolov5n_xnnpack.pte',
+        remoteUrl: '$_yoloDir/yolov5n_xnnpack.pte',
         inputSize: 640,
         fileSizeMB: 3.9,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -251,7 +257,7 @@ class ModelRegistry {
         name: 'yolov5n_coreml',
         displayName: 'YOLOv5 Nano (CoreML)',
         description: 'Apple Neural Engine optimization - iOS/macOS only',
-        remoteUrl: '$_baseUrl/yolov5n_coreml.pte',
+        remoteUrl: '$_yoloDir/yolov5n_coreml.pte',
         inputSize: 640,
         fileSizeMB: 4.2,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -262,7 +268,7 @@ class ModelRegistry {
         name: 'yolov5n_mps',
         displayName: 'YOLOv5 Nano (MPS)',
         description: 'Metal GPU acceleration - iOS/macOS only',
-        remoteUrl: '$_baseUrl/yolov5n_mps.pte',
+        remoteUrl: '$_yoloDir/yolov5n_mps.pte',
         inputSize: 640,
         fileSizeMB: 4.0,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -273,7 +279,7 @@ class ModelRegistry {
         name: 'yolov5n_vulkan',
         displayName: 'YOLOv5 Nano (Vulkan)',
         description: 'GPU acceleration - Android/Linux',
-        remoteUrl: '$_baseUrl/yolov5n_vulkan.pte',
+        remoteUrl: '$_yoloDir/yolov5n_vulkan.pte',
         inputSize: 640,
         fileSizeMB: 4.0,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -285,10 +291,10 @@ class ModelRegistry {
         name: 'gemma-3-270m',
         displayName: 'Gemma 3 270M (Not Working Yet)',
         description: 'Google Gemma 3 text generation model (270M parameters)',
-        remoteUrl: '$_baseUrl/gemma-3-270m_xnnpack.pte',
+        remoteUrl: '$_baseUrl/gemma/gemma-3-270m_xnnpack.pte',
         inputSize: 128, // Sequence length
         fileSizeMB: 540.0,
-        vocabRemoteUrl: '$_baseUrl/gemma-3-270m_vocab.json',
+        vocabRemoteUrl: '$_baseUrl/gemma/vocab.json',
       ),
     ];
   }
