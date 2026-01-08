@@ -119,46 +119,36 @@ See the `example/` directory for a full working application:
 
 ### Web (Experimental)
 - **Status**: Experimental - API may change
-- **Runtime**: WebAssembly (Wasm)
-- **Supported Backends**: Portable (CPU-only, no hardware acceleration)
+- **Runtime**: WebAssembly (Wasm) with XNNPACK backend
+- **Supported Backends**: XNNPACK (Wasm SIMD)
 
-#### ⚠️ Web Performance Warning
+#### Web Performance
 
-**Web is significantly slower than native platforms** (~100-120x slower). The portable backend runs pure CPU operations in WebAssembly without hardware acceleration.
+Web with XNNPACK is ~6-10x slower than native, but fully functional for interactive use.
 
-| Platform | Backend | YOLO11n Inference | Relative Speed |
-|----------|---------|-------------------|----------------|
-| Native (macOS/iOS/Android) | XNNPACK | ~50-100ms | 🚀 100-120x faster |
-| Web | Portable | ~11-12 seconds | baseline |
+| Platform | Backend | YOLO11n Inference | Total (E2E) |
+|----------|---------|-------------------|-------------|
+| Native (macOS/iOS/Android) | XNNPACK | ~50-100ms | ~150-200ms |
+| Web | XNNPACK (Wasm SIMD) | ~622ms | ~855ms |
 
-**Preprocessing Performance (Web):**
+**Web Performance Breakdown (YOLO11n):**
 
-| Method | Time | Recommendation |
-|--------|------|----------------|
-| GPU Shader | ~75ms | ✅ Default, recommended |
-| ImageLib (CPU) | ~560ms | Slower fallback |
+| Stage | Time | % of Total |
+|-------|------|------------|
+| Preprocessing | ~154ms | 18% |
+| Inference | ~622ms | 73% |
+| Postprocessing | ~79ms | 9% |
 
 **When to use Web:**
 - ✅ Demos and prototyping
-- ✅ Infrequent inference (not real-time)
+- ✅ Interactive inference (sub-second response)
 - ✅ Accessibility (no app install required)
 - ❌ Real-time camera inference
-- ❌ Production applications requiring speed
-
-#### Web Model Export
-
-Web requires models exported with the **portable** backend (XNNPACK won't work):
-
-```bash
-cd example/python
-python main.py export --all --backends portable
-```
-
-This creates `*_portable.pte` files that work with the Wasm runtime.
+- ❌ High-throughput batch processing
 
 #### Web Setup
 
-1. **Run the setup script** to copy required JavaScript files:
+1. **Run the setup script** to copy required JavaScript and Wasm files:
 
 ```bash
 dart run executorch_flutter:setup_web
@@ -178,13 +168,9 @@ dart run executorch_flutter:setup_web
 </body>
 ```
 
-3. **Build the Wasm module** (optional - for custom ExecuTorch builds):
+3. **Use XNNPACK models** - Web uses the same XNNPACK-exported models as native platforms.
 
-If you need a custom Wasm build, see the [ExecuTorch Wasm documentation](https://pytorch.org/executorch/stable/). Place the generated files in `web/wasm/`:
-- `executorch.js`
-- `executorch.wasm`
-
-> **Note**: Web support is experimental. File-based model loading is not supported on web - use `loadModelFromAssets()` or `loadModelFromBytes()` instead.
+> **Note**: Web support is experimental. File-based model loading is not supported on web - models are loaded from bytes or remote URLs.
 
 #### macOS Build Limitations
 

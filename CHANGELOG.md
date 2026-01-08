@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0
+
+- **Web Platform Support** (Experimental): WebAssembly with XNNPACK backend
+- Added Docker-based Wasm build system
+- Added `setup_web` CLI tool for web project setup
+
 ## 0.0.6
 - **Android** fix Crash on model reuse
 
