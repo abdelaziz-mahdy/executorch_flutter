@@ -24,8 +24,8 @@ RUN apt-get update && apt-get install -y \
 RUN pip3 install --no-cache-dir cmake>=3.29.0
 
 # Install Emscripten
-# Use "latest" for ARM64 support on Apple Silicon
-ENV EMSDK_VERSION=latest
+# Use version 4.0.10 (same as ExecuTorch CI) for WASM SIMD support
+ENV EMSDK_VERSION=4.0.10
 ENV EMSDK=/opt/emsdk
 WORKDIR /opt
 RUN git clone https://github.com/emscripten-core/emsdk.git && \
@@ -42,8 +42,15 @@ ENV EXECUTORCH_VERSION=v1.0.1
 WORKDIR /workspace
 RUN git clone --branch ${EXECUTORCH_VERSION} --depth 1 --recurse-submodules --shallow-submodules https://github.com/pytorch/executorch.git
 
-# Install minimal Python dependencies for Wasm build
+# Patch XNNPACK to remove the -mfp16 flag that causes build failures on ARM64 hosts
+# The -mfp16 flag is for ARM native FP16 support, not needed for WASM builds
+# See: https://github.com/pytorch/executorch/issues/XXXX
 WORKDIR /workspace/executorch
+RUN sed -i 's/ADD_COMPILE_OPTIONS("-mfp16")/#ADD_COMPILE_OPTIONS("-mfp16") # Disabled for WASM builds/' \
+    backends/xnnpack/third-party/XNNPACK/CMakeLists.txt && \
+    echo "Patched XNNPACK CMakeLists.txt to remove -mfp16 flag"
+
+# Install minimal Python dependencies for Wasm build
 
 # Upgrade pip, setuptools, wheel first
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel

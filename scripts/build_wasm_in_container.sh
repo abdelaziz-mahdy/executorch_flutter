@@ -88,7 +88,9 @@ add_executable(executorch_lib)
 target_sources(executorch_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 
 # Link to executorch_wasm (the object library with Embind bindings)
-target_link_libraries(executorch_lib PRIVATE executorch_wasm)
+# Also link xnnpack_backend for XNNPACK delegate support
+# This enables running models exported with XNNPACK delegate
+target_link_libraries(executorch_lib PRIVATE executorch_wasm xnnpack_backend)
 
 # Emscripten-specific link options for embeddable library
 target_link_options(
@@ -139,12 +141,14 @@ emcmake cmake \
     -DEXECUTORCH_BUILD_EXTENSION_FLAT_TENSOR=ON \
     -DEXECUTORCH_BUILD_EXTENSION_NAMED_DATA_MAP=ON \
     -DEXECUTORCH_BUILD_KERNELS_PORTABLE=ON \
+    -DEXECUTORCH_BUILD_XNNPACK=ON \
     .
 
 # Build the library target
+# Use limited parallelism to avoid compiler crashes (LLVM bug with XNNPACK code)
 echo ""
 echo "Building executorch_lib target..."
-cmake --build . -j$(nproc) --target executorch_lib
+cmake --build . -j2 --target executorch_lib
 
 # Verify outputs
 echo ""
@@ -183,6 +187,10 @@ echo ""
 echo "========================================"
 echo "Library build completed successfully!"
 echo "========================================"
+echo ""
+echo "Features enabled:"
+echo "  - XNNPACK backend (optimized kernels for WASM SIMD)"
+echo "  - Portable kernels (fallback)"
 echo ""
 echo "The library exports the following via Embind:"
 echo "  - Module.load(data)   - Load model from Uint8Array/ArrayBuffer/path"

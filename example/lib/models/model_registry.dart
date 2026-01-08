@@ -52,15 +52,15 @@ class ModelRegistry {
     return _nativeModels();
   }
 
-  /// Models optimized for web platform (portable backend)
+  /// Models optimized for web platform (XNNPACK backend with WASM SIMD)
   static List<ModelDefinition> _webModels() {
     return [
       // ========== MobileNet Models (Web) ==========
       MobileNetModelDefinition(
-        name: 'mobilenet_v3_small_portable',
+        name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (Web)',
-        description: 'Web-compatible image classification - portable backend',
-        remoteUrl: '$_mobilenetDir/mobilenet_v3_small_portable.pte',
+        description: 'Web-optimized image classification - XNNPACK with WASM SIMD',
+        remoteUrl: '$_mobilenetDir/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
         fileSizeMB: 9.5,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -68,10 +68,10 @@ class ModelRegistry {
 
       // ========== YOLO11 Nano Models (Web) ==========
       YoloModelDefinition(
-        name: 'yolo11n_portable',
+        name: 'yolo11n_xnnpack',
         displayName: 'YOLO11 Nano (Web)',
-        description: 'Web-compatible object detection - portable backend',
-        remoteUrl: '$_yoloDir/yolo11n_portable.pte',
+        description: 'Web-optimized object detection - XNNPACK with WASM SIMD',
+        remoteUrl: '$_yoloDir/yolo11n_xnnpack.pte',
         inputSize: 640,
         fileSizeMB: 5.4,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -79,10 +79,10 @@ class ModelRegistry {
 
       // ========== YOLOv8 Nano Models (Web) ==========
       YoloModelDefinition(
-        name: 'yolov8n_portable',
+        name: 'yolov8n_xnnpack',
         displayName: 'YOLOv8 Nano (Web)',
-        description: 'Web-compatible object detection - portable backend',
-        remoteUrl: '$_yoloDir/yolov8n_portable.pte',
+        description: 'Web-optimized object detection - XNNPACK with WASM SIMD',
+        remoteUrl: '$_yoloDir/yolov8n_xnnpack.pte',
         inputSize: 640,
         fileSizeMB: 6.2,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -90,10 +90,10 @@ class ModelRegistry {
 
       // ========== YOLOv5 Nano Models (Web) ==========
       YoloModelDefinition(
-        name: 'yolov5n_portable',
+        name: 'yolov5n_xnnpack',
         displayName: 'YOLOv5 Nano (Web)',
-        description: 'Web-compatible object detection - portable backend',
-        remoteUrl: '$_yoloDir/yolov5n_portable.pte',
+        description: 'Web-optimized object detection - XNNPACK with WASM SIMD',
+        remoteUrl: '$_yoloDir/yolov5n_xnnpack.pte',
         inputSize: 640,
         fileSizeMB: 3.9,
         labelsRemoteUrl: _cocoLabelsUrl,

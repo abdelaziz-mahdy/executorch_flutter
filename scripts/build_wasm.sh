@@ -195,8 +195,15 @@ echo ""
 echo -e "${GREEN}========================================"
 echo "Build successful!"
 echo "========================================${NC}"
+
+# Run setup_web.dart to copy files to example project
 echo ""
-echo "Next steps:"
-echo "  1. Implement web plugin in lib/src/web/"
-echo "  2. Test with 'flutter run -d chrome'"
-echo "  3. Update documentation with web platform support"
+echo -e "${BLUE}Setting up web files for example project...${NC}"
+cd "${PACKAGE_ROOT}/example"
+dart run ../bin/setup_web.dart
+
+echo ""
+echo -e "${GREEN}✅ Web setup complete!${NC}"
+echo ""
+echo "To test:"
+echo "  cd example && flutter run -d chrome"

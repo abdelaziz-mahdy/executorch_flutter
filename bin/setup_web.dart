@@ -70,9 +70,12 @@ void main(List<String> args) {
 
     for (final file in wasmDir.listSync()) {
       if (file is File) {
-        final destFile = File(_joinPath(webWasmDir.path, _basename(file.path)));
+        final filename = _basename(file.path);
+        // Skip hidden files like .DS_Store
+        if (filename.startsWith('.')) continue;
+        final destFile = File(_joinPath(webWasmDir.path, filename));
         file.copySync(destFile.path);
-        print('✅ Copied: ${_basename(file.path)}');
+        print('✅ Copied: $filename');
       }
     }
   } else {
@@ -145,12 +148,14 @@ String? _findProjectRoot() {
 /// Find the package root
 String? _findPackageRoot() {
   // First, check if we're running from within the package itself
+  // Must match exactly "name: executorch_flutter" (not executorch_flutter_example)
   final currentPubspec = File(
     _joinPath(Directory.current.path, 'pubspec.yaml'),
   );
   if (currentPubspec.existsSync()) {
     final content = currentPubspec.readAsStringSync();
-    if (content.contains('name: executorch_flutter')) {
+    // Use regex to match exact package name, not a substring
+    if (RegExp(r'name:\s*executorch_flutter\s*$', multiLine: true).hasMatch(content)) {
       return Directory.current.path;
     }
   }
