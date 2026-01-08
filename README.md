@@ -10,7 +10,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 ## Features
 
-- ✅ **Cross-Platform Support**: Android (API 23+), iOS (17.0+), macOS (12.0+ Apple Silicon), and Web (experimental)
+- ✅ **Cross-Platform Support**: Android (API 23+), iOS (17.0+), macOS (12.0+ Apple Silicon), and Web
 - ✅ **Type-Safe API**: Generated with Pigeon for reliable cross-platform communication
 - ✅ **Async Operations**: Non-blocking model loading and inference execution
 - ✅ **Multiple Models**: Support for concurrent model instances
@@ -117,8 +117,8 @@ See the `example/` directory for a full working application:
   - ⚠️ **Intel Macs (x86_64) are NOT supported**
 - **Supported Backends**: XNNPACK, CoreML, MPS
 
-### Web (Experimental)
-- **Status**: Experimental - API may change
+### Web
+- **Status**: Supported via WebAssembly
 - **Runtime**: WebAssembly (Wasm) with XNNPACK backend
 - **Supported Backends**: XNNPACK (Wasm SIMD)
 
@@ -170,7 +170,7 @@ dart run executorch_flutter:setup_web
 
 3. **Use XNNPACK models** - Web uses the same XNNPACK-exported models as native platforms.
 
-> **Note**: Web support is experimental. File-based model loading is not supported on web - models are loaded from bytes or remote URLs.
+> **Note**: File-based model loading is not supported on web - models are loaded from bytes or remote URLs.
 
 #### macOS Build Limitations
 

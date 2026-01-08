@@ -2,7 +2,7 @@
 
 ## 0.1.0
 
-- **Web Platform Support** (Experimental): WebAssembly with XNNPACK backend
+- **Web Platform Support**: WebAssembly with XNNPACK backend
 - Added Docker-based Wasm build system
 - Added `setup_web` CLI tool for web project setup
 
