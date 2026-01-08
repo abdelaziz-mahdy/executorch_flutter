@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show Uint8List;
+import 'package:http/http.dart' as http;
 import 'package:universal_platform/universal_platform.dart';
 
 import '../processors/base_processor.dart';
@@ -23,33 +24,40 @@ class MobileNetModelDefinition
     required super.remoteUrl,
     required super.inputSize,
     super.fileSizeMB,
-    required this.labelsAssetPath,
+    required this.labelsRemoteUrl,
   }) : super(icon: Icons.image);
 
-  final String labelsAssetPath;
+  /// Remote URL to download labels file
+  final String labelsRemoteUrl;
 
   // Cache for labels (loaded once)
   static final Map<String, List<String>> _labelsCache = {};
 
   Future<List<String>> _loadLabels() async {
-    if (_labelsCache.containsKey(labelsAssetPath)) {
-      return _labelsCache[labelsAssetPath]!;
+    if (_labelsCache.containsKey(labelsRemoteUrl)) {
+      return _labelsCache[labelsRemoteUrl]!;
     }
 
-    final labelsString = await rootBundle.loadString(labelsAssetPath);
+    // Download labels from remote URL
+    final response = await http.get(Uri.parse(labelsRemoteUrl));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to download labels from $labelsRemoteUrl');
+    }
+
+    final labelsString = response.body;
     final labels = labelsString
         .split('\n')
         .where((line) => line.isNotEmpty)
         .toList();
 
-    _labelsCache[labelsAssetPath] = labels;
+    _labelsCache[labelsRemoteUrl] = labels;
     return labels;
   }
 
   // Helper to load labels synchronously from cache
   List<String> _loadLabelsSync() {
-    if (_labelsCache.containsKey(labelsAssetPath)) {
-      return _labelsCache[labelsAssetPath]!;
+    if (_labelsCache.containsKey(labelsRemoteUrl)) {
+      return _labelsCache[labelsRemoteUrl]!;
     }
     // Labels should be preloaded by controller before creating processor
     throw StateError('Labels not loaded. Call loadLabels() first.');

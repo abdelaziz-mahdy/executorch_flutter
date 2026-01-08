@@ -1,0 +1,13 @@
+# Auto-detect line endings for text files
+* text=auto
+
+# Ensure shell scripts use LF
+*.sh text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pte binary

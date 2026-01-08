@@ -84,11 +84,8 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # ExecuTorch model files and labels
+  # Test images only (models and labels are downloaded at runtime)
   assets:
-    - assets/models/
-    - assets/imagenet_classes.txt
-    - assets/coco_labels.txt
     - assets/images/
 
   # GPU shaders for preprocessing
