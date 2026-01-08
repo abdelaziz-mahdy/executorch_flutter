@@ -1,0 +1,42 @@
+name: Flutter Build and Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+concurrency:
+  group: auto-deploy
+  cancel-in-progress: true
+
+jobs:
+  build_web:
+    name: Build Flutter Web, Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Install Flutter Dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Setup Web Files
+        working-directory: example
+        run: dart run ../bin/setup_web.dart
+
+      - name: Build Flutter Web
+        working-directory: example
+        run: flutter build web --release --base-href "/executorch_flutter/"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./example/build/web

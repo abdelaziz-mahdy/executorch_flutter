@@ -1,8 +1,8 @@
 # ExecuTorch Flutter
 
-A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, and macOS platforms.
+A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, macOS, and Web platforms.
 
-**📦 [pub.dev](https://pub.dev/packages/executorch_flutter)** | **🔧 [Example App](example/)**
+**📦 [pub.dev](https://pub.dev/packages/executorch_flutter)** | **🌐 [Live Demo](https://abdelaziz-mahdy.github.io/executorch_flutter/)** | **🔧 [Example App](example/)**
 
 ## Overview
 
