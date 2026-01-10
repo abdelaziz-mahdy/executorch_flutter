@@ -100,13 +100,19 @@ echo "   - yolov5n_xnnpack.pte"
 echo "   - yolov8n_xnnpack.pte"
 echo ""
 
+# Helper function to get flutter devices (cached to avoid broken pipe issues)
+get_flutter_devices() {
+    flutter devices 2>/dev/null || true
+}
+
 # Test on macOS (if on macOS)
 if [[ "$TARGET_PLATFORM" == "all" || "$TARGET_PLATFORM" == "macos" ]]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         echo "📍 Detected macOS platform"
 
         # Check if macOS device is available
-        if flutter devices | grep -q "macos"; then
+        DEVICES_OUTPUT=$(get_flutter_devices)
+        if echo "$DEVICES_OUTPUT" | grep -q "macos"; then
             if run_tests "macOS" "-d macos"; then
                 MACOS_RESULT="✓ PASSED (tests)"
             else
@@ -137,9 +143,10 @@ if [[ "$TARGET_PLATFORM" == "all" || "$TARGET_PLATFORM" == "ios" ]]; then
 
         IOS_DEVICE=""
         # Check if any iOS physical device is connected
-        if flutter devices | grep -q "ios" && ! flutter devices | grep "ios" | grep -q "simulator"; then
+        DEVICES_OUTPUT=$(get_flutter_devices)
+        if echo "$DEVICES_OUTPUT" | grep -q "ios" && ! echo "$DEVICES_OUTPUT" | grep "ios" | grep -q "simulator"; then
             # Extract device ID from flutter devices output (format: "name • device_id • platform • details")
-            IOS_DEVICE=$(flutter devices | grep "ios" | grep -v "simulator" | head -1 | sed -E 's/.*• ([^ ]+) *• ios.*/\1/')
+            IOS_DEVICE=$(echo "$DEVICES_OUTPUT" | grep "ios" | grep -v "simulator" | head -1 | sed -E 's/.*• ([^ ]+) *• ios.*/\1/')
             echo "Found iOS physical device: $IOS_DEVICE"
 
             if run_tests "iOS" "-d $IOS_DEVICE"; then
@@ -173,15 +180,17 @@ if [[ "$TARGET_PLATFORM" == "all" || "$TARGET_PLATFORM" == "android" ]]; then
     echo "📍 Checking for Android devices..."
 
     ANDROID_DEVICE=""
-    if flutter devices | grep -q "android"; then
+    DEVICES_OUTPUT=$(get_flutter_devices)
+    if echo "$DEVICES_OUTPUT" | grep -q "android"; then
         # Extract device ID from flutter devices output (format: "name • device_id • platform • details")
-        ANDROID_DEVICE=$(flutter devices | grep "android" | head -1 | sed -E 's/.*• ([^ ]+) *• android.*/\1/')
+        ANDROID_DEVICE=$(echo "$DEVICES_OUTPUT" | grep "android" | head -1 | sed -E 's/.*• ([^ ]+) *• android.*/\1/')
         echo "Found Android device: $ANDROID_DEVICE"
     else
         echo "No Android device found, checking for available emulators..."
 
         # Get list of Android emulators
-        ANDROID_EMULATOR=$(flutter emulators | grep "android" | head -1 | awk '{print $1}')
+        EMULATORS_OUTPUT=$(flutter emulators 2>/dev/null || true)
+        ANDROID_EMULATOR=$(echo "$EMULATORS_OUTPUT" | grep "android" | head -1 | awk '{print $1}')
 
         if [ -n "$ANDROID_EMULATOR" ]; then
             echo "Found Android emulator: $ANDROID_EMULATOR"
@@ -193,9 +202,10 @@ if [[ "$TARGET_PLATFORM" == "all" || "$TARGET_PLATFORM" == "android" ]]; then
             COUNTER=0
             while [ $COUNTER -lt 120 ]; do
                 sleep 2
-                if flutter devices | grep -q "android"; then
+                DEVICES_OUTPUT=$(get_flutter_devices)
+                if echo "$DEVICES_OUTPUT" | grep -q "android"; then
                     # Extract device ID from flutter devices output (format: "name • device_id • platform • details")
-                    ANDROID_DEVICE=$(flutter devices | grep "android" | head -1 | sed -E 's/.*• ([^ ]+) *• android.*/\1/')
+                    ANDROID_DEVICE=$(echo "$DEVICES_OUTPUT" | grep "android" | head -1 | sed -E 's/.*• ([^ ]+) *• android.*/\1/')
                     echo "${GREEN}✓ Android emulator ready: $ANDROID_DEVICE${NC}"
                     break
                 fi
