@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart' as camera_pkg;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'camera_controller.dart';
 import '../processors/camera_image_converter.dart';
 
-/// Platform camera controller for mobile (Android/iOS) using camera package
+/// Platform camera controller using the camera package.
+/// Supports both live streaming and capture modes on all platforms.
 class PlatformCameraController implements CameraController {
   PlatformCameraController({
     required this.converter,
@@ -21,8 +23,10 @@ class PlatformCameraController implements CameraController {
 
   bool _isActive = false;
   bool _isProcessing = false;
+  bool _isPreviewReady = false;
   DateTime? _lastProcessedTime;
   int _sensorOrientation = 0;
+  CameraMode _mode = CameraMode.live;
 
   @override
   Stream<Uint8List> get frameStream => _frameController.stream;
@@ -31,11 +35,19 @@ class PlatformCameraController implements CameraController {
   bool get isActive => _isActive;
 
   @override
-  Future<void> start() async {
+  CameraMode get mode => _mode;
+
+  @override
+  bool get isPreviewReady => _isPreviewReady;
+
+  @override
+  Future<void> start({CameraMode mode = CameraMode.live}) async {
     if (_isActive) return;
 
+    _mode = mode;
+
     try {
-      debugPrint('📱 PlatformCameraController: Initializing camera');
+      debugPrint('📱 PlatformCameraController: Initializing camera (mode: $mode)');
 
       // Get available cameras
       final cameras = await camera_pkg.availableCameras();
@@ -45,24 +57,32 @@ class PlatformCameraController implements CameraController {
 
       // Get sensor orientation for Android (iOS is always 0)
       final camera = cameras.first;
-      _sensorOrientation = Platform.isAndroid ? camera.sensorOrientation : 0;
+      _sensorOrientation = !kIsWeb && Platform.isAndroid ? camera.sensorOrientation : 0;
       debugPrint('📱 Camera sensor orientation: $_sensorOrientation');
 
+      // Determine image format based on platform
+      camera_pkg.ImageFormatGroup? imageFormatGroup;
+      if (!kIsWeb) {
+        imageFormatGroup = Platform.isAndroid
+            ? camera_pkg.ImageFormatGroup.yuv420
+            : camera_pkg.ImageFormatGroup.bgra8888;
+      }
+
       // Initialize camera controller
-      // iOS requires bgra8888, Android uses yuv420
       _cameraController = camera_pkg.CameraController(
         camera,
         camera_pkg.ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup: Platform.isAndroid
-            ? camera_pkg.ImageFormatGroup.yuv420
-            : camera_pkg.ImageFormatGroup.bgra8888,
+        imageFormatGroup: imageFormatGroup,
       );
 
       await _cameraController!.initialize();
+      _isPreviewReady = true;
 
-      // Start image stream
-      await _cameraController!.startImageStream(_onImage);
+      // Start image stream only in live mode
+      if (mode == CameraMode.live) {
+        await _cameraController!.startImageStream(_onImage);
+      }
 
       _isActive = true;
       debugPrint('✅ PlatformCameraController: Camera started successfully');
@@ -104,18 +124,51 @@ class PlatformCameraController implements CameraController {
   }
 
   @override
+  Future<Uint8List?> takePicture() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      debugPrint('❌ PlatformCameraController: Camera not initialized');
+      return null;
+    }
+
+    try {
+      debugPrint('📸 PlatformCameraController: Taking picture');
+      final xFile = await _cameraController!.takePicture();
+      final bytes = await xFile.readAsBytes();
+      debugPrint('✅ PlatformCameraController: Picture taken (${bytes.length} bytes)');
+      return bytes;
+    } catch (e) {
+      debugPrint('❌ PlatformCameraController: Failed to take picture: $e');
+      return null;
+    }
+  }
+
+  @override
+  Widget buildPreview() {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return camera_pkg.CameraPreview(_cameraController!);
+  }
+
+  @override
   Future<void> stop() async {
     if (!_isActive) return;
 
     debugPrint('🛑 PlatformCameraController: Stopping camera');
 
     try {
-      await _cameraController?.stopImageStream();
+      if (_mode == CameraMode.live) {
+        await _cameraController?.stopImageStream();
+      }
     } catch (e) {
       debugPrint('⚠️ Error stopping image stream: $e');
     }
 
     _isActive = false;
+    _isPreviewReady = false;
   }
 
   @override

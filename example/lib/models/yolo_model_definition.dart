@@ -263,23 +263,15 @@ class YoloModelDefinition
                 }
               },
               child: Column(
-                children: [
-                  RadioListTile<PreprocessingProvider>(
-                    title: Text(PreprocessingProvider.imageLib.displayName),
-                    subtitle: Text(PreprocessingProvider.imageLib.description),
-                    value: PreprocessingProvider.imageLib,
-                  ),
-                  RadioListTile<PreprocessingProvider>(
-                    title: Text(PreprocessingProvider.opencv.displayName),
-                    subtitle: Text(PreprocessingProvider.opencv.description),
-                    value: PreprocessingProvider.opencv,
-                  ),
-                  RadioListTile<PreprocessingProvider>(
-                    title: Text(PreprocessingProvider.gpu.displayName),
-                    subtitle: Text(PreprocessingProvider.gpu.description),
-                    value: PreprocessingProvider.gpu,
-                  ),
-                ],
+                children: PreprocessingProvider.availableProviders
+                    .map(
+                      (provider) => RadioListTile<PreprocessingProvider>(
+                        title: Text(provider.displayName),
+                        subtitle: Text(provider.description),
+                        value: provider,
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ],

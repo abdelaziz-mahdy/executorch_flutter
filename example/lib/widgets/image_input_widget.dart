@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:universal_platform/universal_platform.dart';
 
 import '../utils/test_images.dart';
+import 'web_camera_capture.dart';
 
 /// Generic reusable image input widget for any image-based model
 /// Uses Uint8List for cross-platform compatibility (including web)
@@ -43,13 +44,27 @@ class ImageInputWidget extends StatelessWidget {
             isEnabled: !isCameraMode,
           ),
         ),
+        // Web: Show "Take Photo" button that opens camera dialog
+        if (UniversalPlatform.isWeb) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildActionButton(
+              context: context,
+              icon: Icons.camera_alt,
+              label: 'Camera',
+              onTap: () => _openWebCamera(context),
+              isEnabled: !isCameraMode,
+            ),
+          ),
+        ],
+        // Native: Show live camera toggle (streaming mode)
         if (onCameraModeToggle != null && !UniversalPlatform.isWeb) ...[
           const SizedBox(width: 8),
           Expanded(
             child: _buildActionButton(
               context: context,
               icon: isCameraMode ? Icons.photo : Icons.videocam,
-              label: isCameraMode ? 'Image' : 'Camera',
+              label: isCameraMode ? 'Image' : 'Live',
               onTap: onCameraModeToggle!,
               isActive: isCameraMode,
             ),
@@ -64,6 +79,13 @@ class ImageInputWidget extends StatelessWidget {
     final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
       final bytes = await pickedFile.readAsBytes();
+      onImageSelected(bytes);
+    }
+  }
+
+  Future<void> _openWebCamera(BuildContext context) async {
+    final bytes = await showWebCameraCapture(context);
+    if (bytes != null) {
       onImageSelected(bytes);
     }
   }

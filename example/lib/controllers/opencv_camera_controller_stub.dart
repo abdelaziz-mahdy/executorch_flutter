@@ -4,6 +4,7 @@ library;
 
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/widgets.dart';
 import 'camera_controller.dart';
 
 /// Stub implementation that throws UnsupportedError on web
@@ -24,11 +25,27 @@ class OpenCVCameraController implements CameraController {
   bool get isActive => false;
 
   @override
-  Future<void> start() {
+  CameraMode get mode => CameraMode.capture;
+
+  @override
+  bool get isPreviewReady => false;
+
+  @override
+  Future<void> start({CameraMode mode = CameraMode.live}) {
     throw UnsupportedError(
       'OpenCV camera is not available on web. '
       'Use platform camera instead.',
     );
+  }
+
+  @override
+  Future<Uint8List?> takePicture() {
+    throw UnsupportedError('OpenCV camera is not available on web.');
+  }
+
+  @override
+  Widget buildPreview() {
+    throw UnsupportedError('OpenCV camera is not available on web.');
   }
 
   @override
