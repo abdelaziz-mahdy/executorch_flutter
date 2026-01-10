@@ -7,7 +7,7 @@
 **Package Name**: `executorch_flutter`
 **Version**: 0.0.3
 **License**: MIT
-**Platforms**: Android, iOS, macOS
+**Platforms**: Android, iOS, macOS, Web
 
 ## Current Development Status
 
@@ -117,10 +117,15 @@ executorch_flutter/
 │       ├── models/                          # .pte files (gitignored)
 │       └── images/                          # Test images
 ├── scripts/
-│   ├── generate_pigeon.sh                   # Regenerate Pigeon code
-│   └── setup_models.py                      # Download/convert models
-└── python/
-    └── convert_model.py                     # PyTorch → ExecuTorch converter
+│   └── generate_pigeon.sh                   # Regenerate Pigeon code
+└── models/                                   # Git submodule for model assets
+    ├── python/                               # Model export scripts
+    │   ├── main.py                           # Unified CLI for export
+    │   ├── executorch_exporter.py            # Core exporter framework
+    │   └── BACKENDS.md                       # Backend selection guide
+    ├── mobilenet/                            # MobileNet model files
+    ├── yolo/                                 # YOLO model files
+    └── index.json                            # Model metadata index
 ```
 
 ## Key APIs
@@ -304,12 +309,8 @@ cd example
 - ✅ Exit codes for CI/CD integration
 
 **Prerequisites**:
-- Models must be in `example/assets/models/`:
-  - `mobilenet_v3_small_xnnpack.pte`
-  - `yolo11n_xnnpack.pte`
-  - `yolov5n_xnnpack.pte`
-  - `yolov8n_xnnpack.pte`
-- Run model setup: `cd python && python3 setup_models.py`
+- Models are automatically downloaded from GitHub on first use
+- To export models manually: `cd models/python && python3 main.py`
 
 ### Generated Files
 

@@ -294,20 +294,26 @@ To use your PyTorch models with this package, convert them to ExecuTorch format 
 
 **Example App Models:**
 
-The example app includes scripts for exporting reference models (MobileNet, YOLO):
+Models are automatically downloaded from GitHub on first use. To export models manually:
 
 ```bash
-# One-command setup: installs dependencies and exports all models
-cd example/python
-python3 setup_models.py
+# Export all models with all available backends
+cd models/python
+python3 main.py
 ```
 
 This will:
-- ✅ Install all required dependencies (torch, ultralytics, executorch)
-- ✅ Export MobileNet V3 for image classification
-- ✅ Export YOLO11n for object detection
-- ✅ Generate COCO labels file
-- ✅ Verify all models are ready
+- ✅ Export MobileNet V3 (all backends: XNNPACK, CoreML, MPS, Vulkan)
+- ✅ Export YOLO11n, YOLOv8n, YOLOv5n (all backends)
+- ✅ Generate labels files
+- ✅ Generate index.json for dynamic model discovery
+
+**Model Hosting:**
+
+Models are hosted in a separate repository for faster cloning:
+- Repository: [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models)
+- Models are downloaded and cached locally on first use
+- index.json provides model metadata (size, hash, platforms)
 
 ## Development Status
 
