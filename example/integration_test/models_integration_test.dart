@@ -2,10 +2,13 @@
 
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/services.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+
+// Import the example app services for model downloading
+import 'package:executorch_flutter_example/services/model_index_service.dart';
+import 'package:executorch_flutter_example/services/model_download_service.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -13,42 +16,75 @@ void main() {
   group('ExecuTorch Models Integration Tests', () {
     late ExecutorchManager manager;
     final Map<String, String> modelPaths = {};
+    final Map<String, ModelIndexEntry> modelEntries = {};
 
-    /// Load an asset model to the cache directory
-    Future<String> loadAssetModel(String assetPath) async {
-      final byteData = await rootBundle.load(assetPath);
-      final directory = await getApplicationCacheDirectory();
-      final fileName = assetPath.split('/').last;
-      final file = File('${directory.path}/$fileName');
+    /// Download a model from GitHub and save to cache directory
+    Future<String> downloadAndCacheModel(ModelIndexEntry entry) async {
+      print('📥 Downloading ${entry.displayName}...');
 
-      if (!file.existsSync()) {
-        await file.writeAsBytes(
-          byteData.buffer.asUint8List(
-            byteData.offsetInBytes,
-            byteData.lengthInBytes,
-          ),
-        );
+      final downloadService = ModelDownloadService.instance;
+      final info = await downloadService.downloadModel(
+        modelName: entry.name,
+        remoteUrl: entry.remoteUrl,
+        onProgress: (progress, received, total) {
+          if (progress == 0.0 || progress == 0.5 || progress == 1.0) {
+            print('   ${(progress * 100).toStringAsFixed(0)}% downloaded');
+          }
+        },
+      );
+
+      if (info.state != ModelDownloadState.downloaded) {
+        throw Exception('Failed to download ${entry.name}: ${info.errorMessage}');
       }
 
-      return file.path;
+      // For native platforms, return the local path
+      if (info.localPath != null) {
+        print('✅ Downloaded ${entry.displayName} to ${info.localPath}');
+        return info.localPath!;
+      }
+
+      // For web or bytes-only, write to cache directory
+      if (info.bytes != null) {
+        final directory = await getApplicationCacheDirectory();
+        final file = File('${directory.path}/${entry.name}');
+        await file.writeAsBytes(info.bytes!);
+        print('✅ Downloaded ${entry.displayName} to ${file.path}');
+        return file.path;
+      }
+
+      throw Exception('Download succeeded but no path or bytes available');
     }
 
     setUpAll(() async {
       manager = ExecutorchManager.instance;
       await manager.initialize();
 
-      // Load all required models from assets to cache
-      final models = {
-        'mobilenet': 'assets/models/mobilenet_v3_small_xnnpack.pte',
-        'yolo11n': 'assets/models/yolo11n_xnnpack.pte',
-        'yolov5n': 'assets/models/yolov5n_xnnpack.pte',
-        'yolov8n': 'assets/models/yolov8n_xnnpack.pte',
+      // Fetch model index from GitHub
+      print('📦 Fetching model index from GitHub...');
+      final index = await ModelIndexService.fetchIndex(forceRefresh: true);
+      print('✅ Found ${index.models.length} models in index');
+
+      // Find required models (XNNPACK backend for cross-platform support)
+      final requiredModels = {
+        'mobilenet': 'mobilenet_v3_small_xnnpack.pte',
+        'yolo11n': 'yolo11n_xnnpack.pte',
+        'yolov5n': 'yolov5n_xnnpack.pte',
+        'yolov8n': 'yolov8n_xnnpack.pte',
       };
 
-      for (final entry in models.entries) {
-        modelPaths[entry.key] = await loadAssetModel(entry.value);
-        print('📦 Loaded ${entry.key}: ${modelPaths[entry.key]}');
+      for (final entry in requiredModels.entries) {
+        final modelEntry = index.models.firstWhere(
+          (m) => m.name == entry.value,
+          orElse: () => throw Exception('Model ${entry.value} not found in index'),
+        );
+        modelEntries[entry.key] = modelEntry;
+        modelPaths[entry.key] = await downloadAndCacheModel(modelEntry);
+        print('📦 Ready: ${entry.key} -> ${modelPaths[entry.key]}');
       }
+
+      print('');
+      print('✅ All models downloaded and ready for testing');
+      print('');
     });
 
     tearDownAll(() async {

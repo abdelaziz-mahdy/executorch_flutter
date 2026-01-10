@@ -88,36 +88,16 @@ build_platform() {
     fi
 }
 
-# Check if models exist
-echo "📦 Checking for model files..."
-MODELS_DIR="$PROJECT_DIR/assets/models"
-REQUIRED_MODELS=(
-    "mobilenet_v3_small_xnnpack.pte"
-    "yolo11n_xnnpack.pte"
-    "yolov5n_xnnpack.pte"
-    "yolov8n_xnnpack.pte"
-)
-
-MODELS_MISSING=false
-for model in "${REQUIRED_MODELS[@]}"; do
-    if [ ! -f "$MODELS_DIR/$model" ]; then
-        echo "${RED}✗ Missing model: $model${NC}"
-        MODELS_MISSING=true
-    else
-        echo "${GREEN}✓ Found model: $model${NC}"
-    fi
-done
-
-if [ "$MODELS_MISSING" = true ]; then
-    echo ""
-    echo "${RED}Error: Some required models are missing!${NC}"
-    echo "Please run the model setup script first:"
-    echo "  cd ../python && python3 setup_models.py"
-    exit 1
-fi
-
+# Note: Models are downloaded from GitHub at runtime
+echo "📦 Model Download Info"
+echo "   Models will be downloaded from GitHub during tests."
+echo "   Repository: https://github.com/abdelaziz-mahdy/executorch_flutter_models"
 echo ""
-echo "✅ All required models found"
+echo "   Required models:"
+echo "   - mobilenet_v3_small_xnnpack.pte"
+echo "   - yolo11n_xnnpack.pte"
+echo "   - yolov5n_xnnpack.pte"
+echo "   - yolov8n_xnnpack.pte"
 echo ""
 
 # Test on macOS (if on macOS)
