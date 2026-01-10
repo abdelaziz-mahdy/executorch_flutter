@@ -4,8 +4,8 @@ import 'package:universal_platform/universal_platform.dart';
 /// Camera provider options (how to capture frames)
 /// Only used by models that support camera input (e.g., image models)
 enum CameraProvider {
-  platform('Platform Camera', 'Uses Flutter camera plugin'),
-  opencv('OpenCV Camera', 'Uses opencv_dart for camera');
+  platform('Platform Camera', 'Uses Flutter camera plugin (iOS/Android only)'),
+  opencv('OpenCV Camera', 'Uses opencv_dart for camera (recommended)');
 
   const CameraProvider(this.displayName, this.description);
 
@@ -13,19 +13,41 @@ enum CameraProvider {
   final String description;
 
   /// Returns available camera providers for the current platform
-  /// OpenCV is not available on web
+  /// - Platform camera: Only available on iOS and Android
+  /// - OpenCV camera: Available on iOS, Android, macOS, Linux (not web)
   static List<CameraProvider> get availableProviders {
     if (UniversalPlatform.isWeb) {
-      return values.where((p) => p != CameraProvider.opencv).toList();
+      // Web: No camera support currently
+      return [];
     }
+    if (UniversalPlatform.isMacOS || UniversalPlatform.isLinux || UniversalPlatform.isWindows) {
+      // Desktop: Only OpenCV camera works
+      return [CameraProvider.opencv];
+    }
+    // Mobile (iOS/Android): Both work, but OpenCV is more consistent
     return values.toList();
+  }
+
+  /// Returns the default camera provider for the current platform
+  static CameraProvider get defaultProvider {
+    if (UniversalPlatform.isWeb) {
+      // Web has no camera support, but return opencv as placeholder
+      return CameraProvider.opencv;
+    }
+    // OpenCV is recommended for all platforms (more consistent)
+    return CameraProvider.opencv;
   }
 
   /// Whether this provider is available on the current platform
   bool get isAvailable {
-    if (UniversalPlatform.isWeb && this == CameraProvider.opencv) {
-      return false;
+    if (UniversalPlatform.isWeb) {
+      return false; // No camera on web
     }
+    if (this == CameraProvider.platform) {
+      // Platform camera only works on iOS and Android
+      return UniversalPlatform.isIOS || UniversalPlatform.isAndroid;
+    }
+    // OpenCV works on all native platforms
     return true;
   }
 }

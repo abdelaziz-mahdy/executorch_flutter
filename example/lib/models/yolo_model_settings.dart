@@ -1,5 +1,3 @@
-import 'package:universal_platform/universal_platform.dart';
-
 import 'model_settings.dart';
 
 /// Settings specific to YOLO models
@@ -17,11 +15,9 @@ class YoloModelSettings extends ModelSettings {
        _nmsThreshold = nmsThreshold;
 
   /// Default camera provider based on platform
+  /// Uses the centralized platform-aware logic from CameraProvider
   static CameraProvider get _defaultCameraProvider {
-    if (UniversalPlatform.isWeb) {
-      return CameraProvider.platform; // OpenCV not available on web
-    }
-    return CameraProvider.platform; // Platform camera is more reliable
+    return CameraProvider.defaultProvider;
   }
 
   /// Default preprocessing provider based on platform
