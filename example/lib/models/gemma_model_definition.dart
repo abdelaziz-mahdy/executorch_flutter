@@ -5,6 +5,7 @@ import '../processors/base_processor.dart';
 import '../processors/gemma_input_processor.dart';
 import '../processors/gemma_output_processor.dart';
 import '../renderers/screens/text_generation_renderer.dart';
+import '../services/model_index_service.dart';
 import 'model_definition.dart';
 import 'model_input.dart';
 import 'model_settings.dart';
@@ -35,8 +36,9 @@ class GemmaModelDefinition
       return _vocabCache[vocabRemoteUrl]!;
     }
 
-    // Download vocab from remote URL
-    final response = await http.get(Uri.parse(vocabRemoteUrl));
+    // Download vocab from remote URL (with cache buster)
+    final urlWithCacheBuster = ModelIndexService.addCacheBuster(vocabRemoteUrl);
+    final response = await http.get(Uri.parse(urlWithCacheBuster));
     if (response.statusCode != 200) {
       throw Exception('Failed to download vocab from $vocabRemoteUrl');
     }

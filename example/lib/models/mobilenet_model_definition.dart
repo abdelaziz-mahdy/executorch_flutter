@@ -8,6 +8,7 @@ import '../processors/image_processor.dart';
 import '../processors/mobilenet_input_processor.dart';
 import '../processors/mobilenet_output_processor.dart';
 import '../renderers/screens/classification_renderer.dart';
+import '../services/model_index_service.dart';
 import '../widgets/image_input_widget.dart';
 import 'model_definition.dart';
 import 'model_input.dart';
@@ -38,8 +39,9 @@ class MobileNetModelDefinition
       return _labelsCache[labelsRemoteUrl]!;
     }
 
-    // Download labels from remote URL
-    final response = await http.get(Uri.parse(labelsRemoteUrl));
+    // Download labels from remote URL (with cache buster)
+    final urlWithCacheBuster = ModelIndexService.addCacheBuster(labelsRemoteUrl);
+    final response = await http.get(Uri.parse(urlWithCacheBuster));
     if (response.statusCode != 200) {
       throw Exception('Failed to download labels from $labelsRemoteUrl');
     }

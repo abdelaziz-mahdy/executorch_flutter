@@ -7,6 +7,7 @@ import 'model_download_service_stub.dart'
     if (dart.library.io) 'model_download_service_native.dart'
     if (dart.library.js_interop) 'model_download_service_web.dart'
     as impl;
+import 'model_index_service.dart';
 
 /// Download progress callback
 typedef DownloadProgressCallback =
@@ -129,10 +130,13 @@ class ModelDownloadService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Add cache buster to invalidate CDN cache
+      final urlWithCacheBuster = ModelIndexService.addCacheBuster(remoteUrl);
+
       // Download with progress
       final bytes = await impl.downloadModel(
         modelName: modelName,
-        remoteUrl: remoteUrl,
+        remoteUrl: urlWithCacheBuster,
         onProgress: (progress, received, total) {
           _downloadStates[modelName] = _downloadStates[modelName]!.copyWith(
             progress: progress,

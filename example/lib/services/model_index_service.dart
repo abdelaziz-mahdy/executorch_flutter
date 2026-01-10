@@ -168,6 +168,14 @@ class ModelIndexService {
   static DateTime? _cacheTime;
   static const Duration _cacheDuration = Duration(hours: 1);
 
+  /// Adds a cache-busting timestamp to a URL
+  /// This prevents CDN/browser caching issues when files are updated
+  static String addCacheBuster(String url) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final separator = url.contains('?') ? '&' : '?';
+    return '$url${separator}t=$timestamp';
+  }
+
   /// Fetches the model index from the remote server
   /// Caches the result for 1 hour
   static Future<ModelIndex> fetchIndex({bool forceRefresh = false}) async {
@@ -180,7 +188,9 @@ class ModelIndexService {
     }
 
     try {
-      final response = await http.get(Uri.parse(_indexUrl));
+      // Add timestamp to invalidate CDN cache
+      final urlWithCacheBuster = addCacheBuster(_indexUrl);
+      final response = await http.get(Uri.parse(urlWithCacheBuster));
       if (response.statusCode != 200) {
         throw Exception('Failed to fetch model index: ${response.statusCode}');
       }
