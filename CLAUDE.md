@@ -860,7 +860,7 @@ for (int c = 0; c < 3; c++) {
 
 ## Future Considerations
 
-- Windows/Linux platform support
+- Windows/Linux platform support via FFI migration
 - iOS simulator support (x86_64 build)
 - macOS Intel support (x86_64 build)
 - Streaming inference for large outputs
@@ -868,6 +868,38 @@ for (int c = 0; c < 3; c++) {
 - Comprehensive unit/integration test suite
 - Model caching and version management
 - Optional debugging/profiling APIs
+
+## FFI Migration Documentation
+
+The package includes comprehensive documentation for migrating from Pigeon-based method channels to dart:ffi with native assets. This would enable:
+
+- **Additional platforms**: Linux, Windows desktop support
+- **Better performance**: Direct native calls without method channel overhead
+- **Unified codebase**: Single C wrapper instead of Kotlin/Swift implementations
+- **Zero-copy tensors**: Potential for direct memory sharing
+
+**Documentation files in `docs/`:**
+
+- **`FFI_NATIVE_ASSETS_PATTERNS.md`**: Patterns extracted from opencv_dart including:
+  - C interface design with opaque pointers and status codes
+  - ffigen configuration for generating FFI bindings
+  - Native assets build system with CMake
+  - Memory management with NativeFinalizer
+  - Backend configuration system
+  - Platform-specific build configurations
+
+- **`FFI_MIGRATION_GUIDE.md`**: Step-by-step migration guide including:
+  - Phase 1: Project setup and dependencies
+  - Phase 2: C interface implementation (header + implementation)
+  - Phase 3: FFI bindings generation with ffigen
+  - Phase 4: Native assets build hook
+  - Phase 5: Dart wrapper classes
+  - Phase 6: Platform-specific integration
+  - Phase 7: Testing and validation
+  - Phase 8: Cleanup and release
+
+**Migration complexity**: Medium-High (2-4 weeks estimated)
+**Risk**: ExecuTorch doesn't have a stable C API, would need to create/maintain wrapper
 
 ## Example App Architecture
 
