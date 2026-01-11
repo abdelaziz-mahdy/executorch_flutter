@@ -1,6 +1,6 @@
 name: executorch_flutter
 description: A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, macOS, and Web platforms.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/abdelaziz-mahdy/executorch_flutter
 repository: https://github.com/abdelaziz-mahdy/executorch_flutter
 

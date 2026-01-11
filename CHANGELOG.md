@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.1
+
+### Example App Improvements
+- Models are now downloaded from remote GitHub repository instead of bundled in assets
+- Significantly reduces app size by loading models on-demand
+- Added cache-busting for GitHub model requests to ensure fresh downloads
+- Updated integration tests to download models from remote URL
+
+### Bug Fixes
+- Fixed camera provider defaulting to OpenCV on all platforms for better compatibility
+- Fixed broken pipe errors in integration test script
+
+### Dependencies
+- Fixed `plugin_platform_interface` version constraint
+
 ## 0.1.0
 
 - **Web Platform Support**: WebAssembly with XNNPACK backend
