@@ -34,3 +34,6 @@ tmp/
 # Large example assets - users should generate their own
 example/assets/models/*.pte
 example/assets/images/*.jpg
+
+# Models directory (large .pte files)
+models/
