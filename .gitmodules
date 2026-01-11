@@ -1,3 +1,6 @@
 [submodule "models"]
 	path = models
 	url = https://github.com/abdelaziz-mahdy/executorch_flutter_models.git
+[submodule "native"]
+	path = native
+	url = https://github.com/abdelaziz-mahdy/executorch_native.git

@@ -8,12 +8,14 @@
 /// This file implements the build hook for compiling the native C/C++
 /// library using CMake and native_toolchain_cmake.
 ///
-/// ExecuTorch is downloaded and built from source via CMake FetchContent.
+/// ## Build Modes
 ///
-/// ## Build Requirements
-/// - Python 3.8+ with pyyaml package (for ExecuTorch code generation)
-/// - CMake 3.18+
-/// - Platform-specific toolchains (Xcode for Apple, NDK for Android, etc.)
+/// - **prebuilt** (default): Downloads pre-built binaries from GitHub Releases.
+///   Fast builds, no Python required.
+///
+/// - **source**: Builds ExecuTorch from source using FetchContent.
+///   Slower but supports custom backend configurations.
+///   Requires Python 3.8+ with pyyaml package.
 ///
 /// ## Configuration via pubspec.yaml
 /// ```yaml
@@ -21,16 +23,20 @@
 ///   user_defines:
 ///     executorch_flutter:
 ///       debug: true
+///       build_mode: "prebuilt"  # or "source"
 ///       executorch_version: "1.0.1"
 ///       backends:
 ///         - xnnpack
 ///         - coreml
 ///         - mps
+///         - vulkan
 /// ```
 ///
 /// ## Environment Variables
+/// - `EXECUTORCH_BUILD_MODE`: Override build mode ("prebuilt" or "source")
 /// - `EXECUTORCH_CACHE_DIR`: Custom cache directory for ExecuTorch sources
-/// - `EXECUTORCH_DISABLE_DOWNLOAD`: Set to "1" to use local sources only
+/// - `EXECUTORCH_DISABLE_DOWNLOAD`: Set to "1" to skip pre-built download
+/// - `EXECUTORCH_INSTALL_DIR`: Path to local ExecuTorch installation
 library;
 
 import 'dart:io';
@@ -47,20 +53,23 @@ const String _libraryName = 'executorch_ffi';
 const String _packageName = 'executorch_flutter';
 
 /// Default ExecuTorch version.
-/// Note: 0.6+ removed buck2 dependency for CMake builds
 const String _defaultExecutorchVersion = '1.0.1';
 
-/// Minimum required Python version (major.minor).
+/// Default build mode.
+const String _defaultBuildMode = 'source'; // TODO: Change to 'prebuilt' after first release
+
+/// Minimum required Python version (major.minor) - only for source builds.
 const List<int> _minPythonVersion = [3, 8];
 
 /// Run the native assets build.
 ///
 /// This function is called from hook/build.dart and performs:
-/// 1. Python dependency validation
-/// 2. Platform detection
-/// 3. Backend configuration from user_defines
-/// 4. CMake build orchestration (downloads and builds ExecuTorch from source)
-/// 5. Code asset registration
+/// 1. Build mode detection (prebuilt vs source)
+/// 2. Python dependency validation (source mode only)
+/// 3. Platform detection
+/// 4. Backend configuration from user_defines
+/// 5. CMake build orchestration
+/// 6. Code asset registration
 Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   final packagePath = Directory(await getPackagePath(_packageName));
   final targetOS = input.config.code.targetOS;
@@ -68,21 +77,15 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
 
   // Get user defines
   final userDefines = input.userDefines;
-  // Debug mode enables stderr output for immediate visibility
-  // Normal mode uses print() which Flutter captures and shows with --verbose
   final debugMode = userDefines['debug'] as bool? ?? false;
 
-  // Set up logger - use root logger so Flutter's hooks_runner captures output
-  // Flutter's native_assets.dart listens to Logger('') and routes to printTrace
-  // We use INFO level so logs appear with --verbose flag
+  // Set up logger
   hierarchicalLoggingEnabled = true;
   final logger = Logger('')
     ..level = Level.ALL
     ..onRecord.listen((record) {
       final message = record.message;
       if (message.isNotEmpty) {
-        // Debug: stderr for immediate output
-        // Normal: print() for Flutter capture (--verbose shows these)
         if (debugMode) {
           stderr.write(message);
         } else {
@@ -94,66 +97,75 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   // Print build header
   _printBuildHeader(logger, targetOS, targetArch);
 
-  // Step 1: Verify Python dependencies (required for ExecuTorch codegen)
-  logger.info('[executorch_flutter] Step 1/5: Checking Python dependencies\n');
-  final pythonInfo = await _verifyPythonDependencies(logger);
+  // Determine build mode
+  final buildMode = Platform.environment['EXECUTORCH_BUILD_MODE'] ??
+      userDefines['build_mode'] as String? ??
+      _defaultBuildMode;
 
-  // Get ExecuTorch version from user defines or use default
+  final isSourceBuild = buildMode == 'source';
+  logger.info('[executorch_flutter] Build mode: $buildMode\n');
+
+  // Get ExecuTorch version
   final executorchVersion =
       userDefines['executorch_version'] as String? ?? _defaultExecutorchVersion;
+  logger.info('[executorch_flutter] ExecuTorch version: v$executorchVersion\n');
+
+  // Step 1: Python dependencies (only for source builds)
+  String? pythonExecutable;
+  if (isSourceBuild) {
+    logger.info('\n[executorch_flutter] Step 1/5: Checking Python dependencies\n');
+    final pythonInfo = await _verifyPythonDependencies(logger);
+    pythonExecutable = pythonInfo.executable;
+  } else {
+    logger.info('\n[executorch_flutter] Step 1/5: Skipping Python check (prebuilt mode)\n');
+  }
 
   // Step 2: Configure backends
   logger.info('[executorch_flutter] Step 2/5: Configuring backends\n');
-
-  // Get backend configuration from user defines
   final backendDefines = _getBackendDefines(input, targetOS);
   _logBackendConfiguration(logger, backendDefines);
 
   // Step 3: Configure CMake generator
   logger.info('[executorch_flutter] Step 3/5: Configuring build system\n');
 
-  // Select generator based on target OS
   final generator = switch (targetOS) {
-    OS.linux => Generator.make,
+    OS.linux => Generator.ninja,
     OS.macOS || OS.iOS => Generator.xcode,
     OS.windows => Generator.defaultGenerator,
     OS.android => Generator.ninja,
-    _ => throw ArgumentError.value(
-      targetOS,
-      'targetOS',
-      'Unsupported target OS',
-    ),
+    _ => throw ArgumentError.value(targetOS, 'targetOS', 'Unsupported target OS'),
   };
   logger.info('[executorch_flutter]   Generator: ${generator.name}\n');
 
-  // Check for cache directory environment variable
+  // Cache directory
   final cacheDir = Platform.environment['EXECUTORCH_CACHE_DIR'];
   if (cacheDir != null && cacheDir.isNotEmpty) {
     logger.info('[executorch_flutter]   Cache directory: $cacheDir\n');
   }
 
-  // Create CMake builder
+  // Create CMake builder - uses native/ directory (submodule)
   final builder = CMakeBuilder.create(
     logLevel: debugMode ? LogLevel.DEBUG : LogLevel.STATUS,
-    appleArgs: const AppleBuilderArgs(
-      enableArc: false,
-    ),
+    appleArgs: const AppleBuilderArgs(enableArc: false),
     name: _libraryName,
-    sourceDir: packagePath.uri.resolve('src/'),
+    sourceDir: packagePath.uri.resolve('native/'),
     targets: ['install'],
     generator: generator,
     defines: {
-      // Python executable for ExecuTorch codegen
-      'PYTHON_EXECUTABLE': pythonInfo.executable,
-      // ExecuTorch version to build
+      // Build mode
+      'EXECUTORCH_BUILD_MODE': buildMode,
+      // ExecuTorch version
       'EXECUTORCH_VERSION': executorchVersion,
-      // Cache directory (if specified)
+      // Python executable (only for source builds)
+      if (isSourceBuild && pythonExecutable != null)
+        'PYTHON_EXECUTABLE': pythonExecutable,
+      // Cache directory
       if (cacheDir != null && cacheDir.isNotEmpty)
         'EXECUTORCH_CACHE_DIR': cacheDir,
       // Platform-specific deployment targets
-      if (targetOS == OS.macOS) 'DEPLOYMENT_TARGET': '11.0',
-      if (targetOS == OS.iOS) 'DEPLOYMENT_TARGET': '13.0',
-      // Install prefix for output
+      if (targetOS == OS.macOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '11.0',
+      if (targetOS == OS.iOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '13.0',
+      // Install prefix
       'CMAKE_INSTALL_PREFIX':
           input.outputDirectory.resolve('install/').toFilePath(),
       // Backend defines
@@ -161,21 +173,23 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
     },
   );
 
-  // Step 4: Build ExecuTorch (this is the long step)
-  logger
-    ..info('[executorch_flutter] Step 4/5: Building ExecuTorch\n')
-    ..info('[executorch_flutter]   Version: v$executorchVersion\n')
-    ..info('[executorch_flutter]   This may take 5-15 minutes...\n')
-    ..info('[executorch_flutter]   (Faster after first build)\n')
-    ..info('[executorch_flutter]\n');
+  // Step 4: Build
+  if (isSourceBuild) {
+    logger
+      ..info('[executorch_flutter] Step 4/5: Building from source\n')
+      ..info('[executorch_flutter]   This may take 15-30 minutes on first build...\n')
+      ..info('[executorch_flutter]   (Faster after first build with cache)\n');
+  } else {
+    logger
+      ..info('[executorch_flutter] Step 4/5: Building with pre-built binaries\n')
+      ..info('[executorch_flutter]   Downloading and linking pre-built ExecuTorch...\n');
+  }
 
-  // Run the builder
   await builder.run(input: input, output: output, logger: logger);
 
   // Step 5: Register code assets
   logger.info('[executorch_flutter] Step 5/5: Registering native assets\n');
 
-  // Find and add code assets
   await output.findAndAddCodeAssets(
     input,
     outDir: input.outputDirectory.resolve('install/'),
@@ -233,12 +247,12 @@ void _printBuildHeader(Logger logger, OS targetOS, Architecture? targetArch) {
     ..info('[executorch_flutter]  ExecuTorch Flutter Native Build\n')
     ..info('[executorch_flutter] ═══════════════════════════════════════\n')
     ..info('[executorch_flutter]  Target: ${targetOS.name}$archSuffix\n')
-    ..info('[executorch_flutter] ───────────────────────────────────────\n')
-    ..info('\n');
+    ..info('[executorch_flutter] ───────────────────────────────────────\n');
 }
 
 /// Verify Python dependencies (Python 3.8+ with pyyaml).
 ///
+/// Only called for source builds.
 /// Throws [Exception] with user-friendly message if dependencies not met.
 Future<_PythonInfo> _verifyPythonDependencies(Logger logger) async {
   // Find Python executable
@@ -258,7 +272,6 @@ Future<_PythonInfo> _verifyPythonDependencies(Logger logger) async {
       );
       if (result.exitCode == 0) {
         pythonExecutable = name;
-        // Output is "Python 3.x.y" - extract version
         final output = (result.stdout as String).trim();
         pythonVersion = output.replaceFirst('Python ', '');
         break;
@@ -272,17 +285,20 @@ Future<_PythonInfo> _verifyPythonDependencies(Logger logger) async {
     throw Exception('''
 [executorch_flutter] ERROR: Python not found!
 
-ExecuTorch requires Python 3.8+ for code generation during the build.
+Building from source requires Python 3.8+ for ExecuTorch code generation.
 
-To fix this:
-1. Install Python 3.8 or newer:
+Options:
+1. Install Python 3.8+:
    - macOS: brew install python3
    - Ubuntu/Debian: sudo apt install python3
    - Windows: Download from https://python.org
 
-2. Ensure 'python3' or 'python' is in your PATH
-
-3. Install required packages: pip install pyyaml
+2. Or use pre-built binaries (no Python required):
+   In pubspec.yaml:
+   hooks:
+     user_defines:
+       executorch_flutter:
+         build_mode: "prebuilt"
 ''');
   }
 
@@ -301,14 +317,12 @@ To fix this:
 Found: Python $pythonVersion
 Required: Python ${_minPythonVersion[0]}.${_minPythonVersion[1]}+
 
-Please upgrade Python to version ${_minPythonVersion[0]}.${_minPythonVersion[1]} or newer.
+Please upgrade Python or use pre-built mode.
 ''');
     }
   }
 
-  logger.info(
-    '[executorch_flutter]   Python: $pythonVersion ($pythonExecutable)\n',
-  );
+  logger.info('[executorch_flutter]   Python: $pythonVersion ($pythonExecutable)\n');
 
   // Check for pyyaml
   String? pyyamlVersion;
@@ -335,7 +349,6 @@ Please upgrade Python to version ${_minPythonVersion[0]}.${_minPythonVersion[1]}
         runInShell: Platform.isWindows,
       );
       if (installResult.exitCode == 0) {
-        // Verify installation
         final verifyResult = await Process.run(
           pythonExecutable,
           ['-c', 'import yaml; print(yaml.__version__)'],
@@ -343,9 +356,7 @@ Please upgrade Python to version ${_minPythonVersion[0]}.${_minPythonVersion[1]}
         );
         if (verifyResult.exitCode == 0) {
           pyyamlVersion = (verifyResult.stdout as String).trim();
-          logger.info(
-            '[executorch_flutter]   pyyaml installed: $pyyamlVersion\n',
-          );
+          logger.info('[executorch_flutter]   pyyaml installed: $pyyamlVersion\n');
         }
       }
     } catch (_) {
@@ -359,13 +370,17 @@ Please upgrade Python to version ${_minPythonVersion[0]}.${_minPythonVersion[1]}
     throw Exception('''
 [executorch_flutter] ERROR: pyyaml package not found!
 
-ExecuTorch requires the pyyaml Python package for code generation.
+Building from source requires the pyyaml Python package.
 
 To fix this, run:
   $pythonExecutable -m pip install pyyaml
 
-Or with user flag if you don't have admin rights:
-  $pythonExecutable -m pip install --user pyyaml
+Or use pre-built mode (no Python required):
+  In pubspec.yaml:
+  hooks:
+    user_defines:
+      executorch_flutter:
+        build_mode: "prebuilt"
 ''');
   }
 
@@ -391,14 +406,10 @@ void _logBackendConfiguration(Logger logger, Map<String, String?> defines) {
   }
 
   if (enabledBackends.isNotEmpty) {
-    logger.info(
-      '[executorch_flutter]   Enabled: ${enabledBackends.join(", ")}\n',
-    );
+    logger.info('[executorch_flutter]   Enabled: ${enabledBackends.join(", ")}\n');
   }
   if (disabledBackends.isNotEmpty) {
-    logger.info(
-      '[executorch_flutter]   Disabled: ${disabledBackends.join(", ")}\n',
-    );
+    logger.info('[executorch_flutter]   Disabled: ${disabledBackends.join(", ")}\n');
   }
 }
 
@@ -411,4 +422,3 @@ void _printBuildSuccess(Logger logger) {
     ..info('[executorch_flutter] ═══════════════════════════════════════\n')
     ..info('\n');
 }
-
