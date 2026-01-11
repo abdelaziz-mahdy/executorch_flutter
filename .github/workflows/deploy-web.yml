@@ -11,7 +11,7 @@ concurrency:
 jobs:
   build_web:
     name: Build Flutter Web, Deploy
-    runs-on: ubuntu-latest
+    runs-on: macos-14
 
     steps:
       - name: Checkout Code
