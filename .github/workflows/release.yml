@@ -59,15 +59,14 @@ jobs:
             echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           fi
 
-  # Create tag, GitHub Release, and publish to pub.dev
+  # Create tag and GitHub Release (publish.yml handles pub.dev)
   create-release:
-    name: Create Tag & Release & Publish
+    name: Create Tag & Release
     needs: [check-version, build-checks]
     if: needs.check-version.outputs.should_release == 'true'
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write  # Required for pub.dev OIDC authentication
     steps:
       - uses: actions/checkout@v4
         with:
@@ -88,11 +87,17 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create and push tag
+        env:
+          # Use PAT to push tag so it triggers publish workflow
+          # Create a PAT with 'contents: write' scope and add as repository secret 'RELEASE_TOKEN'
+          # If RELEASE_TOKEN is not set, falls back to GITHUB_TOKEN (won't trigger publish workflow)
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "v$VERSION" -m "Release v$VERSION"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git push origin "v$VERSION"
 
       - name: Create GitHub Release
@@ -110,21 +115,3 @@ jobs:
             📦 [View on pub.dev](https://pub.dev/packages/executorch_flutter/versions/${{ needs.check-version.outputs.version }})
           draft: false
           prerelease: false
-
-      # Publish to pub.dev using OIDC authentication
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Enable Swift Package Manager
-        run: flutter config --enable-swift-package-manager
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Publish to pub.dev
-        run: dart pub publish --force
