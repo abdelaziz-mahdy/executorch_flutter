@@ -67,7 +67,8 @@ hooks:
   user_defines:
     executorch_flutter:
       # Set to true for debug output during build
-      debug: false
+      debug: true
+      build_mode: "prebuilt"
       # List of backends to build (default: platform-appropriate)
       # Available: xnnpack, coreml, mps, vulkan, qnn
       # backends:

@@ -56,7 +56,7 @@ const String _packageName = 'executorch_flutter';
 const String _defaultExecutorchVersion = '1.0.1';
 
 /// Default build mode.
-const String _defaultBuildMode = 'source'; // TODO: Change to 'prebuilt' after first release
+const String _defaultBuildMode = 'prebuilt';
 
 /// Minimum required Python version (major.minor) - only for source builds.
 const List<int> _minPythonVersion = [3, 8];
@@ -113,11 +113,13 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   // Step 1: Python dependencies (only for source builds)
   String? pythonExecutable;
   if (isSourceBuild) {
-    logger.info('\n[executorch_flutter] Step 1/5: Checking Python dependencies\n');
+    logger.info(
+        '\n[executorch_flutter] Step 1/5: Checking Python dependencies\n');
     final pythonInfo = await _verifyPythonDependencies(logger);
     pythonExecutable = pythonInfo.executable;
   } else {
-    logger.info('\n[executorch_flutter] Step 1/5: Skipping Python check (prebuilt mode)\n');
+    logger.info(
+        '\n[executorch_flutter] Step 1/5: Skipping Python check (prebuilt mode)\n');
   }
 
   // Step 2: Configure backends
@@ -133,7 +135,8 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
     OS.macOS || OS.iOS => Generator.xcode,
     OS.windows => Generator.defaultGenerator,
     OS.android => Generator.ninja,
-    _ => throw ArgumentError.value(targetOS, 'targetOS', 'Unsupported target OS'),
+    _ =>
+      throw ArgumentError.value(targetOS, 'targetOS', 'Unsupported target OS'),
   };
   logger.info('[executorch_flutter]   Generator: ${generator.name}\n');
 
@@ -177,12 +180,15 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   if (isSourceBuild) {
     logger
       ..info('[executorch_flutter] Step 4/5: Building from source\n')
-      ..info('[executorch_flutter]   This may take 15-30 minutes on first build...\n')
+      ..info(
+          '[executorch_flutter]   This may take 15-30 minutes on first build...\n')
       ..info('[executorch_flutter]   (Faster after first build with cache)\n');
   } else {
     logger
-      ..info('[executorch_flutter] Step 4/5: Building with pre-built binaries\n')
-      ..info('[executorch_flutter]   Downloading and linking pre-built ExecuTorch...\n');
+      ..info(
+          '[executorch_flutter] Step 4/5: Building with pre-built binaries\n')
+      ..info(
+          '[executorch_flutter]   Downloading and linking pre-built ExecuTorch...\n');
   }
 
   await builder.run(input: input, output: output, logger: logger);
@@ -322,7 +328,8 @@ Please upgrade Python or use pre-built mode.
     }
   }
 
-  logger.info('[executorch_flutter]   Python: $pythonVersion ($pythonExecutable)\n');
+  logger.info(
+      '[executorch_flutter]   Python: $pythonVersion ($pythonExecutable)\n');
 
   // Check for pyyaml
   String? pyyamlVersion;
@@ -356,7 +363,8 @@ Please upgrade Python or use pre-built mode.
         );
         if (verifyResult.exitCode == 0) {
           pyyamlVersion = (verifyResult.stdout as String).trim();
-          logger.info('[executorch_flutter]   pyyaml installed: $pyyamlVersion\n');
+          logger.info(
+              '[executorch_flutter]   pyyaml installed: $pyyamlVersion\n');
         }
       }
     } catch (_) {
@@ -406,10 +414,12 @@ void _logBackendConfiguration(Logger logger, Map<String, String?> defines) {
   }
 
   if (enabledBackends.isNotEmpty) {
-    logger.info('[executorch_flutter]   Enabled: ${enabledBackends.join(", ")}\n');
+    logger.info(
+        '[executorch_flutter]   Enabled: ${enabledBackends.join(", ")}\n');
   }
   if (disabledBackends.isNotEmpty) {
-    logger.info('[executorch_flutter]   Disabled: ${disabledBackends.join(", ")}\n');
+    logger.info(
+        '[executorch_flutter]   Disabled: ${disabledBackends.join(", ")}\n');
   }
 }
 
