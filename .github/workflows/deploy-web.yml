@@ -22,7 +22,9 @@ jobs:
         with:
           channel: "stable"
           cache: true
-
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+        
       - name: Install Flutter Dependencies
         working-directory: example
         run: flutter pub get
