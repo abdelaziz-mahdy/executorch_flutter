@@ -16,8 +16,9 @@ abstract class ModelDefinition<TInput extends ModelInput, TResult> {
     required this.displayName,
     required this.description,
     required this.icon,
-    required this.assetPath,
     required this.inputSize,
+    required this.remoteUrl,
+    this.fileSizeMB = 0,
     this.showPerformanceOverlay = true,
   });
 
@@ -25,8 +26,13 @@ abstract class ModelDefinition<TInput extends ModelInput, TResult> {
   final String displayName;
   final String description;
   final IconData icon;
-  final String assetPath;
   final int inputSize;
+
+  /// Remote URL to download the model from (GitHub raw content URL)
+  final String remoteUrl;
+
+  /// Approximate file size in MB (for display purposes)
+  final double fileSizeMB;
 
   /// Whether to show performance overlay (can be toggled by user)
   final bool showPerformanceOverlay;

@@ -1,198 +1,173 @@
+import 'package:universal_platform/universal_platform.dart';
+
 import 'model_definition.dart';
 import 'yolo_model_definition.dart';
 import 'mobilenet_model_definition.dart';
-import 'gemma_model_definition.dart';
+import '../services/model_index_service.dart';
 
 /// Central registry of all available models
-/// To add a new model, just add it to this list!
+/// Models are dynamically loaded from index.json hosted on GitHub.
 /// Each model is completely self-contained and knows:
-/// - Where its model file is
+/// - Where to download its model file from (GitHub)
 /// - Where its labels are (if applicable)
 /// - How to process its inputs/outputs
 /// - How to render its results
 ///
 /// Backend Information:
-/// - XNNPACK: CPU-optimized, works on all platforms (Android, iOS, macOS)
+/// - XNNPACK: CPU-optimized, works on ALL platforms (Android, iOS, macOS, Web)
 /// - CoreML: Apple Neural Engine optimization (iOS, macOS)
 /// - MPS: Metal Performance Shaders for GPU acceleration (iOS, macOS)
 /// - Vulkan: Cross-platform GPU acceleration (Android, Linux)
+///
+/// Model Hosting:
+/// Models are stored in a separate repository to keep the main repo lightweight.
+/// They are downloaded from raw.githubusercontent.com on first use and cached locally.
+/// Models repo: https://github.com/abdelaziz-mahdy/executorch_flutter_models
 class ModelRegistry {
+  /// Base URL for model downloads from GitHub raw content
+  /// Models are hosted in a separate repository for faster cloning of main repo
+  static const String _baseUrl =
+      'https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main';
+
+  /// URL for ImageNet class labels (for MobileNet)
+  static const String _imagenetLabelsUrl = '$_baseUrl/mobilenet/labels.txt';
+
+  /// URL for COCO class labels (for YOLO)
+  static const String _cocoLabelsUrl = '$_baseUrl/yolo/labels.txt';
+
+  /// Loads all available models from the index.json
   static Future<List<ModelDefinition>> loadAll() async {
+    try {
+      final index = await ModelIndexService.fetchIndex();
+      return _buildModelsFromIndex(index);
+    } catch (e) {
+      // Fallback to hardcoded models if index fetch fails
+      // ignore: avoid_print
+      print('Warning: Failed to fetch model index, using fallback: $e');
+      return _fallbackModels();
+    }
+  }
+
+  /// Builds model definitions from the fetched index
+  static List<ModelDefinition> _buildModelsFromIndex(ModelIndex index) {
+    final currentPlatform = _getCurrentPlatform();
+    final models = <ModelDefinition>[];
+
+    // Filter models by current platform
+    final platformModels = index.getModelsForPlatform(currentPlatform);
+
+    for (final entry in platformModels) {
+      final definition = _createModelDefinition(entry, index);
+      if (definition != null) {
+        models.add(definition);
+      }
+    }
+
+    return models;
+  }
+
+  /// Creates a model definition from an index entry
+  static ModelDefinition? _createModelDefinition(
+    ModelIndexEntry entry,
+    ModelIndex index,
+  ) {
+    switch (entry.category) {
+      case 'mobilenet':
+        return MobileNetModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 224,
+          fileSizeMB: entry.sizeMB,
+          labelsRemoteUrl: entry.labelsRemoteUrl ??
+              index.getLabelsUrl('mobilenet') ??
+              _imagenetLabelsUrl,
+        );
+
+      case 'yolo':
+        return YoloModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 640,
+          fileSizeMB: entry.sizeMB,
+          labelsRemoteUrl: entry.labelsRemoteUrl ??
+              index.getLabelsUrl('yolo') ??
+              _cocoLabelsUrl,
+        );
+
+      default:
+        return null;
+    }
+  }
+
+  /// Gets the current platform string for filtering
+  static String _getCurrentPlatform() {
+    if (UniversalPlatform.isWeb) return 'web';
+    if (UniversalPlatform.isAndroid) return 'android';
+    if (UniversalPlatform.isIOS) return 'ios';
+    if (UniversalPlatform.isMacOS) return 'macos';
+    if (UniversalPlatform.isLinux) return 'linux';
+    if (UniversalPlatform.isWindows) return 'windows';
+    return 'android'; // Default fallback
+  }
+
+  /// Fallback models if index.json cannot be fetched
+  static List<ModelDefinition> _fallbackModels() {
+    if (UniversalPlatform.isWeb) {
+      return _webFallbackModels();
+    }
+    return _nativeFallbackModels();
+  }
+
+  /// Fallback web models
+  static List<ModelDefinition> _webFallbackModels() {
     return [
-      // ========== MobileNet Models ==========
-      // MobileNet V3 Small - XNNPACK (CPU)
-      const MobileNetModelDefinition(
+      MobileNetModelDefinition(
+        name: 'mobilenet_v3_small_xnnpack',
+        displayName: 'MobileNet V3 Small (Web)',
+        description: 'Web-optimized image classification - XNNPACK with WASM SIMD',
+        remoteUrl: '$_baseUrl/mobilenet/mobilenet_v3_small_xnnpack.pte',
+        inputSize: 224,
+        fileSizeMB: 9.73,
+        labelsRemoteUrl: _imagenetLabelsUrl,
+      ),
+      YoloModelDefinition(
+        name: 'yolo11n_xnnpack',
+        displayName: 'YOLO11 Nano (Web)',
+        description: 'Web-optimized object detection - XNNPACK with WASM SIMD',
+        remoteUrl: '$_baseUrl/yolo/yolo11n_xnnpack.pte',
+        inputSize: 640,
+        fileSizeMB: 10.19,
+        labelsRemoteUrl: _cocoLabelsUrl,
+      ),
+    ];
+  }
+
+  /// Fallback native models
+  static List<ModelDefinition> _nativeFallbackModels() {
+    return [
+      // MobileNet XNNPACK
+      MobileNetModelDefinition(
         name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (XNNPACK)',
-        description:
-            'CPU-optimized image classification - works on all platforms',
-        assetPath: 'assets/models/mobilenet_v3_small_xnnpack.pte',
+        description: 'CPU-optimized image classification - works on all platforms',
+        remoteUrl: '$_baseUrl/mobilenet/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
-        labelsAssetPath: 'assets/imagenet_classes.txt',
+        fileSizeMB: 9.73,
+        labelsRemoteUrl: _imagenetLabelsUrl,
       ),
-
-      // MobileNet V3 Small - CoreML (Apple NPU)
-      const MobileNetModelDefinition(
-        name: 'mobilenet_v3_small_coreml',
-        displayName: 'MobileNet V3 Small (CoreML)',
-        description: 'Apple Neural Engine optimization - iOS/macOS only',
-        assetPath: 'assets/models/mobilenet_v3_small_coreml.pte',
-        inputSize: 224,
-        labelsAssetPath: 'assets/imagenet_classes.txt',
-      ),
-
-      // MobileNet V3 Small - MPS (Apple GPU)
-      const MobileNetModelDefinition(
-        name: 'mobilenet_v3_small_mps',
-        displayName: 'MobileNet V3 Small (MPS)',
-        description: 'Metal GPU acceleration - iOS/macOS only',
-        assetPath: 'assets/models/mobilenet_v3_small_mps.pte',
-        inputSize: 224,
-        labelsAssetPath: 'assets/imagenet_classes.txt',
-      ),
-
-      // MobileNet V3 Small - Vulkan (GPU)
-      const MobileNetModelDefinition(
-        name: 'mobilenet_v3_small_vulkan',
-        displayName: 'MobileNet V3 Small (Vulkan)',
-        description: 'GPU acceleration - Android/Linux',
-        assetPath: 'assets/models/mobilenet_v3_small_vulkan.pte',
-        inputSize: 224,
-        labelsAssetPath: 'assets/imagenet_classes.txt',
-      ),
-
-      // ========== YOLO11 Nano Models ==========
-      // YOLO11n - XNNPACK (CPU)
-      const YoloModelDefinition(
+      // YOLO11n XNNPACK
+      YoloModelDefinition(
         name: 'yolo11n_xnnpack',
         displayName: 'YOLO11 Nano (XNNPACK)',
         description: 'CPU-optimized object detection - works on all platforms',
-        assetPath: 'assets/models/yolo11n_xnnpack.pte',
+        remoteUrl: '$_baseUrl/yolo/yolo11n_xnnpack.pte',
         inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLO11n - CoreML (Apple NPU)
-      const YoloModelDefinition(
-        name: 'yolo11n_coreml',
-        displayName: 'YOLO11 Nano (CoreML)',
-        description: 'Apple Neural Engine optimization - iOS/macOS only',
-        assetPath: 'assets/models/yolo11n_coreml.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLO11n - MPS (Apple GPU)
-      const YoloModelDefinition(
-        name: 'yolo11n_mps',
-        displayName: 'YOLO11 Nano (MPS)',
-        description: 'Metal GPU acceleration - iOS/macOS only',
-        assetPath: 'assets/models/yolo11n_mps.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLO11n - Vulkan (GPU)
-      const YoloModelDefinition(
-        name: 'yolo11n_vulkan',
-        displayName: 'YOLO11 Nano (Vulkan)',
-        description: 'GPU acceleration - Android/Linux',
-        assetPath: 'assets/models/yolo11n_vulkan.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // ========== YOLOv8 Nano Models ==========
-      // YOLOv8n - XNNPACK (CPU)
-      const YoloModelDefinition(
-        name: 'yolov8n_xnnpack',
-        displayName: 'YOLOv8 Nano (XNNPACK)',
-        description: 'CPU-optimized object detection - works on all platforms',
-        assetPath: 'assets/models/yolov8n_xnnpack.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLOv8n - CoreML (Apple NPU)
-      const YoloModelDefinition(
-        name: 'yolov8n_coreml',
-        displayName: 'YOLOv8 Nano (CoreML)',
-        description: 'Apple Neural Engine optimization - iOS/macOS only',
-        assetPath: 'assets/models/yolov8n_coreml.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLOv8n - MPS (Apple GPU)
-      const YoloModelDefinition(
-        name: 'yolov8n_mps',
-        displayName: 'YOLOv8 Nano (MPS)',
-        description: 'Metal GPU acceleration - iOS/macOS only',
-        assetPath: 'assets/models/yolov8n_mps.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLOv8n - Vulkan (GPU)
-      const YoloModelDefinition(
-        name: 'yolov8n_vulkan',
-        displayName: 'YOLOv8 Nano (Vulkan)',
-        description: 'GPU acceleration - Android/Linux',
-        assetPath: 'assets/models/yolov8n_vulkan.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // ========== YOLOv5 Nano Models ==========
-      // YOLOv5n - XNNPACK (CPU)
-      const YoloModelDefinition(
-        name: 'yolov5n_xnnpack',
-        displayName: 'YOLOv5 Nano (XNNPACK)',
-        description: 'CPU-optimized object detection - works on all platforms',
-        assetPath: 'assets/models/yolov5n_xnnpack.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLOv5n - CoreML (Apple NPU)
-      const YoloModelDefinition(
-        name: 'yolov5n_coreml',
-        displayName: 'YOLOv5 Nano (CoreML)',
-        description: 'Apple Neural Engine optimization - iOS/macOS only',
-        assetPath: 'assets/models/yolov5n_coreml.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLOv5n - MPS (Apple GPU)
-      const YoloModelDefinition(
-        name: 'yolov5n_mps',
-        displayName: 'YOLOv5 Nano (MPS)',
-        description: 'Metal GPU acceleration - iOS/macOS only',
-        assetPath: 'assets/models/yolov5n_mps.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // YOLOv5n - Vulkan (GPU)
-      const YoloModelDefinition(
-        name: 'yolov5n_vulkan',
-        displayName: 'YOLOv5 Nano (Vulkan)',
-        description: 'GPU acceleration - Android/Linux',
-        assetPath: 'assets/models/yolov5n_vulkan.pte',
-        inputSize: 640,
-        labelsAssetPath: 'assets/coco_labels.txt',
-      ),
-
-      // ========== Text Generation Models ==========
-      // Note: Text generation models currently only support XNNPACK backend
-      const GemmaModelDefinition(
-        name: 'gemma-3-270m',
-        displayName: 'Gemma 3 270M (Not Working Yet)',
-        description: 'Google Gemma 3 text generation model (270M parameters)',
-        assetPath: 'assets/models/gemma-3-270m_xnnpack.pte',
-        inputSize: 128, // Sequence length
-        vocabAssetPath: 'assets/models/gemma-3-270m_vocab.json',
+        fileSizeMB: 10.19,
+        labelsRemoteUrl: _cocoLabelsUrl,
       ),
     ];
   }

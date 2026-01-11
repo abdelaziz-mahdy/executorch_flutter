@@ -1,8 +1,8 @@
 # ExecuTorch Flutter
 
-A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, and macOS platforms.
+A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, macOS, and Web platforms.
 
-**📦 [pub.dev](https://pub.dev/packages/executorch_flutter)** | **🔧 [Example App](example/)**
+**📦 [pub.dev](https://pub.dev/packages/executorch_flutter)** | **🌐 [Live Demo](https://abdelaziz-mahdy.github.io/executorch_flutter/)** | **🔧 [Example App](example/)**
 
 ## Overview
 
@@ -10,7 +10,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 ## Features
 
-- ✅ **Cross-Platform Support**: Android (API 23+), iOS (17.0+), and macOS (12.0+ Apple Silicon)
+- ✅ **Cross-Platform Support**: Android (API 23+), iOS (17.0+), macOS (12.0+ Apple Silicon), and Web
 - ✅ **Type-Safe API**: Generated with Pigeon for reliable cross-platform communication
 - ✅ **Async Operations**: Non-blocking model loading and inference execution
 - ✅ **Multiple Models**: Support for concurrent model instances
@@ -117,6 +117,61 @@ See the `example/` directory for a full working application:
   - ⚠️ **Intel Macs (x86_64) are NOT supported**
 - **Supported Backends**: XNNPACK, CoreML, MPS
 
+### Web
+- **Status**: Supported via WebAssembly
+- **Runtime**: WebAssembly (Wasm) with XNNPACK backend
+- **Supported Backends**: XNNPACK (Wasm SIMD)
+
+#### Web Performance
+
+Web with XNNPACK is ~6-10x slower than native, but fully functional for interactive use.
+
+| Platform | Backend | YOLO11n Inference | Total (E2E) |
+|----------|---------|-------------------|-------------|
+| Native (macOS/iOS/Android) | XNNPACK | ~50-100ms | ~150-200ms |
+| Web | XNNPACK (Wasm SIMD) | ~622ms | ~855ms |
+
+**Web Performance Breakdown (YOLO11n):**
+
+| Stage | Time | % of Total |
+|-------|------|------------|
+| Preprocessing | ~154ms | 18% |
+| Inference | ~622ms | 73% |
+| Postprocessing | ~79ms | 9% |
+
+**When to use Web:**
+- ✅ Demos and prototyping
+- ✅ Interactive inference (sub-second response)
+- ✅ Accessibility (no app install required)
+- ❌ Real-time camera inference
+- ❌ High-throughput batch processing
+
+#### Web Setup
+
+1. **Run the setup script** to copy required JavaScript and Wasm files:
+
+```bash
+dart run executorch_flutter:setup_web
+```
+
+2. **Add the script tag** to your `web/index.html` (before the Flutter bootstrap script):
+
+```html
+<head>
+  <!-- ... other head elements ... -->
+
+  <!-- ExecuTorch Wasm wrapper - must load before Flutter -->
+  <script src="js/executorch_wrapper.js"></script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+```
+
+3. **Use XNNPACK models** - Web uses the same XNNPACK-exported models as native platforms.
+
+> **Note**: File-based model loading is not supported on web - models are loaded from bytes or remote URLs.
+
 #### macOS Build Limitations
 
 **Debug Builds**: ✅ Work by default on Apple Silicon Macs
@@ -186,12 +241,12 @@ flutter build apk --debug                 # For Android
 
 The example app demonstrates three preprocessing approaches for common model types:
 
-#### 1. GPU Preprocessing (Recommended)
+#### 1. GPU Preprocessing (Default, Recommended)
 Hardware-accelerated preprocessing using Flutter Fragment Shaders:
-- **Performance**: Comparable to OpenCV on most platforms
-- **Platform Support**: All platforms (mobile + desktop)
+- **Performance**: ~75ms on web, comparable to OpenCV on native
+- **Platform Support**: All platforms including web
 - **Dependencies**: None (native Flutter APIs)
-- **Use Case**: Real-time camera inference, high frame rates
+- **Use Case**: Real-time camera inference, high frame rates, web apps
 
 **📖 [Complete GPU Preprocessing Tutorial](example/GPU_PREPROCESSING.md)** - Step-by-step guide with GLSL shader examples
 
@@ -199,8 +254,8 @@ Hardware-accelerated preprocessing using Flutter Fragment Shaders:
 
 #### 2. OpenCV Preprocessing
 High-performance C++ library preprocessing:
-- **Performance**: High-performance (very close to GPU on macOS)
-- **Platform Support**: All platforms (cross-platform)
+- **Performance**: High-performance (very close to GPU on native)
+- **Platform Support**: Native platforms only (not available on web)
 - **Dependencies**: opencv_dart package
 - **Use Case**: Advanced image processing, computer vision operations
 
@@ -208,10 +263,10 @@ See **[OpenCV Processors](example/lib/processors/opencv/)** for implementations.
 
 #### 3. CPU Preprocessing (image library)
 Pure Dart image processing:
-- **Performance**: Slower than GPU/OpenCV, suitable for non-realtime use
+- **Performance**: ~560ms on web, slower than GPU/OpenCV
 - **Platform Support**: All platforms
 - **Dependencies**: image package
-- **Use Case**: Simple preprocessing, debugging
+- **Use Case**: Simple preprocessing, debugging, fallback option
 
 See the [example app](example/) for complete processor implementations using the strategy pattern.
 
@@ -239,20 +294,26 @@ To use your PyTorch models with this package, convert them to ExecuTorch format 
 
 **Example App Models:**
 
-The example app includes scripts for exporting reference models (MobileNet, YOLO):
+Models are automatically downloaded from GitHub on first use. To export models manually:
 
 ```bash
-# One-command setup: installs dependencies and exports all models
-cd example/python
-python3 setup_models.py
+# Export all models with all available backends
+cd models/python
+python3 main.py
 ```
 
 This will:
-- ✅ Install all required dependencies (torch, ultralytics, executorch)
-- ✅ Export MobileNet V3 for image classification
-- ✅ Export YOLO11n for object detection
-- ✅ Generate COCO labels file
-- ✅ Verify all models are ready
+- ✅ Export MobileNet V3 (all backends: XNNPACK, CoreML, MPS, Vulkan)
+- ✅ Export YOLO11n, YOLOv8n, YOLOv5n (all backends)
+- ✅ Generate labels files
+- ✅ Generate index.json for dynamic model discovery
+
+**Model Hosting:**
+
+Models are hosted in a separate repository for faster cloning:
+- Repository: [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models)
+- Models are downloaded and cached locally on first use
+- index.json provides model metadata (size, hash, platforms)
 
 ## Development Status
 

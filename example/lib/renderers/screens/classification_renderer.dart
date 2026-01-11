@@ -30,9 +30,9 @@ class _ClassificationRendererState extends State<ClassificationRenderer> {
         gaplessPlayback: true, // Critical for smooth video playback
         excludeFromSemantics: true, // Performance optimization
       );
-    } else if (widget.input is ImageFileInput) {
-      imageWidget = Image.file(
-        (widget.input as ImageFileInput).file,
+    } else if (widget.input is ImageBytesInput) {
+      imageWidget = Image.memory(
+        (widget.input as ImageBytesInput).imageBytes,
         fit: BoxFit.contain,
       );
     } else {

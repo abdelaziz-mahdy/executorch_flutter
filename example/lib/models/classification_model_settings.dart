@@ -4,12 +4,25 @@ import 'model_settings.dart';
 class ClassificationModelSettings extends ModelSettings {
   ClassificationModelSettings({
     super.showPerformanceOverlay,
-    CameraProvider cameraProvider = CameraProvider.opencv,
-    PreprocessingProvider preprocessingProvider = PreprocessingProvider.opencv,
+    CameraProvider? cameraProvider,
+    PreprocessingProvider? preprocessingProvider,
     int topK = 5,
-  }) : _cameraProvider = cameraProvider,
-       _preprocessingProvider = preprocessingProvider,
+  }) : _cameraProvider = cameraProvider ?? _defaultCameraProvider,
+       _preprocessingProvider =
+           preprocessingProvider ?? _defaultPreprocessingProvider,
        _topK = topK;
+
+  /// Default camera provider based on platform
+  /// Uses the centralized platform-aware logic from CameraProvider
+  static CameraProvider get _defaultCameraProvider {
+    return CameraProvider.defaultProvider;
+  }
+
+  /// Default preprocessing provider based on platform
+  /// GPU shader is fastest and works on all platforms
+  static PreprocessingProvider get _defaultPreprocessingProvider {
+    return PreprocessingProvider.gpu;
+  }
 
   /// Camera provider selection (for live camera input)
   CameraProvider _cameraProvider;
@@ -60,8 +73,8 @@ class ClassificationModelSettings extends ModelSettings {
   @override
   void reset() {
     showPerformanceOverlay = true;
-    cameraProvider = CameraProvider.opencv;
-    preprocessingProvider = PreprocessingProvider.opencv;
+    cameraProvider = _defaultCameraProvider;
+    preprocessingProvider = _defaultPreprocessingProvider;
     topK = 5;
   }
 }

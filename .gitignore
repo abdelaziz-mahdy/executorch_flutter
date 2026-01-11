@@ -45,6 +45,9 @@ macos/executorch_flutter/Sources/executorch_flutter/
 # Internal development documentation
 specs/
 PIGEON_MACOS_NOTES.md
+
+# Temporary Wasm build artifacts and examples
+web/wasm/tmp/
 example/example/assets/models/gemma-3-270m_xnnpack.pte
 example/example/assets/models/gemma-3-270m_tokenizer_config.json
 example/example/assets/models/gemma-3-270m_vocab.json

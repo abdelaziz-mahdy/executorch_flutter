@@ -78,7 +78,7 @@ example/
 │   │
 │   ├── models/                                # Model definitions
 │   │   ├── model_definition.dart              # Abstract base class
-│   │   ├── model_registry.dart                # List of all available models
+│   │   ├── model_registry.dart                # Dynamic model loading from index.json
 │   │   ├── model_input.dart                   # Input types (ImageFile, LiveCamera)
 │   │   ├── model_settings.dart                # Base settings class
 │   │   ├── mobilenet_model_definition.dart    # MobileNet implementation
@@ -104,7 +104,8 @@ example/
 │   │       └── yolo_renderer.dart             # Detection boxes overlay
 │   │
 │   ├── services/                              # Business logic
-│   │   └── model_controller.dart              # Central model state manager
+│   │   ├── model_controller.dart              # Central model state manager
+│   │   └── model_index_service.dart           # Fetches index.json from GitHub
 │   │
 │   ├── screens/                               # UI screens
 │   │   └── unified_model_playground.dart      # Main playground screen
@@ -119,22 +120,18 @@ example/
 │       └── performance_monitor.dart           # FPS/timing display
 │
 ├── assets/
-│   ├── models/                                # .pte model files
-│   │   ├── mobilenet_v3_small_xnnpack.pte
-│   │   ├── yolo11n_xnnpack.pte
-│   │   ├── yolov8n_xnnpack.pte
-│   │   └── yolov5n_xnnpack.pte
-│   ├── imagenet_classes.txt                   # MobileNet labels
-│   └── coco_labels.txt                        # YOLO labels
+│   └── images/                                # Test images
 │
-├── python/                                    # Model export scripts
-│   ├── setup_models.py                        # One-command model setup
-│   ├── export_mobilenet.py                    # Export MobileNet to .pte
-│   ├── export_yolo.py                         # Export YOLO to .pte
-│   └── requirements.txt                       # Python dependencies
+├── shaders/                                   # GPU preprocessing shaders
+│   ├── yolo_preprocess.frag                   # YOLO letterbox resize
+│   └── mobilenet_preprocess.frag              # MobileNet center crop
 │
 └── scripts/
     └── run_integration_tests.sh               # Multi-platform testing
+
+# Models are hosted in separate repository:
+# https://github.com/abdelaziz-mahdy/executorch_flutter_models
+# Export scripts are in: ../models/python/
 ```
 
 ---
@@ -609,70 +606,69 @@ flutter run -d macos  # Or ios, android
 
 ## Python Model Export Workflow
 
-The `example/python/` directory contains scripts for exporting PyTorch models to ExecuTorch format.
+Model export scripts are in the `models/python/` directory (in the models submodule). Models are hosted in a separate GitHub repository and downloaded automatically by the app.
 
 ### Directory Structure
 
 ```
-example/python/
-├── setup_models.py                 # One-command setup (all models)
-├── export_mobilenet.py             # MobileNet V3 export
-├── export_yolo.py                  # YOLO export (v5, v8, v11)
+models/python/
+├── main.py                         # Unified CLI for export and validation
+├── executorch_exporter.py          # Core exporter framework
+├── validate_all_models.py          # Model validation
 ├── requirements.txt                # Python dependencies
-└── README.md                       # Python setup instructions
+├── README.md                       # Export documentation
+└── BACKENDS.md                     # Backend selection guide
 ```
 
 ### Quick Setup
 
 ```bash
-cd example/python
-python3 setup_models.py
+cd models/python
+python3 main.py
 ```
 
 This will:
-1. Install Python dependencies (`torch`, `ultralytics`, `executorch`)
-2. Export all models to `example/assets/models/`
-3. Generate label files (`imagenet_classes.txt`, `coco_labels.txt`)
-4. Verify all models are ready
+1. Export all models with all available backends
+2. Generate label files
+3. Generate `index.json` for dynamic model discovery
+4. Output to `models/mobilenet/` and `models/yolo/`
 
 ### Manual Export
 
 #### Exporting MobileNet
 
 ```bash
-cd example/python
-python3 export_mobilenet.py
+cd models/python
+python3 main.py export --mobilenet
 ```
 
 **What it does**:
 - Downloads MobileNet V3 Small (pretrained on ImageNet)
-- Exports to ExecuTorch format with XNNPACK delegation
-- Saves to `../assets/models/mobilenet_v3_small_xnnpack.pte`
-- Generates `../assets/imagenet_classes.txt` (1000 classes)
+- Exports to ExecuTorch format with multiple backends
+- Saves to `../mobilenet/mobilenet_v3_small_{backend}.pte`
+- Updates `../index.json` with model metadata
 
 #### Exporting YOLO
 
 ```bash
-cd example/python
-python3 export_yolo.py --model yolo11n  # or yolov8n, yolov5n
+cd models/python
+python3 main.py export --yolo yolo11n  # or yolov8n, yolov5n
 ```
 
 **What it does**:
 - Downloads YOLO model from Ultralytics
-- Exports to ExecuTorch format with XNNPACK delegation
-- Saves to `../assets/models/{model}_xnnpack.pte`
-- Generates `../assets/coco_labels.txt` (80 classes)
+- Exports to ExecuTorch format with multiple backends
+- Saves to `../yolo/{model}_{backend}.pte`
+- Updates `../index.json` with model metadata
 
 ### Custom Model Export
 
-**Template** for exporting custom models:
+For custom models, use the `ExecuTorchExporter` class from the models/python/ directory:
 
 ```python
-# example/python/export_custom.py
+# In models/python/ directory
 import torch
-from executorch.exir import to_edge
-from executorch.exir.backend.canonical_partitioners import CanonicalPartitioner
-from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
+from executorch_exporter import ExecuTorchExporter, ExportConfig
 
 def export_custom_model():
     # 1. Load your PyTorch model
@@ -681,26 +677,29 @@ def export_custom_model():
     model.eval()
 
     # 2. Create example input with correct shape
-    example_input = (torch.randn(1, 3, 224, 224),)
+    sample_inputs = (torch.randn(1, 3, 224, 224),)
 
-    # 3. Export to ExecuTorch
-    exported_program = torch.export.export(model, example_input)
-    edge_program = to_edge(exported_program)
+    # 3. Create exporter
+    exporter = ExecuTorchExporter()
 
-    # 4. Apply XNNPACK backend delegation (optional but recommended)
-    edge_program = edge_program.to_backend(XnnpackPartitioner())
+    # 4. Configure export
+    config = ExportConfig(
+        model_name='custom_model',
+        backends=['xnnpack', 'coreml', 'mps', 'vulkan'],  # Choose backends
+        output_dir='../custom',  # Output directory
+        quantize=False,
+        input_shapes=[[1, 3, 224, 224]],
+        input_dtypes=['float32']
+    )
 
-    # 5. Generate ExecuTorch program
-    executorch_program = edge_program.to_executorch()
+    # 5. Export to all backends
+    results = exporter.export_model(model, sample_inputs, config)
 
-    # 6. Save .pte file
-    output_path = "../assets/models/custom_model_xnnpack.pte"
-    with open(output_path, "wb") as f:
-        f.write(executorch_program.buffer)
-
-    print(f"✅ Model exported to {output_path}")
-    print(f"   Input shape: {example_input[0].shape}")
-    print(f"   Model size: {len(executorch_program.buffer) / 1024 / 1024:.2f} MB")
+    for result in results:
+        if result.success:
+            print(f"✅ {result.backend}: {result.output_path} ({result.file_size_mb:.1f} MB)")
+        else:
+            print(f"❌ {result.backend}: {result.error_message}")
 
 if __name__ == "__main__":
     export_custom_model()
@@ -783,17 +782,20 @@ example_input = (torch.randn(1, 3, 320, 320),)
 
 When adding a new model, create these files:
 
-- [ ] `python/export_{model}.py` - Export script
+**In the models repository** (models/):
+- [ ] Add export function in `models/python/main.py`
+- [ ] Export model files to appropriate category (mobilenet/, yolo/, etc.)
+- [ ] Add labels file if applicable
+- [ ] Run export to regenerate `index.json`
+
+**In the example app** (example/):
 - [ ] `lib/models/{model}_model_definition.dart` - Main definition
 - [ ] `lib/models/{model}_model_settings.dart` - Settings class
 - [ ] `lib/models/{model}_result.dart` - Result type
 - [ ] `lib/processors/{model}_input_processor.dart` - Preprocessing
 - [ ] `lib/processors/{model}_output_processor.dart` - Postprocessing
 - [ ] `lib/renderers/screens/{model}_renderer.dart` - Visualization
-- [ ] `assets/models/{model}_xnnpack.pte` - Model file
-- [ ] `assets/{model}_labels.txt` - Class labels (if applicable)
-- [ ] Update `lib/models/model_registry.dart` - Register model
-- [ ] Update `pubspec.yaml` - Add assets
+- [ ] Update `lib/models/model_registry.dart` - Add category handling
 
 ---
 

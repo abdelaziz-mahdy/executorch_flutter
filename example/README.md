@@ -29,11 +29,14 @@ A comprehensive demonstration of the `executorch_flutter` plugin featuring:
 ```bash
 # Install Flutter dependencies
 flutter pub get
+```
 
-# Setup models (downloads and converts PyTorch models to .pte format)
-cd python
-python3 setup_models.py
-cd ..
+**Models are automatically downloaded from GitHub** on first use. No manual setup required.
+
+To export models manually (optional):
+```bash
+cd ../models/python
+python3 main.py
 ```
 
 ### 2. Run the App
@@ -106,7 +109,7 @@ example/
 │   ├── main.dart                          # App entry point
 │   ├── models/                            # Model definitions
 │   │   ├── model_definition.dart          # Abstract base class
-│   │   ├── model_registry.dart            # Available models list
+│   │   ├── model_registry.dart            # Available models (loaded from index.json)
 │   │   ├── yolo_model_definition.dart     # YOLO implementation
 │   │   └── mobilenet_model_definition.dart # MobileNet implementation
 │   ├── processors/                        # Preprocessing strategies
@@ -121,55 +124,53 @@ example/
 │   │       ├── yolo_renderer.dart         # Bounding box overlay
 │   │       └── classification_renderer.dart # Class predictions
 │   ├── services/
-│   │   └── model_controller.dart          # Model state management
+│   │   ├── model_controller.dart          # Model state management
+│   │   └── model_index_service.dart       # Fetches model index from GitHub
 │   └── screens/
 │       └── unified_model_playground.dart  # Main playground screen
 ├── shaders/                               # GPU shaders (GLSL)
 │   ├── yolo_preprocess.frag              # YOLO letterbox resize
 │   └── mobilenet_preprocess.frag         # MobileNet center crop
-├── assets/
-│   ├── models/                           # .pte model files (generated)
-│   ├── imagenet_classes.txt              # MobileNet labels
-│   └── coco_labels.txt                   # YOLO labels
-└── python/                               # Model export scripts
-    ├── setup_models.py                   # One-command setup
-    ├── export_mobilenet.py               # MobileNet export
-    └── export_yolo.py                    # YOLO export
+└── assets/
+    └── images/                           # Test images
+
+# Models are hosted in separate repository and downloaded on demand:
+# https://github.com/abdelaziz-mahdy/executorch_flutter_models
 ```
 
 ## Exporting Your Own Models
 
-The example includes Python scripts for converting PyTorch models to ExecuTorch format:
+Models are hosted in a separate repository and downloaded automatically. To export models manually:
 
-### One-Command Setup (Recommended)
+### Export All Models
 
 ```bash
-cd python
-python3 setup_models.py
+cd ../models/python
+python3 main.py
 ```
 
 This will:
-- ✅ Install all dependencies (torch, ultralytics, executorch)
-- ✅ Export MobileNet V3 Small
-- ✅ Export YOLO11n, YOLOv8n, YOLOv5n
+- ✅ Export MobileNet V3 Small (all backends)
+- ✅ Export YOLO11n, YOLOv8n, YOLOv5n (all backends)
 - ✅ Generate label files
-- ✅ Verify all models
+- ✅ Generate index.json for dynamic model discovery
 
-### Manual Export
+### Export Specific Models
 
-#### MobileNet
 ```bash
-cd python
-python3 export_mobilenet.py
+cd ../models/python
+
+# Export MobileNet only
+python3 main.py export --mobilenet
+
+# Export specific YOLO model
+python3 main.py export --yolo yolo11n
+
+# Export with specific backends
+python3 main.py export --all --backends xnnpack coreml
 ```
 
-#### YOLO
-```bash
-cd python
-python3 export_yolo.py --model yolo11n  # or yolov8n, yolov5n
-```
-
-**📖 See [Python Export Scripts](python/README.md)** for detailed export instructions and custom model conversion.
+**📖 See [Model Export Tools](../models/python/README.md)** for detailed export instructions and backend selection guide.
 
 ## Testing
 
@@ -192,6 +193,8 @@ cd example
 - **[GPU Preprocessing Tutorial](GPU_PREPROCESSING.md)** - Implement GPU-accelerated preprocessing with Fragment Shaders
 - **[Main Package README](../README.md)** - Core API documentation and usage
 - **[Example App Architecture](CLAUDE.md)** - Detailed architecture guide for developers
+- **[Model Export Tools](../models/python/README.md)** - Export PyTorch models to ExecuTorch format
+- **[Backend Selection Guide](../models/python/BACKENDS.md)** - Choose the right backend for your platform
 
 ## Requirements
 
@@ -217,13 +220,14 @@ cd example
 **Issue**: "Failed to load model" error
 
 **Solution**:
-```bash
-# Re-export models
-cd python
-python3 setup_models.py
+- Models are downloaded from GitHub on first use
+- Check your internet connection
+- Clear app cache and restart
 
-# Verify files exist
-ls -lh ../assets/models/
+To verify models manually:
+```bash
+# Check model index
+curl https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main/index.json
 ```
 
 ### Camera Not Working
@@ -256,7 +260,7 @@ Contributions are welcome! When adding new models:
 2. Implement preprocessors in `lib/processors/`
 3. Add result renderer in `lib/renderers/screens/`
 4. Register in `lib/models/model_registry.dart`
-5. Add export script in `python/`
+5. Add export function in `../models/python/main.py`
 
 See **[Example App Architecture Guide](CLAUDE.md)** for detailed instructions.
 

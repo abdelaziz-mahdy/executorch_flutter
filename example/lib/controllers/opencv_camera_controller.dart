@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'camera_controller.dart';
 
 /// OpenCV-based camera controller for desktop platforms (macOS, Windows, Linux)
+/// Supports both live streaming and capture modes
 class OpenCVCameraController implements CameraController {
   OpenCVCameraController({
     this.deviceId = 0,
@@ -20,7 +22,9 @@ class OpenCVCameraController implements CameraController {
 
   bool _isActive = false;
   bool _isProcessing = false;
+  bool _isPreviewReady = false;
   cv.Mat? _currentFrame;
+  CameraMode _mode = CameraMode.live;
 
   @override
   Stream<Uint8List> get frameStream => _frameController.stream;
@@ -29,11 +33,19 @@ class OpenCVCameraController implements CameraController {
   bool get isActive => _isActive;
 
   @override
-  Future<void> start() async {
+  CameraMode get mode => _mode;
+
+  @override
+  bool get isPreviewReady => _isPreviewReady;
+
+  @override
+  Future<void> start({CameraMode mode = CameraMode.live}) async {
     if (_isActive) return;
 
+    _mode = mode;
+
     try {
-      debugPrint('🎥 OpenCVCameraController: Initializing camera');
+      debugPrint('🎥 OpenCVCameraController: Initializing camera (mode: $mode)');
 
       // Initialize VideoCapture
       _capture = cv.VideoCapture.fromDevice(
@@ -50,11 +62,15 @@ class OpenCVCameraController implements CameraController {
       _capture!.set(cv.CAP_PROP_FRAME_HEIGHT, 480);
       _capture!.set(cv.CAP_PROP_FPS, 30);
 
-      // Start frame capture timer
-      debugPrint(
-        '⏰ OpenCVCameraController: Starting timer (${processingInterval.inMilliseconds}ms)',
-      );
-      _frameTimer = Timer.periodic(processingInterval, (_) => _captureFrame());
+      _isPreviewReady = true;
+
+      // Start frame capture timer only in live mode
+      if (mode == CameraMode.live) {
+        debugPrint(
+          '⏰ OpenCVCameraController: Starting timer (${processingInterval.inMilliseconds}ms)',
+        );
+        _frameTimer = Timer.periodic(processingInterval, (_) => _captureFrame());
+      }
 
       _isActive = true;
       debugPrint('✅ OpenCVCameraController: Camera started successfully');
@@ -104,6 +120,71 @@ class OpenCVCameraController implements CameraController {
   }
 
   @override
+  Future<Uint8List?> takePicture() async {
+    if (_capture == null || !_capture!.isOpened) {
+      debugPrint('❌ OpenCVCameraController: Camera not initialized');
+      return null;
+    }
+
+    try {
+      debugPrint('📸 OpenCVCameraController: Taking picture');
+
+      // Read frame
+      final (success, frame) = _capture!.read();
+
+      if (!success || frame.isEmpty) {
+        debugPrint('❌ OpenCVCameraController: Failed to read frame');
+        return null;
+      }
+
+      // Encode to JPEG
+      final (encodeSuccess, jpegBytes) = await cv.imencodeAsync('.jpg', frame);
+      frame.dispose();
+
+      if (encodeSuccess && jpegBytes.isNotEmpty) {
+        debugPrint('✅ OpenCVCameraController: Picture taken (${jpegBytes.length} bytes)');
+        return jpegBytes;
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('❌ OpenCVCameraController: Failed to take picture: $e');
+      return null;
+    }
+  }
+
+  @override
+  Widget buildPreview() {
+    // OpenCV doesn't have a native preview widget, so we show the latest frame
+    // In a real implementation, you might use a custom painter or texture
+    if (_currentFrame == null || !_isPreviewReady) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('OpenCV Camera Preview'),
+          ],
+        ),
+      );
+    }
+
+    // For now, return a placeholder since OpenCV doesn't have Flutter widget integration
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.videocam, size: 64),
+          SizedBox(height: 16),
+          Text('OpenCV Camera Active'),
+          Text('(Preview not available)', style: TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  @override
   Future<void> stop() async {
     if (!_isActive) return;
 
@@ -113,6 +194,7 @@ class OpenCVCameraController implements CameraController {
     _frameTimer = null;
 
     _isActive = false;
+    _isPreviewReady = false;
   }
 
   @override

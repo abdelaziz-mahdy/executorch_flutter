@@ -1,0 +1,65 @@
+# Docker build context exclusions for Wasm build
+
+# Dart/Flutter build outputs
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+*.code-workspace
+
+# macOS
+.DS_Store
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.cxx/
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+macos/Pods/
+macos/.symlinks/
+
+# Example app (not needed for Wasm build)
+example/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Test files
+test/
+integration_test/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Only include what's needed for the build
+# Keep: Dockerfile.wasm, scripts/build_wasm_in_container.sh

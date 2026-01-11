@@ -1,19 +1,23 @@
 name: executorch_flutter
-description: A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, and macOS platforms.
-version: 0.0.6
+description: A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, macOS, and Web platforms.
+version: 0.1.0
 homepage: https://github.com/abdelaziz-mahdy/executorch_flutter
 repository: https://github.com/abdelaziz-mahdy/executorch_flutter
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
   flutter: '>=3.16.0'
 
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   image: ^4.0.17
   meta: ^1.9.1
+  path_provider: ^2.1.5
 
+  plugin_platform_interface: any
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
@@ -31,10 +35,16 @@ flutter:
         pluginClass: ExecutorchFlutterPlugin
       macos:
         pluginClass: ExecutorchFlutterPlugin
+      web:
+        pluginClass: ExecutorchFlutterWebPlugin
+        fileName: src/web/executorch_web_plugin.dart
+
+executables:
+  setup_web: setup_web
 
 topics:
   - machine-learning
   - pytorch
   - ai
   - mobile
-  - deep-learning
+  - wasm

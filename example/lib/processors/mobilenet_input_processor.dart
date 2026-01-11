@@ -5,7 +5,8 @@ import '../models/model_input.dart';
 import '../models/model_settings.dart';
 import 'base_processor.dart';
 import 'image_processor.dart';
-import 'opencv/opencv_imagenet_preprocessor.dart';
+import 'opencv/opencv_imagenet_preprocessor_stub.dart'
+    if (dart.library.io) 'opencv/opencv_imagenet_preprocessor.dart';
 
 /// MobileNet/ImageNet input processor with settings baked in
 class MobileNetInputProcessor extends InputProcessor<ModelInput> {
@@ -21,8 +22,8 @@ class MobileNetInputProcessor extends InputProcessor<ModelInput> {
   Future<List<TensorData>> process(ModelInput input) async {
     // Extract bytes from input
     final Uint8List bytes;
-    if (input is ImageFileInput) {
-      bytes = await input.file.readAsBytes();
+    if (input is ImageBytesInput) {
+      bytes = input.imageBytes;
     } else if (input is LiveCameraInput) {
       bytes = input.frameBytes;
     } else {

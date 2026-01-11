@@ -1,12 +1,14 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show Uint8List;
+import 'package:http/http.dart' as http;
+import 'package:universal_platform/universal_platform.dart';
+
 import '../processors/base_processor.dart';
 import '../processors/yolo_processor.dart';
 import '../processors/yolo_input_processor.dart';
 import '../processors/yolo_output_processor.dart';
 import '../renderers/screens/object_detection_renderer.dart';
+import '../services/model_index_service.dart';
 import '../widgets/image_input_widget.dart';
 import 'model_definition.dart';
 import 'model_input.dart';
@@ -20,35 +22,44 @@ class YoloModelDefinition
     required super.name,
     required super.displayName,
     required super.description,
-    required super.assetPath,
+    required super.remoteUrl,
     required super.inputSize,
-    required this.labelsAssetPath,
+    super.fileSizeMB,
+    required this.labelsRemoteUrl,
   }) : super(icon: Icons.center_focus_strong);
 
-  final String labelsAssetPath;
+  /// Remote URL to download labels file
+  final String labelsRemoteUrl;
 
   // Cache for labels (loaded once)
   static final Map<String, List<String>> _labelsCache = {};
 
   Future<List<String>> _loadLabels() async {
-    if (_labelsCache.containsKey(labelsAssetPath)) {
-      return _labelsCache[labelsAssetPath]!;
+    if (_labelsCache.containsKey(labelsRemoteUrl)) {
+      return _labelsCache[labelsRemoteUrl]!;
     }
 
-    final labelsString = await rootBundle.loadString(labelsAssetPath);
+    // Download labels from remote URL (with cache buster)
+    final urlWithCacheBuster = ModelIndexService.addCacheBuster(labelsRemoteUrl);
+    final response = await http.get(Uri.parse(urlWithCacheBuster));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to download labels from $labelsRemoteUrl');
+    }
+
+    final labelsString = response.body;
     final labels = labelsString
         .split('\n')
         .where((line) => line.isNotEmpty)
         .toList();
 
-    _labelsCache[labelsAssetPath] = labels;
+    _labelsCache[labelsRemoteUrl] = labels;
     return labels;
   }
 
   // Helper to load labels synchronously from cache
   List<String> _loadLabelsSync() {
-    if (_labelsCache.containsKey(labelsAssetPath)) {
-      return _labelsCache[labelsAssetPath]!;
+    if (_labelsCache.containsKey(labelsRemoteUrl)) {
+      return _labelsCache[labelsRemoteUrl]!;
     }
     // Labels should be preloaded by controller before creating processor
     throw StateError('Labels not loaded. Call loadLabels() first.');
@@ -65,7 +76,8 @@ class YoloModelDefinition
     bool isCameraMode = false,
   }) {
     return ImageInputWidget(
-      onImageSelected: (File file) => onInputSelected(ImageFileInput(file)),
+      onImageSelected: (Uint8List bytes) =>
+          onInputSelected(ImageBytesInput(bytes)),
       onCameraModeToggle: onCameraModeToggle,
       isCameraMode: isCameraMode,
     );
@@ -181,7 +193,7 @@ class YoloModelDefinition
         : YoloModelSettings();
 
     // Check if we're on a platform that supports multiple camera providers
-    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    final isMobile = UniversalPlatform.isAndroid || UniversalPlatform.isIOS;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,23 +265,15 @@ class YoloModelDefinition
                 }
               },
               child: Column(
-                children: [
-                  RadioListTile<PreprocessingProvider>(
-                    title: Text(PreprocessingProvider.imageLib.displayName),
-                    subtitle: Text(PreprocessingProvider.imageLib.description),
-                    value: PreprocessingProvider.imageLib,
-                  ),
-                  RadioListTile<PreprocessingProvider>(
-                    title: Text(PreprocessingProvider.opencv.displayName),
-                    subtitle: Text(PreprocessingProvider.opencv.description),
-                    value: PreprocessingProvider.opencv,
-                  ),
-                  RadioListTile<PreprocessingProvider>(
-                    title: Text(PreprocessingProvider.gpu.displayName),
-                    subtitle: Text(PreprocessingProvider.gpu.description),
-                    value: PreprocessingProvider.gpu,
-                  ),
-                ],
+                children: PreprocessingProvider.availableProviders
+                    .map(
+                      (provider) => RadioListTile<PreprocessingProvider>(
+                        title: Text(provider.displayName),
+                        subtitle: Text(provider.description),
+                        value: provider,
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ],

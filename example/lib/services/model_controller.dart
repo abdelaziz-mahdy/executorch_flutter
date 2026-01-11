@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
@@ -9,10 +8,16 @@ import '../models/model_settings.dart';
 import '../models/classification_model_settings.dart';
 import '../models/yolo_model_settings.dart';
 import '../controllers/camera_controller.dart';
-import '../controllers/opencv_camera_controller.dart';
-import '../controllers/platform_camera_controller.dart';
-import '../processors/camera_image_converter.dart';
+import '../controllers/opencv_camera_controller_stub.dart'
+    if (dart.library.io) '../controllers/opencv_camera_controller.dart';
+import '../controllers/platform_camera_controller_stub.dart'
+    if (dart.library.io) '../controllers/platform_camera_controller.dart';
+import '../processors/camera_image_converter_stub.dart'
+    if (dart.library.io) '../processors/camera_image_converter.dart';
 import '../ui/widgets/performance_monitor.dart';
+import 'model_controller_platform.dart'
+    if (dart.library.io) 'model_controller_platform_native.dart'
+    as platform;
 
 /// Central controller that owns ALL model state and lifecycle
 ///
@@ -361,11 +366,7 @@ class ModelController extends ChangeNotifier {
 
   /// Get default camera provider
   CameraProvider _getDefaultCameraProvider() {
-    if (kIsWeb) return CameraProvider.platform;
-    if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-      return CameraProvider.opencv;
-    }
-    return CameraProvider.platform;
+    return platform.getDefaultCameraProvider();
   }
 
   /// Build settings widget

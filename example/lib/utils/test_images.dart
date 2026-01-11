@@ -1,9 +1,12 @@
 /// Test image utilities for ExecuTorch model testing
 library;
 
-import 'dart:io';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:universal_platform/universal_platform.dart';
+
+import 'test_images_native.dart'
+    if (dart.library.js_interop) 'test_images_web.dart'
+    as platform;
 
 /// Pre-loaded test images available in the app assets
 class TestImages {
@@ -21,23 +24,19 @@ class TestImages {
   /// All available test images
   static const List<String> all = [cat, dog, car, person, street];
 
-  /// Get a temporary file from an asset image
-  /// This is useful for APIs that require a File path instead of asset bytes
-  static Future<File> getFileFromAsset(String assetPath) async {
-    final byteData = await rootBundle.load(assetPath);
-    final tempDir = await getTemporaryDirectory();
-    final fileName = assetPath.split('/').last;
-    final file = File('${tempDir.path}/$fileName');
-    await file.writeAsBytes(
-      byteData.buffer.asUint8List(
-        byteData.offsetInBytes,
-        byteData.lengthInBytes,
-      ),
-    );
-    return file;
+  /// Get a temporary file from an asset image (native platforms only)
+  /// On web, this throws UnsupportedError - use [getBytesFromAsset] instead.
+  static Future<dynamic> getFileFromAsset(String assetPath) async {
+    if (UniversalPlatform.isWeb) {
+      throw UnsupportedError(
+        'TestImages.getFileFromAsset() is not supported on web. '
+        'Use TestImages.getBytesFromAsset() instead.',
+      );
+    }
+    return platform.getFileFromAsset(assetPath);
   }
 
-  /// Get image bytes from asset
+  /// Get image bytes from asset (works on all platforms)
   static Future<Uint8List> getBytesFromAsset(String assetPath) async {
     final byteData = await rootBundle.load(assetPath);
     return byteData.buffer.asUint8List(

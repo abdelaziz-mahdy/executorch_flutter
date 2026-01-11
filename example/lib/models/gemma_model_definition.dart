@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' hide TextInput;
+import 'package:http/http.dart' as http;
 import '../processors/base_processor.dart';
 import '../processors/gemma_input_processor.dart';
 import '../processors/gemma_output_processor.dart';
 import '../renderers/screens/text_generation_renderer.dart';
+import '../services/model_index_service.dart';
 import 'model_definition.dart';
 import 'model_input.dart';
 import 'model_settings.dart';
@@ -18,35 +19,43 @@ class GemmaModelDefinition
     required super.name,
     required super.displayName,
     required super.description,
-    required super.assetPath,
+    required super.remoteUrl,
     required super.inputSize, // Sequence length (e.g., 128)
-    required this.vocabAssetPath,
+    super.fileSizeMB,
+    required this.vocabRemoteUrl,
   }) : super(icon: Icons.auto_awesome);
 
-  final String vocabAssetPath;
+  /// Remote URL to download vocabulary JSON file
+  final String vocabRemoteUrl;
 
   // Cache for vocabulary (loaded once)
   static final Map<String, Map<String, int>> _vocabCache = {};
 
   Future<Map<String, int>> _loadVocabulary() async {
-    if (_vocabCache.containsKey(vocabAssetPath)) {
-      return _vocabCache[vocabAssetPath]!;
+    if (_vocabCache.containsKey(vocabRemoteUrl)) {
+      return _vocabCache[vocabRemoteUrl]!;
     }
 
-    final vocabString = await rootBundle.loadString(vocabAssetPath);
-    final vocabJson = json.decode(vocabString) as Map<String, dynamic>;
+    // Download vocab from remote URL (with cache buster)
+    final urlWithCacheBuster = ModelIndexService.addCacheBuster(vocabRemoteUrl);
+    final response = await http.get(Uri.parse(urlWithCacheBuster));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to download vocab from $vocabRemoteUrl');
+    }
+
+    final vocabJson = json.decode(response.body) as Map<String, dynamic>;
 
     // Convert to Map<String, int>
     final vocab = vocabJson.map((key, value) => MapEntry(key, value as int));
 
-    _vocabCache[vocabAssetPath] = vocab;
+    _vocabCache[vocabRemoteUrl] = vocab;
     return vocab;
   }
 
   // Helper to load vocabulary synchronously from cache
   Map<String, int> _loadVocabularySync() {
-    if (_vocabCache.containsKey(vocabAssetPath)) {
-      return _vocabCache[vocabAssetPath]!;
+    if (_vocabCache.containsKey(vocabRemoteUrl)) {
+      return _vocabCache[vocabRemoteUrl]!;
     }
     // Vocabulary should be preloaded by controller before creating processor
     throw StateError('Vocabulary not loaded. Call loadVocabulary() first.');
