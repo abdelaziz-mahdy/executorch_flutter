@@ -1,0 +1,62 @@
+format_version: 1.0.0
+files:
+  package:executorch_flutter/src/generated/executorch_ffi.g.dart:
+    used-config:
+      ffi-native: true
+    symbols:
+      c:@EA@ETBackend:
+        name: ETBackend
+      c:@EA@ETDType:
+        name: ETDType
+      c:@EA@ETErrorCode:
+        name: ETErrorCode
+      c:@F@et_backend_available:
+        name: et_backend_available
+      c:@F@et_backend_list:
+        name: et_backend_list
+      c:@F@et_executorch_version:
+        name: et_executorch_version
+      c:@F@et_module_forward:
+        name: et_module_forward
+      c:@F@et_module_free:
+        name: et_module_free
+      c:@F@et_module_input_count:
+        name: et_module_input_count
+      c:@F@et_module_load:
+        name: et_module_load
+      c:@F@et_module_load_file:
+        name: et_module_load_file
+      c:@F@et_module_output_count:
+        name: et_module_output_count
+      c:@F@et_set_log_level:
+        name: et_set_log_level
+      c:@F@et_status_free:
+        name: et_status_free
+      c:@F@et_string_free:
+        name: et_string_free
+      c:@F@et_tensor_array_free:
+        name: et_tensor_array_free
+      c:@F@et_tensor_create:
+        name: et_tensor_create
+      c:@F@et_tensor_data:
+        name: et_tensor_data
+      c:@F@et_tensor_data_size:
+        name: et_tensor_data_size
+      c:@F@et_tensor_dtype:
+        name: et_tensor_dtype
+      c:@F@et_tensor_free:
+        name: et_tensor_free
+      c:@F@et_tensor_rank:
+        name: et_tensor_rank
+      c:@F@et_tensor_shape:
+        name: et_tensor_shape
+      c:@F@et_version:
+        name: et_version
+      c:@S@ETModule:
+        name: ETModule
+      c:@S@ETStatus:
+        name: ETStatus
+      c:@S@ETTensor:
+        name: ETTensor
+      c:@UA@__mbstate_t:
+        name: __mbstate_t

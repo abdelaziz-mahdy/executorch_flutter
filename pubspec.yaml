@@ -1,5 +1,7 @@
 name: executorch_flutter
-description: A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, macOS, and Web platforms.
+description: >
+  ExecuTorch ML inference for Flutter using dart:ffi.
+  Supports Android, iOS, macOS, Linux, Windows, and Web.
 version: 0.1.1
 homepage: https://github.com/abdelaziz-mahdy/executorch_flutter
 repository: https://github.com/abdelaziz-mahdy/executorch_flutter
@@ -13,28 +15,39 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
+  ffi: ^2.1.4
   image: ^4.0.17
   meta: ^1.9.1
   path_provider: ^2.1.5
+  # Native assets build dependencies
+  code_assets: ^1.0.0
+  hooks: ^1.0.0
+  native_toolchain_cmake: ^0.2.2
+  logging: ^1.3.0
 
-  plugin_platform_interface: ^2.1.8
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
-  pigeon: ^26.0.1
+  ffigen: ^14.0.0
+
 flutter:
   plugin:
     platforms:
+      # Native platforms use FFI via native assets (no pluginClass needed)
       android:
-        package: com.zcreations.executorch_flutter
-        pluginClass: ExecutorchFlutterPlugin
+        ffiPlugin: true
       ios:
-        pluginClass: ExecutorchFlutterPlugin
+        ffiPlugin: true
       macos:
-        pluginClass: ExecutorchFlutterPlugin
+        ffiPlugin: true
+      linux:
+        ffiPlugin: true
+      windows:
+        ffiPlugin: true
+      # Web uses JS interop
       web:
         pluginClass: ExecutorchFlutterWebPlugin
         fileName: src/web/executorch_web_plugin.dart
@@ -46,5 +59,17 @@ topics:
   - machine-learning
   - pytorch
   - ai
+  - ffi
   - mobile
-  - wasm
+
+# Native assets build hooks configuration
+hooks:
+  user_defines:
+    executorch_flutter:
+      # Set to true for debug output during build
+      debug: false
+      # List of backends to build (default: platform-appropriate)
+      # Available: xnnpack, coreml, mps, vulkan, qnn
+      # backends:
+      #   - xnnpack
+      #   - coreml

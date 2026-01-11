@@ -32,6 +32,8 @@ PODS:
     - DartCvMacOS/core
   - device_info_plus (0.0.1):
     - FlutterMacOS
+  - executorch_flutter (0.1.1):
+    - FlutterMacOS
   - FlutterMacOS (1.0.0)
   - opencv_dart (0.0.1):
     - DartCvMacOS (= 4.12.0.0)
@@ -41,6 +43,7 @@ PODS:
 
 DEPENDENCIES:
   - device_info_plus (from `Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos`)
+  - executorch_flutter (from `Flutter/ephemeral/.symlinks/plugins/executorch_flutter/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - opencv_dart (from `Flutter/ephemeral/.symlinks/plugins/opencv_dart/macos`)
 
@@ -51,6 +54,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   device_info_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos
+  executorch_flutter:
+    :path: Flutter/ephemeral/.symlinks/plugins/executorch_flutter/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
   opencv_dart:
@@ -59,6 +64,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   DartCvMacOS: febe6cec544670ad68c71da89b9c1b94bd342e48
   device_info_plus: a56e6e74dbbd2bb92f2da12c64ddd4f67a749041
+  executorch_flutter: d0cb1f5e60dbd62ff1d1e416289c64f2dcb74ac2
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   opencv_dart: 9adf31b6905f6e9f7e471d3eb6cc1c65a144db84
 
