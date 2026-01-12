@@ -235,6 +235,105 @@ flutter build macos --debug               # For macOS
 flutter build apk --debug                 # For Android
 ```
 
+## Build Configuration
+
+The package supports build-time configuration through Flutter's `hooks` system in your app's `pubspec.yaml`. This allows you to customize the build behavior without modifying package code.
+
+### Configuration Options
+
+Add the following to your **app's** `pubspec.yaml` (not the package):
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      # Enable debug logging and use Debug prebuilt binaries
+      debug: true
+
+      # Build mode: "prebuilt" (default) or "source"
+      build_mode: "prebuilt"
+
+      # ExecuTorch version (default: "1.0.1")
+      executorch_version: "1.0.1"
+
+      # Backend selection (platform-specific defaults apply)
+      backends:
+        - xnnpack
+        - coreml
+        - mps
+```
+
+### Available Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `debug` | `bool` | `false` | Enables native debug logging and selects Debug prebuilt binaries (useful for debugging crashes) |
+| `build_mode` | `string` | `"prebuilt"` | `"prebuilt"` downloads pre-compiled binaries (fast, recommended). `"source"` builds from source (slower, requires Python 3.8+ with pyyaml) |
+| `executorch_version` | `string` | `"1.0.1"` | ExecuTorch version to use |
+| `backends` | `list` | Platform-specific | List of backends to enable. Options: `xnnpack`, `coreml`, `mps`, `vulkan`, `qnn` |
+
+### Backend Defaults by Platform
+
+If `backends` is not specified, the following defaults are used:
+
+| Platform | Default Backends |
+|----------|------------------|
+| Android | xnnpack |
+| iOS | xnnpack, coreml |
+| macOS | xnnpack, coreml, mps |
+| Windows | xnnpack |
+| Linux | xnnpack |
+
+### Prebuilt Binaries
+
+Prebuilt binaries are maintained by the package maintainer and hosted at [executorch_native](https://github.com/abdelaziz-mahdy/executorch_native). The prebuilt mode downloads these pre-compiled libraries automatically during the Flutter build process.
+
+**Available prebuilt configurations:**
+- Release and Debug builds for each platform
+- Platform-specific backend combinations (see table above)
+
+**Request new backends or platforms:** If you need a backend or platform configuration that isn't currently available in prebuilt mode, please [open an issue](https://github.com/abdelaziz-mahdy/executorch_native/issues) on the executorch_native repository.
+
+### Environment Variables
+
+You can also override configuration via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `EXECUTORCH_BUILD_MODE` | Override build mode ("prebuilt" or "source") |
+| `EXECUTORCH_CACHE_DIR` | Custom cache directory for downloaded/built artifacts |
+| `EXECUTORCH_DISABLE_DOWNLOAD` | Set to "1" to skip prebuilt download (requires `EXECUTORCH_INSTALL_DIR`) |
+| `EXECUTORCH_INSTALL_DIR` | Path to local ExecuTorch installation |
+
+### Example Configurations
+
+**Debug build with verbose logging:**
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      debug: true
+```
+
+**Build from source with specific backends:**
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      build_mode: "source"
+      backends:
+        - xnnpack
+        - vulkan
+```
+
+**Use a specific ExecuTorch version:**
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      executorch_version: "1.0.1"
+```
+
 ## Advanced Usage
 
 ### Preprocessing Strategies
