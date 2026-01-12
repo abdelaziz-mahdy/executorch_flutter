@@ -52,8 +52,11 @@ const String _libraryName = 'executorch_ffi';
 /// Package name.
 const String _packageName = 'executorch_flutter';
 
-/// Default ExecuTorch version.
+/// Default ExecuTorch source version (upstream PyTorch ExecuTorch).
 const String _defaultExecutorchVersion = '1.0.1';
+
+/// Default prebuilt release version (our release tag for prebuilt downloads).
+const String _defaultPrebuiltVersion = '1.0.1.3';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -105,10 +108,16 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   final isSourceBuild = buildMode == 'source';
   logger.info('[executorch_flutter] Build mode: $buildMode\n');
 
-  // Get ExecuTorch version
+  // Get ExecuTorch version (for source builds)
   final executorchVersion =
       userDefines['executorch_version'] as String? ?? _defaultExecutorchVersion;
+  // Get prebuilt version (for prebuilt downloads)
+  final prebuiltVersion =
+      userDefines['prebuilt_version'] as String? ?? _defaultPrebuiltVersion;
   logger.info('[executorch_flutter] ExecuTorch version: v$executorchVersion\n');
+  if (!isSourceBuild) {
+    logger.info('[executorch_flutter] Prebuilt version: v$prebuiltVersion\n');
+  }
 
   // Step 1: Python dependencies (only for source builds)
   String? pythonExecutable;
@@ -165,8 +174,10 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
       'CMAKE_BUILD_TYPE': cmakeBuildType,
       // Build mode
       'EXECUTORCH_BUILD_MODE': buildMode,
-      // ExecuTorch version
+      // ExecuTorch source version (for source builds)
       'EXECUTORCH_VERSION': executorchVersion,
+      // Prebuilt release version (for prebuilt downloads)
+      'EXECUTORCH_PREBUILT_VERSION': prebuiltVersion,
       // Python executable (only for source builds)
       if (isSourceBuild && pythonExecutable != null)
         'PYTHON_EXECUTABLE': pythonExecutable,
