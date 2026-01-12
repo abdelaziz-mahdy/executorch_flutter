@@ -1,4 +1,4 @@
-// Copyright (c) 2024 ExecuTorch Flutter. All rights reserved.
+// Copyright (c) 2026 ExecuTorch Flutter. All rights reserved.
 // Licensed under the MIT license.
 
 /// FFI implementation of ExecuTorchModel.
@@ -10,7 +10,7 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import 'executorch_model.dart';
 import 'ffi/native_module.dart';
-import 'generated/executorch_api.dart';
+import 'types.dart';
 
 /// FFI-based implementation of ExecuTorchModel.
 ///

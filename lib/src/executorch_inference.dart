@@ -9,7 +9,7 @@ import 'executorch_manager_unsupported_stub.dart'
     if (dart.library.js_interop) 'executorch_manager_web_stub.dart'
     if (dart.library.js) 'executorch_manager_web_stub.dart' as stub;
 import 'executorch_model.dart';
-import 'generated/executorch_api.dart';
+import 'types.dart';
 
 /// High-level manager for ExecuTorch inference operations
 ///

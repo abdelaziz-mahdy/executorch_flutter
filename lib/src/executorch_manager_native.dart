@@ -1,7 +1,10 @@
+// Copyright (c) 2026 ExecuTorch Flutter. All rights reserved.
+// Licensed under the MIT license.
+
 /// Native platform implementation of ExecutorchManager
 ///
-/// This implementation uses Pigeon for platform communication with
-/// Android, iOS, and macOS native ExecuTorch libraries.
+/// This implementation uses FFI for direct native calls to the
+/// ExecuTorch C library on Android, iOS, macOS, Linux, and Windows.
 library;
 
 import 'dart:async';
@@ -11,12 +14,12 @@ import 'dart:typed_data';
 import 'executorch_errors.dart';
 import 'executorch_inference.dart';
 import 'executorch_model.dart';
-import 'generated/executorch_api.dart';
+import 'ffi/native_logging.dart';
+import 'types.dart';
 
 /// Native platform implementation of ExecutorchManager
 ///
-/// Uses Pigeon-generated host API for communication with native platforms
-/// (Android, iOS, macOS).
+/// Uses FFI for direct native calls to the ExecuTorch C library.
 class ExecutorchManagerNative implements ExecutorchManager {
   ExecutorchManagerNative._();
 
@@ -29,9 +32,6 @@ class ExecutorchManagerNative implements ExecutorchManager {
     return _instance!;
   }
 
-  /// Internal reference to the Pigeon host API
-  late final ExecutorchHostApi _hostApi = ExecutorchHostApi();
-
   /// Cache of loaded models by model ID
   final Map<String, ExecuTorchModel> _loadedModels = {};
 
@@ -41,32 +41,15 @@ class ExecutorchManagerNative implements ExecutorchManager {
   @override
   Future<void> initialize() async {
     if (_initialized) return;
-
-    try {
-      // Test Pigeon connectivity by querying loaded models
-      await _hostApi.getLoadedModels();
-      _initialized = true;
-    } catch (e) {
-      throw ExecuTorchPlatformException(
-        'Failed to initialize ExecutorchManager: $e\n'
-        'Make sure ExecuTorch native libraries are properly installed.',
-        e.toString(),
-      );
-    }
+    // FFI is always available on native platforms
+    _initialized = true;
   }
 
   @override
   Future<void> setDebugLogging(bool enabled) async {
     _ensureInitialized();
-
-    try {
-      await _hostApi.setDebugLogging(enabled);
-    } catch (e) {
-      throw ExecuTorchPlatformException(
-        'Failed to set debug logging: $e',
-        e.toString(),
-      );
-    }
+    // Enable debug logging via FFI native layer
+    setNativeDebugLogging(enabled);
   }
 
   /// Load an ExecuTorch model from a file path
@@ -158,16 +141,7 @@ class ExecutorchManagerNative implements ExecutorchManager {
   @override
   Future<List<String>> getLoadedModelIds() async {
     _ensureInitialized();
-
-    try {
-      final ids = await _hostApi.getLoadedModels();
-      return ids.whereType<String>().toList();
-    } catch (e) {
-      throw ExecuTorchPlatformException(
-        'Failed to get loaded model IDs: $e',
-        e.toString(),
-      );
-    }
+    return _loadedModels.keys.toList();
   }
 
   /// Dispose a loaded model and free its resources
@@ -181,13 +155,6 @@ class ExecutorchManagerNative implements ExecutorchManager {
     final model = _loadedModels.remove(modelId);
     if (model != null) {
       await model.dispose();
-    } else {
-      // Try to dispose on platform side even if not in our cache
-      try {
-        await _hostApi.dispose(modelId);
-      } catch (e) {
-        // Ignore errors for unknown models
-      }
     }
   }
 
@@ -213,8 +180,6 @@ class ExecutorchManagerNative implements ExecutorchManager {
   Future<Map<String, Object>> getMemoryInfo() async {
     _ensureInitialized();
 
-    // This would be implemented with platform-specific memory queries
-    // For now, return basic information
     return {
       'loaded_models_count': _loadedModels.length,
       'loaded_model_ids': _loadedModels.keys.toList(),
@@ -225,14 +190,8 @@ class ExecutorchManagerNative implements ExecutorchManager {
 
   @override
   Future<bool> isAvailable() async {
-    if (!_initialized) return false;
-
-    try {
-      await _hostApi.getLoadedModels();
-      return true;
-    } catch (e) {
-      return false;
-    }
+    // FFI is always available on native platforms
+    return _initialized;
   }
 
   /// Create tensor data with validation
@@ -304,94 +263,4 @@ class ExecutorchManagerNative implements ExecutorchManager {
     _initialized = false;
     _instance = null;
   }
-}
-
-/// Utility class for working with ExecuTorch tensors
-class TensorUtils {
-  TensorUtils._();
-
-  /// Create a float32 tensor from a 2D list (commonly used for images)
-  static TensorData createFloat32Tensor2D({
-    required List<List<double>> data,
-    String? name,
-  }) {
-    final height = data.length;
-    final width = height > 0 ? data[0].length : 0;
-    final flatData = data.expand((row) => row).toList();
-
-    return ExecutorchManager.instance.createTensorData(
-      shape: [height, width],
-      dataType: TensorType.float32,
-      data: flatData,
-      name: name,
-    );
-  }
-
-  /// Create a float32 tensor from a 3D list (commonly used for RGB images)
-  static TensorData createFloat32Tensor3D({
-    required List<List<List<double>>> data,
-    String? name,
-  }) {
-    final depth = data.length;
-    final height = depth > 0 ? data[0].length : 0;
-    final width = height > 0 ? data[0][0].length : 0;
-    final flatData =
-        data.expand((plane) => plane.expand((row) => row)).toList();
-
-    return ExecutorchManager.instance.createTensorData(
-      shape: [depth, height, width],
-      dataType: TensorType.float32,
-      data: flatData,
-      name: name,
-    );
-  }
-
-  /// Create a float32 tensor from a 4D list (commonly used for batched images)
-  static TensorData createFloat32Tensor4D({
-    required List<List<List<List<double>>>> data,
-    String? name,
-  }) {
-    final batch = data.length;
-    final depth = batch > 0 ? data[0].length : 0;
-    final height = depth > 0 ? data[0][0].length : 0;
-    final width = height > 0 ? data[0][0][0].length : 0;
-    final flatData = data
-        .expand((batchItem) =>
-            batchItem.expand((plane) => plane.expand((row) => row)))
-        .toList();
-
-    return ExecutorchManager.instance.createTensorData(
-      shape: [batch, depth, height, width],
-      dataType: TensorType.float32,
-      data: flatData,
-      name: name,
-    );
-  }
-
-  /// Extract numeric data from a tensor
-  static List<double> extractFloat32Data(TensorData tensor) {
-    if (tensor.dataType != TensorType.float32) {
-      throw ArgumentError('Tensor is not float32 type');
-    }
-
-    final float32List = Float32List.view(tensor.data.buffer);
-    return float32List.toList();
-  }
-
-  /// Extract integer data from a tensor
-  static List<int> extractInt32Data(TensorData tensor) {
-    if (tensor.dataType != TensorType.int32) {
-      throw ArgumentError('Tensor is not int32 type');
-    }
-
-    final int32List = Int32List.view(tensor.data.buffer);
-    return int32List.toList();
-  }
-
-  /// Calculate the total number of elements in a tensor shape
-  static int calculateElementCount(List<int> shape) =>
-      shape.fold(1, (total, dim) => total * dim.abs());
-
-  /// Format tensor shape as a human-readable string
-  static String formatShape(List<int> shape) => '[${shape.join(', ')}]';
 }

@@ -9,7 +9,7 @@ import 'executorch_model_unsupported_stub.dart'
     if (dart.library.ffi) 'executorch_model_ffi_stub.dart'
     if (dart.library.js_interop) 'executorch_model_web_stub.dart'
     if (dart.library.js) 'executorch_model_web_stub.dart' as stub;
-import 'generated/executorch_api.dart';
+import 'types.dart';
 
 /// High-level wrapper for an ExecuTorch model instance
 ///

@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import '../executorch_errors.dart';
 import '../executorch_model.dart';
-import '../generated/executorch_api.dart';
+import '../types.dart';
 
 /// Utility class for tensor operations in processors
 class ProcessorTensorUtils {

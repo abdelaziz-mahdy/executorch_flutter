@@ -9,7 +9,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
-import '../generated/executorch_api.dart';
+import '../types.dart';
 import '../generated/executorch_ffi.g.dart';
 import 'native_status.dart';
 

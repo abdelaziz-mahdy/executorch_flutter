@@ -7,7 +7,7 @@
 /// TensorType enum.
 library;
 
-import '../generated/executorch_api.dart';
+import '../types.dart';
 import '../generated/executorch_ffi.g.dart';
 
 /// Extended tensor types supported by the FFI layer.

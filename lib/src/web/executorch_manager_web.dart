@@ -10,7 +10,7 @@ import 'dart:typed_data';
 import '../executorch_errors.dart';
 import '../executorch_inference.dart';
 import '../executorch_model.dart';
-import '../generated/executorch_api.dart';
+import '../types.dart';
 import 'js_interop.dart' as js;
 import 'wasm_module_loader.dart';
 
