@@ -146,6 +146,12 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
     logger.info('[executorch_flutter]   Cache directory: $cacheDir\n');
   }
 
+  // Determine CMake build type based on user_defines debug flag
+  // When debug: true is set in pubspec.yaml, use Debug prebuilt libs
+  final cmakeBuildType = debugMode ? 'Debug' : 'Release';
+  logger.info(
+      '[executorch_flutter]   CMake build type: $cmakeBuildType\n');
+
   // Create CMake builder - uses native/ directory (submodule)
   final builder = CMakeBuilder.create(
     logLevel: debugMode ? LogLevel.DEBUG : LogLevel.STATUS,
@@ -155,6 +161,8 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
     targets: ['install'],
     generator: generator,
     defines: {
+      // CMake build type (determines which prebuilt to download)
+      'CMAKE_BUILD_TYPE': cmakeBuildType,
       // Build mode
       'EXECUTORCH_BUILD_MODE': buildMode,
       // ExecuTorch version
