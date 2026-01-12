@@ -249,12 +249,12 @@ external void et_string_free(
   ffi.Pointer<ffi.Char> str,
 );
 
-/// Set debug logging level.
+/// Enable or disable debug logging.
 ///
-/// @param level  0=off, 1=error, 2=warn, 3=info, 4=debug
+/// @param enabled  0=off, non-zero=on
 @ffi.Native<ffi.Void Function(ffi.Int32)>()
-external void et_set_log_level(
-  int level,
+external void et_set_debug_enabled(
+  int enabled,
 );
 
 const addresses = _SymbolAddresses();

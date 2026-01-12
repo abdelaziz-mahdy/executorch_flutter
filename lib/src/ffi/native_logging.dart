@@ -15,11 +15,11 @@ bool get isDebugLoggingEnabled => _debugLoggingEnabled;
 /// Set debug logging on or off.
 ///
 /// When enabled, detailed debug output is printed to the console.
-/// Also sets the native FFI log level accordingly.
+/// Also sets the native FFI debug mode accordingly.
 void setNativeDebugLogging(bool enabled) {
   _debugLoggingEnabled = enabled;
-  // Native level: 4=debug, 1=error only
-  et_set_log_level(enabled ? 4 : 1);
+  // Pass 1 for enabled, 0 for disabled
+  et_set_debug_enabled(enabled ? 1 : 0);
 }
 
 /// Log a debug message if debug logging is enabled.

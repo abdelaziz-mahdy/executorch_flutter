@@ -28,8 +28,8 @@ files:
         name: et_module_load_file
       c:@F@et_module_output_count:
         name: et_module_output_count
-      c:@F@et_set_log_level:
-        name: et_set_log_level
+      c:@F@et_set_debug_enabled:
+        name: et_set_debug_enabled
       c:@F@et_status_free:
         name: et_status_free
       c:@F@et_string_free:
