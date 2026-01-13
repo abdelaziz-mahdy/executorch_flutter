@@ -256,8 +256,8 @@ hooks:
       # ExecuTorch source version - for source builds (default: "1.0.1")
       executorch_version: "1.0.1"
 
-      # Prebuilt release version - for prebuilt downloads (default: "1.0.1.3")
-      prebuilt_version: "1.0.1.3"
+      # Prebuilt release version - for prebuilt downloads (default: "1.0.1.4")
+      prebuilt_version: "1.0.1.4"
 
       # Backend selection (platform-specific defaults apply)
       backends:
@@ -273,7 +273,7 @@ hooks:
 | `debug` | `bool` | `false` | Enables native debug logging and selects Debug prebuilt binaries (useful for debugging crashes) |
 | `build_mode` | `string` | `"prebuilt"` | `"prebuilt"` downloads pre-compiled binaries (fast, recommended). `"source"` builds from source (slower, requires Python 3.8+ with pyyaml) |
 | `executorch_version` | `string` | `"1.0.1"` | ExecuTorch source version (for source builds) |
-| `prebuilt_version` | `string` | `"1.0.1.3"` | Prebuilt release version (for prebuilt downloads) |
+| `prebuilt_version` | `string` | `"1.0.1.4"` | Prebuilt release version (for prebuilt downloads) |
 | `backends` | `list` | Platform-specific | List of backends to enable. Options: `xnnpack`, `coreml`, `mps`, `vulkan`, `qnn` |
 
 ### Backend Defaults by Platform
@@ -335,7 +335,7 @@ hooks:
 hooks:
   user_defines:
     executorch_flutter:
-      prebuilt_version: "1.0.1.3"
+      prebuilt_version: "1.0.1.4"
 ```
 
 ## Advanced Usage
