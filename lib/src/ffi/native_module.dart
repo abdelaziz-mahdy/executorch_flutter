@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
+import '../executorch_errors.dart';
 import '../generated/executorch_ffi.g.dart';
 import '../types.dart';
 import 'native_logging.dart';
@@ -248,7 +249,7 @@ class NativeModule implements ffi.Finalizable {
 
   void _checkDisposed() {
     if (_disposed) {
-      throw StateError('NativeModule has been disposed');
+      throw ExecuTorchModelException('Model has been disposed');
     }
   }
 

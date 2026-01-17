@@ -412,11 +412,10 @@ void main() {
         );
 
         // Attempt to run inference on disposed model
-        // FFI implementation throws StateError when model is disposed
         expect(
           () async => await model.forward([inputTensor]),
-          throwsA(isA<StateError>()),
-          reason: 'Running inference on disposed model should throw StateError',
+          throwsA(isA<ExecuTorchException>()),
+          reason: 'Running inference on disposed model should throw exception',
         );
       },
     );

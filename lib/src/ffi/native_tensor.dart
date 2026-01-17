@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
+import '../executorch_errors.dart';
 import '../generated/executorch_ffi.g.dart';
 import '../types.dart';
 import 'native_status.dart';
@@ -131,7 +132,7 @@ class NativeTensor implements ffi.Finalizable {
 
   void _checkDisposed() {
     if (_disposed) {
-      throw StateError('NativeTensor has been disposed');
+      throw ExecuTorchMemoryException('Tensor has been disposed');
     }
   }
 
