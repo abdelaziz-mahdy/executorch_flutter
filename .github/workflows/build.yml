@@ -219,6 +219,40 @@ jobs:
           path: example/build/linux/x64/release/bundle/
           retention-days: 7
 
+  # Web Build
+  # Tests that the package compiles for web with WASM
+  build-web:
+    name: Build Web (Release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: example
+
+      - name: Setup web assets
+        run: dart run executorch_flutter:setup_web
+        working-directory: example
+
+      - name: Build Web (Release)
+        run: flutter build web --release
+        working-directory: example
+
+      - name: Upload Web Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release-build
+          path: example/build/web/
+          retention-days: 7
+
   # Analyze and Format Check (package only, not example app)
   # Using macos-14 instead of ubuntu-latest due to Flutter SPM compatibility issue
   # Issue: https://github.com/flutter/flutter/issues/162594
