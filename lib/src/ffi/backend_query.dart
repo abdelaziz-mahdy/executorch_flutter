@@ -1,7 +1,7 @@
 // Copyright (c) 2026 ExecuTorch Flutter. All rights reserved.
 // Licensed under the MIT license.
 
-/// Backend enumeration and query functions for FFI layer.
+/// Backend query functions for FFI layer.
 library;
 
 import 'dart:ffi' as ffi;
@@ -9,35 +9,16 @@ import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 
 import '../generated/executorch_ffi.g.dart';
+import '../types.dart';
 
-/// Hardware acceleration backends supported by ExecuTorch.
-enum Backend {
-  /// XNNPACK CPU optimization library (available on all platforms).
-  xnnpack,
-
-  /// Apple CoreML backend (iOS/macOS only).
-  coreml,
-
-  /// Apple Metal Performance Shaders backend (macOS only).
-  mps,
-
-  /// Vulkan GPU compute backend (Android/Linux/Windows).
-  vulkan,
-
-  /// Qualcomm Neural Processing Unit backend (Android only).
-  qnn;
-
-  /// Check if this backend is available (compiled in).
-  bool get isAvailable => et_backend_available(_toNative()) == 1;
-
-  /// Human-readable display name for this backend.
-  String get displayName => switch (this) {
-        Backend.xnnpack => 'XNNPACK',
-        Backend.coreml => 'CoreML',
-        Backend.mps => 'Metal Performance Shaders',
-        Backend.vulkan => 'Vulkan',
-        Backend.qnn => 'Qualcomm QNN',
-      };
+/// Query functions for hardware acceleration backend availability.
+///
+/// Use this class to check which backends are available on the current
+/// platform.
+abstract final class BackendQuery {
+  /// Check if a backend is available (compiled in).
+  static bool isAvailable(Backend backend) =>
+      et_backend_available(_toNative(backend)) == 1;
 
   /// Get all available backends.
   static List<Backend> get available {
@@ -58,8 +39,8 @@ enum Backend {
     }
   }
 
-  /// Convert to native ETBackend enum.
-  ETBackend _toNative() => switch (this) {
+  /// Convert Backend to native ETBackend enum.
+  static ETBackend _toNative(Backend backend) => switch (backend) {
         Backend.xnnpack => ETBackend.ET_BACKEND_XNNPACK,
         Backend.coreml => ETBackend.ET_BACKEND_COREML,
         Backend.mps => ETBackend.ET_BACKEND_MPS,

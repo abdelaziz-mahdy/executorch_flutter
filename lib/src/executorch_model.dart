@@ -17,7 +17,8 @@ import 'types.dart';
 /// ExecuTorch models. It provides a consistent interface across all platforms.
 ///
 /// Platform-specific implementations:
-/// - **Native (Android, iOS, macOS, Windows, Linux)**: Uses dart:ffi with native assets
+/// - **Native (Android, iOS, macOS, Windows, Linux)**: Uses dart:ffi with
+///   native assets
 /// - **Web**: Uses WebAssembly via JavaScript interop
 ///
 /// ## Usage Pattern

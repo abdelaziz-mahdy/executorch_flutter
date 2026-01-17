@@ -18,7 +18,8 @@ import 'types.dart';
 /// It acts as a facade over the lower-level platform-specific implementations.
 ///
 /// Platform-specific implementations:
-/// - **Native (Android, iOS, macOS, Windows, Linux)**: Uses dart:ffi with native assets
+/// - **Native (Android, iOS, macOS, Windows, Linux)**: Uses dart:ffi with
+///   native assets
 /// - **Web**: Uses WebAssembly via JavaScript interop
 abstract class ExecutorchManager {
   /// Get the singleton instance of ExecutorchManager

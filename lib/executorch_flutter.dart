@@ -68,12 +68,27 @@ library;
 export 'src/executorch_errors.dart';
 export 'src/executorch_inference.dart';
 export 'src/executorch_model.dart';
-// FFI-specific exports (backend query, version, extended types)
-export 'src/ffi/backend.dart' show Backend;
+// Backend query (conditional for web)
+export 'src/ffi/backend_query.dart'
+    if (dart.library.js_interop) 'src/ffi/backend_query_web.dart'
+    if (dart.library.js) 'src/ffi/backend_query_web.dart' show BackendQuery;
+// FFI-specific tensor type extensions (conditional for web)
 export 'src/ffi/tensor_type_extensions.dart'
-    show ExtendedTensorType, TensorTypeFFI;
-export 'src/ffi/version.dart' show ExecuTorchVersion;
+    if (dart.library.js_interop) 'src/ffi/tensor_type_extensions_web.dart'
+    if (dart.library.js) 'src/ffi/tensor_type_extensions_web.dart'
+    show TensorTypeFFI;
+// Version query (conditional for web)
+export 'src/ffi/version.dart'
+    if (dart.library.js_interop) 'src/ffi/version_web.dart'
+    if (dart.library.js) 'src/ffi/version_web.dart' show ExecuTorchVersion;
 // Preprocessing and postprocessing utilities
 export 'src/processors/processors.dart';
-// Core types - tensor data and model result types
-export 'src/types.dart' show ModelLoadResult, TensorData, TensorType;
+// Core types - tensor data, model result, Backend enum, ExtendedTensorType
+export 'src/types.dart'
+    show
+        Backend,
+        ExtendedTensorType,
+        ModelLoadResult,
+        TensorData,
+        TensorType,
+        TensorTypeExtension;

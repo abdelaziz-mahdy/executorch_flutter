@@ -74,6 +74,13 @@ const List<int> _minPythonVersion = [3, 8];
 /// 5. CMake build orchestration
 /// 6. Code asset registration
 Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
+  // Check if code assets are expected (not for web builds)
+  if (!input.config.buildCodeAssets) {
+    // Web builds don't use native code assets - skip build
+    // The web implementation uses JS interop instead
+    return;
+  }
+
   final packagePath = Directory(await getPackagePath(_packageName));
   final targetOS = input.config.code.targetOS;
   final targetArch = input.config.code.targetArchitecture;
