@@ -94,12 +94,9 @@ jobs:
           path: example/build/ios/iphoneos/Runner.app
           retention-days: 7
 
-  # macOS Debug Build
-  # Release builds fail due to Flutter fat bundle issue with SPM packages
-  # Issue: https://github.com/flutter/flutter/issues/176605
-  # Fix merged but not released yet: https://github.com/flutter/flutter/pull/176948
+  # macOS Release Build
   build-macos:
-    name: Build macOS (Debug)
+    name: Build macOS (Release)
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -125,15 +122,20 @@ jobs:
         run: flutter pub get
         working-directory: example
 
-      - name: Build macOS (Debug)
-        run: flutter build macos --debug
+      - name: Build macOS (Release)
+        run: flutter build macos --release
         working-directory: example
+
+      - name: Run integration tests (Release)
+        run: flutter test integration_test/models_integration_test.dart -d macos --release
+        working-directory: example
+        timeout-minutes: 30
 
       - name: Upload macOS Build
         uses: actions/upload-artifact@v4
         with:
-          name: macos-debug-build
-          path: example/build/macos/Build/Products/Debug/executorch_flutter_example.app
+          name: macos-release-build
+          path: example/build/macos/Build/Products/Release/executorch_flutter_example.app
           retention-days: 7
 
   # Windows Build
@@ -161,6 +163,11 @@ jobs:
       - name: Build Windows (Release)
         run: flutter build windows --release
         working-directory: example
+
+      - name: Run integration tests (Release)
+        run: flutter test integration_test/models_integration_test.dart -d windows --release
+        working-directory: example
+        timeout-minutes: 30
 
       - name: Upload Windows Build
         uses: actions/upload-artifact@v4
@@ -199,6 +206,11 @@ jobs:
       - name: Build Linux (Release)
         run: flutter build linux --release
         working-directory: example
+
+      - name: Run integration tests (Release)
+        run: flutter test integration_test/models_integration_test.dart -d linux --release
+        working-directory: example
+        timeout-minutes: 30
 
       - name: Upload Linux Build
         uses: actions/upload-artifact@v4
