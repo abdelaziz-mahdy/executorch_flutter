@@ -36,8 +36,8 @@ The package provides a simple, intuitive API that matches native ExecuTorch patt
 ```dart
 import 'package:executorch_flutter/executorch_flutter.dart';
 
-// Load a model from file path
-final model = await ExecuTorchModel.load('/path/to/model.pte');
+// Recommended: Load from Flutter assets (works on all platforms including web)
+final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
 ```
 
 ### 2. Run Inference
@@ -63,24 +63,31 @@ for (var output in outputs) {
 await model.dispose();
 ```
 
-### 3. Loading Models from Assets
+### 3. Loading Models
 
+**From Assets (Recommended - works on all platforms including web):**
+```dart
+// Simply use the asset path - no manual file copying needed
+final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
+final outputs = await model.forward([inputTensor]);
+await model.dispose();
+```
+
+**From Bytes (works on all platforms):**
 ```dart
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
-// Load model from assets
 final byteData = await rootBundle.load('assets/models/model.pte');
-final tempDir = await getTemporaryDirectory();
-final file = File('${tempDir.path}/model.pte');
-await file.writeAsBytes(byteData.buffer.asUint8List());
-
-// Load and run inference
-final model = await ExecuTorchModel.load(file.path);
+final model = await ExecuTorchModel.loadFromBytes(byteData.buffer.asUint8List());
 final outputs = await model.forward([inputTensor]);
+await model.dispose();
+```
 
-// Dispose when done
+**From File Path (native platforms only):**
+```dart
+// Only available on Android, iOS, macOS - not on web
+final model = await ExecuTorchModel.load('/path/to/model.pte');
+final outputs = await model.forward([inputTensor]);
 await model.dispose();
 ```
 
@@ -256,8 +263,8 @@ hooks:
       # ExecuTorch source version - for source builds (default: "1.0.1")
       executorch_version: "1.0.1"
 
-      # Prebuilt release version - for prebuilt downloads (default: "1.0.1.6")
-      prebuilt_version: "1.0.1.6"
+      # Prebuilt release version - for prebuilt downloads (default: "1.0.1.8")
+      prebuilt_version: "1.0.1.8"
 
       # Backend selection (platform-specific defaults apply)
       backends:
@@ -273,7 +280,7 @@ hooks:
 | `debug` | `bool` | `false` | Enables native debug logging and selects Debug prebuilt binaries (useful for debugging crashes) |
 | `build_mode` | `string` | `"prebuilt"` | `"prebuilt"` downloads pre-compiled binaries (fast, recommended). `"source"` builds from source (slower, requires Python 3.8+ with pyyaml) |
 | `executorch_version` | `string` | `"1.0.1"` | ExecuTorch source version (for source builds) |
-| `prebuilt_version` | `string` | `"1.0.1.6"` | Prebuilt release version (for prebuilt downloads) |
+| `prebuilt_version` | `string` | `"1.0.1.8"` | Prebuilt release version (for prebuilt downloads) |
 | `backends` | `list` | Platform-specific | List of backends to enable. Options: `xnnpack`, `coreml`, `mps`, `vulkan`, `qnn` |
 
 ### Backend Defaults by Platform
@@ -335,7 +342,7 @@ hooks:
 hooks:
   user_defines:
     executorch_flutter:
-      prebuilt_version: "1.0.1.6"
+      prebuilt_version: "1.0.1.8"
 ```
 
 ## Advanced Usage
@@ -436,7 +443,13 @@ This project is actively developed following these principles:
 The primary class for model management and inference.
 
 ```dart
-// Static factory method to load a model
+// Load from Flutter asset bundle (recommended - all platforms including web)
+static Future<ExecuTorchModel> loadFromAsset(String assetPath)
+
+// Load from bytes (all platforms including web)
+static Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes)
+
+// Load from file path (native platforms only - Android, iOS, macOS)
 static Future<ExecuTorchModel> load(String filePath)
 
 // Execute inference (matches native module.forward())
