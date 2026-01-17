@@ -225,6 +225,28 @@ The `native/` directory contains the C/C++ FFI library that bridges Dart to Exec
 
 **Important:** Always commit the updated submodule reference in the parent repo after pushing changes to the submodule. Otherwise, other developers cloning the repo will get an older version of the native code.
 
+### CI/CD Workflow Dependencies
+
+**CRITICAL: The `build.yml` workflow depends on pre-built native binaries being available on GitHub Releases.**
+
+When updating the native submodule version, the following order MUST be followed:
+
+1. **Wait for native binaries to finish building** - After tagging a new version in `executorch_native`, GitHub Actions builds binaries for all platforms (Linux, Windows, macOS, Android, iOS). This can take 30-60 minutes.
+
+2. **Verify binaries are published** - Check that all platform variants are available at:
+   `https://github.com/abdelaziz-mahdy/executorch_native/releases/tag/vX.X.X.X`
+
+3. **Only then push changes to `executorch_flutter`** - If you push before binaries are ready, the build workflow will fail with 404 errors like:
+   ```
+   ERROR: downloading '.../libexecutorch_ffi-linux-x64-xnnpack-release.tar.gz' failed
+   The requested URL returned error: 404
+   ```
+
+**If builds fail due to missing binaries:**
+- Check the `executorch_native` GitHub Actions to see if builds are still in progress
+- Wait for all platform builds to complete before re-running the workflow
+- Do NOT merge PRs or push to main until binaries are available
+
 ## Key APIs
 
 ### ExecuTorchModel
