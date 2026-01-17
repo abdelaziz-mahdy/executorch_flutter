@@ -1,6 +1,6 @@
 # ExecuTorch Flutter
 
-A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, macOS, and Web platforms.
+A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, macOS, Windows, Linux, and Web platforms.
 
 **📦 [pub.dev](https://pub.dev/packages/executorch_flutter)** | **🌐 [Live Demo](https://abdelaziz-mahdy.github.io/executorch_flutter/)** | **🔧 [Example App](example/)**
 
@@ -10,8 +10,8 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 ## Features
 
-- ✅ **Cross-Platform Support**: Android (API 23+), iOS (17.0+), macOS (12.0+ Apple Silicon), and Web
-- ✅ **Type-Safe API**: Generated with Pigeon for reliable cross-platform communication
+- ✅ **Cross-Platform Support**: Android (API 23+), iOS (13.0+), macOS (11.0+), Windows, Linux, and Web
+- ✅ **Type-Safe API**: dart:ffi bindings with type-safe Dart wrapper classes
 - ✅ **Async Operations**: Non-blocking model loading and inference execution
 - ✅ **Multiple Models**: Support for concurrent model instances
 - ✅ **Error Handling**: Structured exception handling with clear error messages
@@ -19,6 +19,9 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 - ✅ **Live Camera**: Real-time inference with camera stream support
 
 ## Installation
+
+**Requirements:**
+- Flutter 3.38+ (first version with native assets hooks support)
 
 Add to your `pubspec.yaml`:
 
@@ -36,8 +39,8 @@ The package provides a simple, intuitive API that matches native ExecuTorch patt
 ```dart
 import 'package:executorch_flutter/executorch_flutter.dart';
 
-// Load a model from file path
-final model = await ExecuTorchModel.load('/path/to/model.pte');
+// Recommended: Load from Flutter assets (works on all platforms including web)
+final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
 ```
 
 ### 2. Run Inference
@@ -63,24 +66,31 @@ for (var output in outputs) {
 await model.dispose();
 ```
 
-### 3. Loading Models from Assets
+### 3. Loading Models
 
+**From Assets (Recommended - works on all platforms including web):**
+```dart
+// Simply use the asset path - no manual file copying needed
+final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
+final outputs = await model.forward([inputTensor]);
+await model.dispose();
+```
+
+**From Bytes (works on all platforms):**
 ```dart
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
-// Load model from assets
 final byteData = await rootBundle.load('assets/models/model.pte');
-final tempDir = await getTemporaryDirectory();
-final file = File('${tempDir.path}/model.pte');
-await file.writeAsBytes(byteData.buffer.asUint8List());
-
-// Load and run inference
-final model = await ExecuTorchModel.load(file.path);
+final model = await ExecuTorchModel.loadFromBytes(byteData.buffer.asUint8List());
 final outputs = await model.forward([inputTensor]);
+await model.dispose();
+```
 
-// Dispose when done
+**From File Path (native platforms only):**
+```dart
+// Only available on Android, iOS, macOS, Windows, Linux - not on web
+final model = await ExecuTorchModel.load('/path/to/model.pte');
+final outputs = await model.forward([inputTensor]);
 await model.dispose();
 ```
 
@@ -102,20 +112,28 @@ See the `example/` directory for a full working application:
 
 ### Android
 - **Minimum SDK**: API 23 (Android 6.0)
-- **Architecture**: arm64-v8a
+- **Architectures**: arm64-v8a, armeabi-v7a, x86_64, x86
 - **Supported Backends**: XNNPACK
 
 ### iOS
-- **Minimum Version**: iOS 17.0+
-- **Architecture**: arm64 (device only)
-  - ⚠️ **iOS Simulator (x86_64) is NOT supported**
-- **Supported Backends**: XNNPACK, CoreML, MPS
+- **Minimum Version**: iOS 13.0+
+- **Architectures**: arm64 (device), x86_64 + arm64 (simulator)
+- **Supported Backends**: XNNPACK, CoreML
 
 ### macOS
-- **Minimum Version**: macOS 12.0+ (Monterey)
-- **Architecture**: **arm64 only** (Apple Silicon)
-  - ⚠️ **Intel Macs (x86_64) are NOT supported**
-- **Supported Backends**: XNNPACK, CoreML, MPS
+- **Minimum Version**: macOS 11.0+ (Big Sur)
+- **Architectures**: arm64 (Apple Silicon), x86_64 (Intel)
+- **Supported Backends**: XNNPACK, CoreML, MPS (MPS on arm64 only)
+
+### Windows
+- **Minimum Version**: Windows 10+
+- **Architecture**: x64
+- **Supported Backends**: XNNPACK
+
+### Linux
+- **Minimum Version**: Ubuntu 20.04+ or equivalent
+- **Architectures**: x64, arm64
+- **Supported Backends**: XNNPACK
 
 ### Web
 - **Status**: Supported via WebAssembly
@@ -172,23 +190,13 @@ dart run executorch_flutter:setup_web
 
 > **Note**: File-based model loading is not supported on web - models are loaded from bytes or remote URLs.
 
-#### macOS Build Limitations
-
-**Debug Builds**: ✅ Work by default on Apple Silicon Macs
-
-**Release Builds**: ⚠️ **Currently NOT working**
-
-> macOS release builds are not supported due to Flutter's build system forcing universal binaries (arm64 + x86_64), but ExecuTorch only provides arm64 libraries.
->
-> 🔗 **Tracking**: [Flutter Issue #176605](https://github.com/flutter/flutter/issues/176605)
-
 ## Platform Configuration
 
 When adding `executorch_flutter` to an existing Flutter project, you may need to update the minimum deployment targets. If you see build errors mentioning platform versions, follow these steps:
 
-### iOS Deployment Target (iOS 17.0+)
+### iOS Deployment Target (iOS 13.0+)
 
-If you get an error like: `The package product 'executorch-flutter' requires minimum platform version 17.0 for the iOS platform`
+If you get an error like: `The package product 'executorch-flutter' requires minimum platform version 13.0 for the iOS platform`
 
 **Update using Xcode (Recommended):**
 1. Open your Flutter project in Xcode:
@@ -199,12 +207,12 @@ If you get an error like: `The package product 'executorch-flutter' requires min
 4. Click the **Build Settings** tab at the top
 5. In the search bar, type: `iOS Deployment Target`
 6. You'll see "iOS Deployment Target" with a version number (like 13.0)
-7. Click on the version number and change it to **17.0**
+7. Click on the version number and change it to **13.0**
 8. Close Xcode
 
-### macOS Deployment Target (macOS 12.0+)
+### macOS Deployment Target (macOS 11.0+)
 
-If you get an error like: `The package product 'executorch-flutter' requires minimum platform version 12.0 for the macOS platform`
+If you get an error like: `The package product 'executorch-flutter' requires minimum platform version 11.0 for the macOS platform`
 
 **Update using Xcode (Recommended):**
 1. Open your Flutter project in Xcode:
@@ -215,7 +223,7 @@ If you get an error like: `The package product 'executorch-flutter' requires min
 4. Click the **Build Settings** tab at the top
 5. In the search bar, type: `macOS Deployment Target`
 6. You'll see "macOS Deployment Target" with a version number (like 10.15)
-7. Click on the version number and change it to **12.0**
+7. Click on the version number and change it to **11.0**
 8. Close Xcode
 
 ### Verification
@@ -233,6 +241,109 @@ flutter pub get
 flutter build ios --debug --no-codesign  # For iOS
 flutter build macos --debug               # For macOS
 flutter build apk --debug                 # For Android
+```
+
+## Build Configuration
+
+The package supports build-time configuration through Flutter's `hooks` system in your app's `pubspec.yaml`. This allows you to customize the build behavior without modifying package code.
+
+### Configuration Options
+
+Add the following to your **app's** `pubspec.yaml` (not the package):
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      # Enable debug logging and use Debug prebuilt binaries
+      debug: true
+
+      # Build mode: "prebuilt" (default) or "source"
+      build_mode: "prebuilt"
+
+      # ExecuTorch source version - for source builds (default: "1.0.1")
+      executorch_version: "1.0.1"
+
+      # Prebuilt release version - for prebuilt downloads (default: "1.0.1.8")
+      prebuilt_version: "1.0.1.8"
+
+      # Backend selection (platform-specific defaults apply)
+      backends:
+        - xnnpack
+        - coreml
+        - mps
+```
+
+### Available Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `debug` | `bool` | `false` | Enables native debug logging and selects Debug prebuilt binaries (useful for debugging crashes) |
+| `build_mode` | `string` | `"prebuilt"` | `"prebuilt"` downloads pre-compiled binaries (fast, recommended). `"source"` builds from source (slower, requires Python 3.8+ with pyyaml) |
+| `executorch_version` | `string` | `"1.0.1"` | ExecuTorch source version (for source builds) |
+| `prebuilt_version` | `string` | `"1.0.1.8"` | Prebuilt release version (for prebuilt downloads) |
+| `backends` | `list` | Platform-specific | List of backends to enable. Options: `xnnpack`, `coreml`, `mps`, `vulkan`, `qnn` |
+
+### Backend Defaults by Platform
+
+If `backends` is not specified, the following defaults are used:
+
+| Platform | Default Backends |
+|----------|------------------|
+| Android | xnnpack |
+| iOS | xnnpack, coreml |
+| macOS | xnnpack, coreml, mps |
+| Windows | xnnpack |
+| Linux | xnnpack |
+
+### Prebuilt Binaries
+
+Prebuilt binaries are maintained by the package maintainer and hosted at [executorch_native](https://github.com/abdelaziz-mahdy/executorch_native). The prebuilt mode downloads these pre-compiled libraries automatically during the Flutter build process.
+
+**Available prebuilt configurations:**
+- Release and Debug builds for each platform
+- Platform-specific backend combinations (see table above)
+
+**Request new backends or platforms:** If you need a backend or platform configuration that isn't currently available in prebuilt mode, please [open an issue](https://github.com/abdelaziz-mahdy/executorch_native/issues) on the executorch_native repository.
+
+### Environment Variables
+
+You can also override configuration via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `EXECUTORCH_BUILD_MODE` | Override build mode ("prebuilt" or "source") |
+| `EXECUTORCH_CACHE_DIR` | Custom cache directory for downloaded/built artifacts |
+| `EXECUTORCH_DISABLE_DOWNLOAD` | Set to "1" to skip prebuilt download (requires `EXECUTORCH_INSTALL_DIR`) |
+| `EXECUTORCH_INSTALL_DIR` | Path to local ExecuTorch installation |
+
+### Example Configurations
+
+**Debug build with verbose logging:**
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      debug: true
+```
+
+**Build from source with specific backends:**
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      build_mode: "source"
+      backends:
+        - xnnpack
+        - vulkan
+```
+
+**Use a specific prebuilt version:**
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      prebuilt_version: "1.0.1.8"
 ```
 
 ## Advanced Usage
@@ -333,7 +444,13 @@ This project is actively developed following these principles:
 The primary class for model management and inference.
 
 ```dart
-// Static factory method to load a model
+// Load from Flutter asset bundle (recommended - all platforms including web)
+static Future<ExecuTorchModel> loadFromAsset(String assetPath)
+
+// Load from bytes (all platforms including web)
+static Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes)
+
+// Load from file path (native platforms only - Android, iOS, macOS, Windows, Linux)
 static Future<ExecuTorchModel> load(String filePath)
 
 // Execute inference (matches native module.forward())
@@ -380,7 +497,6 @@ ExecuTorchException              // Base exception
 Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for:
 
 - Development setup and prerequisites
-- Automated Pigeon code generation script
 - Integration testing workflow
 - Code standards and PR process
 - Platform-specific guidelines
@@ -393,14 +509,13 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 For issues and questions:
 - 📖 Check the [Official ExecuTorch Documentation](https://pytorch.org/executorch/stable/getting-started-architecture.html)
-- 🐛 [Report issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) on GitHub
-- 💬 [Discussions](https://github.com/abdelaziz-mahdy/executorch_flutter/discussions) for questions and feature requests
+- 🐛 [Report issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) on GitHub for bugs and feature requests
 
 ## Roadmap
 
 See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
 - Additional model type examples (segmentation, pose estimation)
-- Windows and Linux platform support
+- Additional backend support (Vulkan, QNN)
 - Performance optimizations and more
 
 ---

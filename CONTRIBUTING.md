@@ -29,18 +29,23 @@ Thank you for your interest in contributing to ExecuTorch Flutter! This guide wi
 
 ### Prerequisites
 
-- Flutter SDK 3.16.0 or later
+- Flutter SDK 3.38+ (first version with native assets hooks)
 - Dart SDK 3.0.0 or later
 - **Android Development**:
   - Android Studio with SDK API 23+
   - NDK for native development
 - **iOS Development**:
   - macOS with Xcode 14+
-  - iOS 13.0+ physical device (arm64)
-  - ⚠️ iOS Simulator (x86_64) is NOT supported
+  - iOS 13.0+ (device and simulator supported)
 - **macOS Development**:
-  - macOS 12.0+ (Monterey or later)
-  - Apple Silicon Mac (M1/M2/M3/M4)
+  - macOS 11.0+ (Big Sur or later)
+  - Apple Silicon or Intel Mac
+- **Windows Development**:
+  - Windows 10+
+  - Visual Studio 2022 with C++ workload
+- **Linux Development**:
+  - Ubuntu 20.04+ or equivalent
+  - GCC/Clang, CMake, ninja-build
 
 ### Setup Steps
 
@@ -49,12 +54,7 @@ Thank you for your interest in contributing to ExecuTorch Flutter! This guide wi
    flutter pub get
    ```
 
-2. **Generate Pigeon code** (if modifying API):
-   ```bash
-   ./scripts/generate_pigeon.sh
-   ```
-
-3. **Run the example app**:
+2. **Run the example app**:
    ```bash
    cd example
    flutter run
@@ -66,19 +66,17 @@ Thank you for your interest in contributing to ExecuTorch Flutter! This guide wi
 executorch_flutter/
 ├── lib/                        # Dart library code
 │   ├── src/
-│   │   ├── generated/          # Pigeon-generated code
+│   │   ├── ffi/                # dart:ffi bindings and FFI layer
+│   │   ├── generated/          # ffigen-generated FFI bindings
+│   │   ├── build/              # Native assets build hook
 │   │   ├── executorch_model.dart
 │   │   ├── executorch_inference.dart
 │   │   └── executorch_errors.dart
 │   └── executorch_flutter.dart # Public API exports
-├── android/                    # Android native implementation
-│   └── src/main/kotlin/
-├── ios/                        # iOS native implementation (deprecated, use darwin/)
-├── macos/                      # macOS native implementation (deprecated, use darwin/)
-├── darwin/                     # Unified iOS/macOS Swift Package
-│   └── Sources/executorch_flutter/
-├── pigeons/                    # Pigeon API definitions
-│   └── executorch_api.dart
+├── native/                     # Git submodule: C/C++ FFI library
+│   ├── src/                    # FFI implementation
+│   ├── cmake/                  # CMake build configuration
+│   └── scripts/                # Platform build scripts
 └── example/                    # Example Flutter app
 ```
 
@@ -151,73 +149,34 @@ docs(readme): update installation instructions
 - Use `async/await` for asynchronous operations
 - Utilize Swift actors for thread safety
 
-### Pigeon API Changes
+### FFI API Changes
 
-If modifying the platform API:
+If modifying the FFI layer:
 
-1. **Update** `pigeons/executorch_api.dart`
-2. **Regenerate** platform code using the automated script:
+1. **Update** C/C++ code in `native/src/`
+2. **Update** header files in `native/src/executorch_ffi.h`
+3. **Regenerate** FFI bindings:
    ```bash
-   ./scripts/generate_pigeon.sh
+   dart run ffigen
    ```
-3. **Update** all platform implementations (Android, iOS/macOS)
 4. **Test** changes using integration tests (see below)
-
-#### Pigeon Generation Script
-
-The automated script handles all code generation and post-processing:
-
-**What it does**:
-1. Runs `dart pub global run pigeon --input pigeons/executorch_api.dart`
-2. Automatically makes Swift types `public` (required for SPM)
-3. Makes `PigeonError` class and initializer public for proper Swift error handling
-4. Creates symlinks for iOS and macOS to shared darwin code
-
-**Generated files**:
-- `lib/src/generated/executorch_api.dart` (Dart)
-- `android/src/main/kotlin/com/zcreations/executorch_flutter/generated/ExecutorchApi.kt` (Kotlin)
-- `darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift` (Shared Darwin)
-- `ios/Classes/Generated/ExecutorchApi.swift` → symlink to darwin
-- `macos/Classes/Generated/ExecutorchApi.swift` → symlink to darwin
-
-**Important**: Generated files ARE committed to version control.
 
 ### Integration Testing
 
-After making changes, run the comprehensive integration test suite:
+After making changes, run the integration tests:
 
 ```bash
 cd example
-./scripts/run_integration_tests.sh           # Run tests on all platforms
-./scripts/run_integration_tests.sh macos     # Run tests only on macOS
-./scripts/run_integration_tests.sh ios       # Run tests only on iOS
-./scripts/run_integration_tests.sh android   # Run tests only on Android
+flutter test integration_test/models_integration_test.dart -d macos   # macOS
+flutter test integration_test/models_integration_test.dart -d ios     # iOS
+flutter test integration_test/models_integration_test.dart -d android # Android
+flutter test integration_test/models_integration_test.dart -d windows # Windows
+flutter test integration_test/models_integration_test.dart -d linux   # Linux
 ```
 
-**What it does**:
-1. Checks for required model files (MobileNet, YOLO variants)
-2. Runs integration tests on available platforms:
-   - **macOS**: Tests on macOS device
-   - **iOS**: Tests on physical device (arm64 only, no simulator)
-   - **Android**: Tests on emulator or physical device (auto-launches emulator if needed)
-3. Falls back to building if no device/simulator is available
-4. Provides detailed summary of test results
-
 **Prerequisites**:
-- Models must be in `example/assets/models/`:
-  - `mobilenet_v3_small_xnnpack.pte`
-  - `yolo11n_xnnpack.pte`
-  - `yolov5n_xnnpack.pte`
-  - `yolov8n_xnnpack.pte`
-- Run model setup if needed: `cd python && python3 setup_models.py`
-
-**Script Features**:
-- ✅ Multi-platform support (macOS, iOS, Android)
-- ✅ Auto-detects and launches Android emulator
-- ✅ Validates model files before testing
-- ✅ Fallback to build if no device available
-- ✅ Color-coded output with test summary
-- ✅ Exit codes for CI/CD integration
+- Models are automatically downloaded from GitHub on first use
+- To export models manually: `cd models/python && python3 main.py`
 
 ## Submitting Changes
 
@@ -248,9 +207,8 @@ cd example
 - [ ] Comments added for complex code
 - [ ] Documentation updated
 - [ ] No new warnings from analyzer
-- [ ] Pigeon code regenerated (if API changed)
 - [ ] Verified on example app
-- [ ] Works on all affected platforms (Android/iOS/macOS)
+- [ ] Works on all affected platforms
 
 ### Review Process
 
@@ -271,22 +229,34 @@ cd example
 ### iOS
 
 - **Minimum Version**: iOS 13.0
-- **Architecture**: arm64 (device only)
-- ⚠️ **iOS Simulator (x86_64) NOT supported** - ExecuTorch only provides arm64 binaries
-- **Swift Package Manager**: ExecuTorch 1.0.0
-- **Dependencies**: Defined in `darwin/executorch_flutter/Package.swift`
+- **Architectures**: arm64 (device), arm64-simulator, x86_64-simulator
+- **Build System**: Native assets via CMake
+- **Backend**: XNNPACK, CoreML (optional)
 
 ### macOS
 
-- **Minimum Version**: macOS 12.0 (Monterey)
-- **Architecture**: arm64 only (Apple Silicon)
-- **Build Limitation**: Release builds currently require custom Flutter fork (see [PIGEON_MACOS_NOTES.md](PIGEON_MACOS_NOTES.md))
-- **Swift Package Manager**: Same as iOS
+- **Minimum Version**: macOS 11.0 (Big Sur)
+- **Architectures**: arm64 (Apple Silicon), x86_64 (Intel)
+- **Build System**: Native assets via CMake
+- **Backend**: XNNPACK, CoreML, MPS (Metal Performance Shaders)
+
+### Windows
+
+- **Minimum Version**: Windows 10
+- **Architecture**: x64
+- **Build System**: Native assets via CMake
+- **Backend**: XNNPACK
+
+### Linux
+
+- **Minimum Version**: Ubuntu 20.04+ or equivalent
+- **Architecture**: x64
+- **Build System**: Native assets via CMake
+- **Backend**: XNNPACK
 
 ## Need Help?
 
-- 💬 [GitHub Discussions](https://github.com/abdelaziz-mahdy/executorch_flutter/discussions) - Ask questions
-- 🐛 [GitHub Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) - Report bugs
+- 🐛 [GitHub Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) - Report bugs or ask questions
 - 📖 [Documentation](https://github.com/abdelaziz-mahdy/executorch_flutter) - Read the docs
 
 ## Code of Conduct

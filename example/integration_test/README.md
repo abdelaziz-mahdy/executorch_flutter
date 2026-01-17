@@ -35,17 +35,25 @@ This will download and export all required models to `assets/models/`.
 
 ### 2. Platform Requirements
 
-**macOS** (arm64 only - Apple Silicon):
-- macOS 12.0+ (Monterey)
-- No additional setup required
+**macOS**:
+- macOS 11.0+ (Big Sur)
+- Supports arm64 (Apple Silicon) and x86_64 (Intel)
 
-**iOS** (arm64 only - Physical device):
-- iOS 13.0+ physical device connected
-- ⚠️ iOS Simulator is NOT supported
+**iOS**:
+- iOS 13.0+
+- Supports device (arm64) and simulator (arm64, x86_64)
 
 **Android**:
-- Android device or emulator (API 23+, arm64-v8a)
-- Device/emulator must be running and connected
+- Android device or emulator (API 23+)
+- Supports arm64-v8a, armeabi-v7a, x86_64, x86
+
+**Windows**:
+- Windows 10+
+- x64 architecture
+
+**Linux**:
+- Ubuntu 20.04+ or equivalent
+- x64 architecture
 
 ## Running Tests
 
@@ -105,9 +113,12 @@ Successful test output will show:
 
 ## Current Test Status
 
-**✅ macOS**: All tests passing (12/12)
-**⚠️ iOS**: Requires physical device - Simulator NOT supported (ExecuTorch architecture limitation)
-**⚠️ Android**: Build errors in plugin code (needs fixing separately from tests)
+**✅ macOS**: All tests passing
+**✅ iOS**: Supports device and simulator
+**✅ Android**: All tests passing
+**✅ Windows**: All tests passing
+**✅ Linux**: All tests passing
+**⚠️ Web**: Integration tests not supported (`flutter test` doesn't support web devices)
 
 ## Troubleshooting
 
@@ -116,13 +127,10 @@ Successful test output will show:
 - Verify models exist in `assets/models/`
 
 ### "No devices available"
-- **iOS**: Connect a physical iOS device (Simulator NOT supported - ExecuTorch doesn't provide simulator-compatible libraries)
+- **iOS**: Connect a device or start a simulator
 - **Android**: Emulator launches automatically, or connect a physical device
-- **macOS**: Ensure you're on Apple Silicon (arm64)
-
-### iOS Simulator "Unsupported Swift architecture"
-- This is expected - ExecuTorch does not provide iOS Simulator-compatible binaries
-- Use a physical iOS device for testing
+- **macOS**: No additional setup required
+- **Windows/Linux**: No additional setup required
 
 ### Android build failures
 - Check for Kotlin compilation errors in the plugin code

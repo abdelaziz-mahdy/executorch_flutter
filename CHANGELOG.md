@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0] - 2026-01-16
+
+### Added
+- Native Assets build system with prebuilt binary support
+- Build configuration via `pubspec.yaml` (debug mode, backends, versions)
+- Windows x64 platform support
+- Linux x64 and arm64 platform support
+- iOS Simulator support (arm64 and x86_64)
+- macOS x86_64 (Intel Mac) support
+- Android x86_64 architecture for emulator testing
+- Windows and Linux CI workflows
+
+### Changed
+- Migrate from Pigeon to FFI for native communication
+- Reduce memory copying during tensor operations with direct FFI access
+- Prebuilt binaries now download automatically (faster builds)
+- Default build mode is now "prebuilt" for faster development
+
+### Removed
+- Swift Package Manager dependency (replaced by Native Assets)
+- Pigeon-based method channels
+
 ## 0.1.1
 
 ### Example App Improvements

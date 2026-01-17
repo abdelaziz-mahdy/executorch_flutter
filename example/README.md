@@ -45,11 +45,20 @@ python3 main.py
 # macOS
 flutter run -d macos
 
-# iOS (requires physical device, simulator not supported)
+# iOS (device or simulator)
 flutter run -d <device-id>
 
 # Android
 flutter run -d <device-id>
+
+# Windows
+flutter run -d windows
+
+# Linux
+flutter run -d linux
+
+# Web
+flutter run -d chrome
 ```
 
 ### 3. Choose a Model
@@ -200,18 +209,27 @@ cd example
 
 ### Android
 - Minimum SDK: API 23 (Android 6.0)
-- Architecture: arm64-v8a
+- Architectures: arm64-v8a, armeabi-v7a, x86_64, x86
 
 ### iOS
-- Minimum Version: iOS 17.0+
-- Architecture: arm64 (physical devices only)
-- ⚠️ **Simulator NOT supported**
+- Minimum Version: iOS 13.0+
+- Architectures: arm64 (device), arm64-simulator, x86_64-simulator
 
 ### macOS
-- Minimum Version: macOS 12.0+ (Monterey)
-- Architecture: arm64 (Apple Silicon only)
-- ⚠️ **Intel Macs NOT supported**
-- ⚠️ **Release builds NOT working** (debug builds work fine)
+- Minimum Version: macOS 11.0+ (Big Sur)
+- Architectures: arm64 (Apple Silicon), x86_64 (Intel)
+
+### Windows
+- Minimum Version: Windows 10
+- Architecture: x64
+
+### Linux
+- Minimum Version: Ubuntu 20.04+ or equivalent
+- Architecture: x64
+
+### Web
+- Modern browsers with WebAssembly support
+- See [web/README.md](../web/README.md) for details
 
 ## Troubleshooting
 
@@ -248,9 +266,9 @@ curl https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models
 
 ### iOS Build Errors
 
-**Issue**: "requires minimum platform version 17.0"
+**Issue**: Build fails with deployment target errors
 
-**Solution**: Update deployment target in Xcode (see main README)
+**Solution**: Ensure iOS deployment target is set to 13.0+ in Xcode
 
 ## Contributing
 

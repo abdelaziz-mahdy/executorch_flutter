@@ -23,6 +23,8 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -59,6 +61,8 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -90,15 +94,14 @@ jobs:
           path: example/build/ios/iphoneos/Runner.app
           retention-days: 7
 
-  # macOS Debug Build
-  # Release builds fail due to Flutter fat bundle issue with SPM packages
-  # Issue: https://github.com/flutter/flutter/issues/176605
-  # Fix merged but not released yet: https://github.com/flutter/flutter/pull/176948
+  # macOS Release Build
   build-macos:
-    name: Build macOS (Debug)
+    name: Build macOS (Release)
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -119,15 +122,135 @@ jobs:
         run: flutter pub get
         working-directory: example
 
-      - name: Build macOS (Debug)
-        run: flutter build macos --debug
+      - name: Build macOS (Release)
+        run: flutter build macos --release
         working-directory: example
+
+      - name: Run integration tests
+        run: flutter test integration_test/models_integration_test.dart -d macos
+        working-directory: example
+        timeout-minutes: 30
 
       - name: Upload macOS Build
         uses: actions/upload-artifact@v4
         with:
-          name: macos-debug-build
-          path: example/build/macos/Build/Products/Debug/executorch_flutter_example.app
+          name: macos-release-build
+          path: example/build/macos/Build/Products/Release/executorch_flutter_example.app
+          retention-days: 7
+
+  # Windows Build
+  # Tests that the package compiles on Windows with prebuilt native libraries
+  build-windows:
+    name: Build Windows (Release)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Enable native assets
+        run: flutter config --enable-native-assets
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: example
+
+      - name: Build Windows (Release)
+        run: flutter build windows --release -v
+        working-directory: example
+
+      - name: Run integration tests
+        run: flutter test integration_test/models_integration_test.dart -d windows
+        working-directory: example
+        timeout-minutes: 30
+
+      - name: Upload Windows Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-build
+          path: example/build/windows/x64/runner/Release/
+          retention-days: 7
+
+  # Linux Build
+  # Tests that the package compiles on Linux with prebuilt native libraries
+  build-linux:
+    name: Build Linux (Release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev xvfb
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Enable native assets
+        run: flutter config --enable-native-assets
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: example
+
+      - name: Build Linux (Release)
+        run: flutter build linux --release
+        working-directory: example
+
+      - name: Run integration tests
+        run: xvfb-run flutter test integration_test/models_integration_test.dart -d linux
+        working-directory: example
+        timeout-minutes: 30
+
+      - name: Upload Linux Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-build
+          path: example/build/linux/x64/release/bundle/
+          retention-days: 7
+
+  # Web Build
+  # Tests that the package compiles for web with WASM
+  build-web:
+    name: Build Web (Release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: example
+
+      - name: Setup web assets
+        run: dart run executorch_flutter:setup_web
+        working-directory: example
+
+      - name: Build Web (Release)
+        run: flutter build web --release
+        working-directory: example
+
+      - name: Upload Web Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release-build
+          path: example/build/web/
           retention-days: 7
 
   # Analyze and Format Check (package only, not example app)
@@ -139,6 +262,8 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

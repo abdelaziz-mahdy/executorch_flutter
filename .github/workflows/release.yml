@@ -86,6 +86,69 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      # Download all example app build artifacts
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-apk
+          path: release-artifacts/android
+
+      - name: Download iOS Build
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-release-build
+          path: release-artifacts/ios
+
+      - name: Download macOS Build
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-release-build
+          path: release-artifacts/macos
+
+      - name: Download Windows Build
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release-build
+          path: release-artifacts/windows
+
+      - name: Download Linux Build
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-release-build
+          path: release-artifacts/linux
+
+      # Package artifacts for release
+      - name: Package release artifacts
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          mkdir -p release-packages
+
+          # Android APK - rename for clarity
+          mv release-artifacts/android/app-release.apk "release-packages/executorch_flutter_example-android-arm64-v${VERSION}.apk"
+
+          # iOS - zip the .app bundle
+          cd release-artifacts/ios
+          zip -r "../../release-packages/executorch_flutter_example-ios-arm64-v${VERSION}.zip" Runner.app
+          cd ../..
+
+          # macOS - zip the .app bundle
+          cd release-artifacts/macos
+          zip -r "../../release-packages/executorch_flutter_example-macos-universal-v${VERSION}.zip" executorch_flutter_example.app
+          cd ../..
+
+          # Windows - zip the release folder
+          cd release-artifacts/windows
+          zip -r "../../release-packages/executorch_flutter_example-windows-x64-v${VERSION}.zip" .
+          cd ../..
+
+          # Linux - zip the bundle
+          cd release-artifacts/linux
+          zip -r "../../release-packages/executorch_flutter_example-linux-x64-v${VERSION}.zip" .
+          cd ../..
+
+          echo "Release packages:"
+          ls -la release-packages/
+
       - name: Create and push tag
         env:
           # Use PAT to push tag so it triggers publish workflow
@@ -112,6 +175,20 @@ jobs:
 
             ---
 
+            ## Example App Downloads
+
+            | Platform | Architecture | Download |
+            |----------|--------------|----------|
+            | Android | arm64-v8a | [APK](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-android-arm64-v${{ needs.check-version.outputs.version }}.apk) |
+            | iOS | arm64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-ios-arm64-v${{ needs.check-version.outputs.version }}.zip) |
+            | macOS | Universal | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-macos-universal-v${{ needs.check-version.outputs.version }}.zip) |
+            | Windows | x64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-windows-x64-v${{ needs.check-version.outputs.version }}.zip) |
+            | Linux | x64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-linux-x64-v${{ needs.check-version.outputs.version }}.zip) |
+
+            ---
+
             📦 [View on pub.dev](https://pub.dev/packages/executorch_flutter/versions/${{ needs.check-version.outputs.version }})
           draft: false
           prerelease: false
+          files: |
+            release-packages/*

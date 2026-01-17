@@ -1,27 +1,24 @@
 /// ExecuTorch Flutter Plugin - On-device ML inference with ExecuTorch
 ///
 /// This package provides Flutter developers with the ability to run
-/// ExecuTorch machine learning models on Android, iOS, and macOS platforms
-/// with high performance and low latency.
+/// ExecuTorch machine learning models on Android, iOS, macOS, Linux,
+/// and Windows with high performance and low latency.
 ///
 /// ## Key Features
 ///
-/// - **High Performance**: Optimized for mobile inference with ExecuTorch
-/// - **Type Safe**: Generated platform communication with Pigeon
-/// - **Cross Platform**: Identical APIs across Android, iOS, and macOS
+/// - **High Performance**: Native FFI bindings for minimal latency
+/// - **Cross Platform**: Identical APIs across all supported platforms
 /// - **User-Controlled Resources**: Explicit model lifecycle with load/dispose
 /// - **Easy Integration**: Simple API for loading models and running inference
+/// - **Backend Query**: Check available hardware acceleration backends
 ///
 /// ## Quick Start
 ///
 /// ```dart
 /// import 'package:executorch_flutter/executorch_flutter.dart';
 ///
-/// // Initialize the manager
-/// await ExecutorchManager.instance.initialize();
-///
-/// // Load a model
-/// final model = await ExecutorchManager.instance.loadModel('path/to/model.pte');
+/// // Load a model from asset bundle
+/// final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
 ///
 /// // Prepare input data
 /// final inputTensor = TensorData(
@@ -45,10 +42,10 @@
 ///
 /// ## Main Classes
 ///
-/// - `ExecutorchManager`: Main entry point for ExecuTorch operations
-/// - `ExecuTorchModel`: Represents a loaded model instance
+/// - `ExecuTorchModel`: Main API for loading and running inference
 /// - `TensorData`: Tensor data representation
-/// - `ModelMetadata`: Model information and specifications
+/// - `Backend`: Hardware acceleration backend enumeration
+/// - `ExecuTorchVersion`: Library version information
 ///
 /// ## Processors
 ///
@@ -59,17 +56,39 @@
 /// ## Platform Support
 ///
 /// - **Android**: API 23+ (Android 6.0+), arm64-v8a architecture
-/// - **iOS**: iOS 13.0+, arm64 (device only, simulator not supported)
-/// - **macOS**: macOS 12.0+ (Monterey), arm64 only (Apple Silicon)
+/// - **iOS**: iOS 13.0+, arm64 (device only)
+/// - **macOS**: macOS 11.0+, arm64 (Apple Silicon)
+/// - **Linux**: x64 architecture
+/// - **Windows**: x64 architecture
 ///
 /// For detailed documentation and examples, see the class documentation.
 library;
 
-export 'src/executorch_errors.dart';
 // Core API exports
+export 'src/executorch_errors.dart';
 export 'src/executorch_inference.dart';
 export 'src/executorch_model.dart';
-// Generated Pigeon types - direct export for type safety
-export 'src/generated/executorch_api.dart';
+// Backend query (conditional for web)
+export 'src/ffi/backend_query.dart'
+    if (dart.library.js_interop) 'src/ffi/backend_query_web.dart'
+    if (dart.library.js) 'src/ffi/backend_query_web.dart' show BackendQuery;
+// FFI-specific tensor type extensions (conditional for web)
+export 'src/ffi/tensor_type_extensions.dart'
+    if (dart.library.js_interop) 'src/ffi/tensor_type_extensions_web.dart'
+    if (dart.library.js) 'src/ffi/tensor_type_extensions_web.dart'
+    show TensorTypeFFI;
+// Version query (conditional for web)
+export 'src/ffi/version.dart'
+    if (dart.library.js_interop) 'src/ffi/version_web.dart'
+    if (dart.library.js) 'src/ffi/version_web.dart' show ExecuTorchVersion;
 // Preprocessing and postprocessing utilities
 export 'src/processors/processors.dart';
+// Core types - tensor data, model result, Backend enum, ExtendedTensorType
+export 'src/types.dart'
+    show
+        Backend,
+        ExtendedTensorType,
+        ModelLoadResult,
+        TensorData,
+        TensorType,
+        TensorTypeExtension;

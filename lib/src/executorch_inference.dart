@@ -9,7 +9,7 @@ import 'executorch_manager_unsupported_stub.dart'
     if (dart.library.js_interop) 'executorch_manager_web_stub.dart'
     if (dart.library.js) 'executorch_manager_web_stub.dart' as stub;
 import 'executorch_model.dart';
-import 'generated/executorch_api.dart';
+import 'types.dart';
 
 /// High-level manager for ExecuTorch inference operations
 ///
@@ -18,7 +18,8 @@ import 'generated/executorch_api.dart';
 /// It acts as a facade over the lower-level platform-specific implementations.
 ///
 /// Platform-specific implementations:
-/// - **Native (Android, iOS, macOS)**: Uses Pigeon for platform communication
+/// - **Native (Android, iOS, macOS, Windows, Linux)**: Uses dart:ffi with
+///   native assets
 /// - **Web**: Uses WebAssembly via JavaScript interop
 abstract class ExecutorchManager {
   /// Get the singleton instance of ExecutorchManager

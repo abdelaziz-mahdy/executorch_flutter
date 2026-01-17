@@ -6,10 +6,10 @@ import 'dart:typed_data';
 
 import 'executorch_errors.dart';
 import 'executorch_model_unsupported_stub.dart'
-    if (dart.library.io) 'executorch_model_native_stub.dart'
+    if (dart.library.ffi) 'executorch_model_ffi_stub.dart'
     if (dart.library.js_interop) 'executorch_model_web_stub.dart'
     if (dart.library.js) 'executorch_model_web_stub.dart' as stub;
-import 'generated/executorch_api.dart';
+import 'types.dart';
 
 /// High-level wrapper for an ExecuTorch model instance
 ///
@@ -17,7 +17,8 @@ import 'generated/executorch_api.dart';
 /// ExecuTorch models. It provides a consistent interface across all platforms.
 ///
 /// Platform-specific implementations:
-/// - **Native (Android, iOS, macOS)**: Uses Pigeon for platform communication
+/// - **Native (Android, iOS, macOS, Windows, Linux)**: Uses dart:ffi with
+///   native assets
 /// - **Web**: Uses WebAssembly via JavaScript interop
 ///
 /// ## Usage Pattern

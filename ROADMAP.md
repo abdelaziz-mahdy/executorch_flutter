@@ -2,12 +2,31 @@
 
 This document outlines planned features and improvements for the ExecuTorch Flutter package.
 
+## Completed Features
+
+### Platform Support (All Complete)
+
+- [x] Android support (arm64-v8a, armeabi-v7a, x86_64, x86)
+- [x] iOS support (arm64, simulator)
+- [x] macOS support (arm64, x86_64)
+- [x] Windows desktop support (x64)
+- [x] Linux desktop support (x64)
+- [x] Web platform support (WebAssembly)
+
+### Architecture Migration
+
+- [x] Migrated from Pigeon to dart:ffi with native assets
+- [x] Unified C/C++ FFI layer for all native platforms
+- [x] Pre-built binary distribution via GitHub Releases
+
+### Example App
+
+- [x] Live camera integration with real-time inference
+- [x] GPU-accelerated preprocessing via Fragment Shaders
+- [x] Multiple model support (YOLO, MobileNet)
+- [x] Backend selection (XNNPACK, CoreML, MPS)
+
 ## Planned Features
-
-### Example App Enhancements
-
-- [ ] Live camera integration with real-time inference
-- [ ] Frame rate and latency monitoring UI
 
 ### Additional Processors
 
@@ -15,13 +34,6 @@ This document outlines planned features and improvements for the ExecuTorch Flut
 - [ ] Instance segmentation processor
 - [ ] Text/NLP processors (BERT, GPT tokenizers)
 - [ ] Audio classification processors
-
-### Platform Support
-
-- [ ] Windows desktop support
-- [ ] Linux desktop support
-- [ ] Web platform support (when ExecuTorch adds WebAssembly)
-- [ ] macOS release builds (waiting on [Flutter Issue #176605](https://github.com/flutter/flutter/issues/176605))
 
 ### Advanced Features
 
