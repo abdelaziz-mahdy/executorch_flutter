@@ -164,11 +164,10 @@ jobs:
         run: flutter build windows --release -v
         working-directory: example
 
-      - name: Run integration tests (verbose)
-        run: flutter test integration_test/models_integration_test.dart -d windows -v
+      - name: Run integration tests
+        run: flutter test integration_test/models_integration_test.dart -d windows
         working-directory: example
         timeout-minutes: 30
-        continue-on-error: true
 
       - name: Upload Windows Build
         uses: actions/upload-artifact@v4
