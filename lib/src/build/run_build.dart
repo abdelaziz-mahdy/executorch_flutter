@@ -56,7 +56,7 @@ const String _packageName = 'executorch_flutter';
 const String _defaultExecutorchVersion = '1.0.1';
 
 /// Default prebuilt release version (our release tag for prebuilt downloads).
-const String _defaultPrebuiltVersion = '1.0.1.7';
+const String _defaultPrebuiltVersion = '1.0.1.8';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
