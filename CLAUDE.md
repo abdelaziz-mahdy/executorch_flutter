@@ -871,6 +871,7 @@ for (int c = 0; c < 3; c++) {
 
 ### Commit Guidelines
 
+- **ALWAYS ask before committing** unless the user explicitly says to commit. Present the changes and proposed commit message for approval first.
 - **DO NOT include AI co-author tags** in commit messages. Never use:
   - `Co-Authored-By: Claude ...`
   - `Co-Authored-By: ChatGPT ...`
