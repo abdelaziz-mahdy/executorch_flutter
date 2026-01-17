@@ -509,8 +509,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 For issues and questions:
 - 📖 Check the [Official ExecuTorch Documentation](https://pytorch.org/executorch/stable/getting-started-architecture.html)
-- 🐛 [Report issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) on GitHub
-- 💬 [Discussions](https://github.com/abdelaziz-mahdy/executorch_flutter/discussions) for questions and feature requests
+- 🐛 [Report issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) on GitHub for bugs and feature requests
 
 ## Roadmap
 
