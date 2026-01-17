@@ -72,8 +72,7 @@ ExecuTorchException _mapErrorCode(int code, String message, String? location) {
     ETErrorCode.ET_INFERENCE_FAILED =>
       ExecuTorchInferenceException(message, details),
     ETErrorCode.ET_INVALID_STATE => ExecuTorchModelException(message, details),
-    ETErrorCode.ET_UNSUPPORTED =>
-      ExecuTorchPlatformException(message, details),
+    ETErrorCode.ET_UNSUPPORTED => ExecuTorchPlatformException(message, details),
     ETErrorCode.ET_IO_ERROR => ExecuTorchIOException(message, details),
     ETErrorCode.ET_INTERNAL => ExecuTorchPlatformException(message, details),
   };

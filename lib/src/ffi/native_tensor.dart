@@ -137,21 +137,21 @@ class NativeTensor implements ffi.Finalizable {
 
   /// Convert TensorType to ETDType.
   static ETDType _tensorTypeToETDType(TensorType type) => switch (type) {
-      TensorType.float32 => ETDType.ET_DTYPE_FLOAT32,
-      TensorType.int8 => ETDType.ET_DTYPE_INT8,
-      TensorType.int32 => ETDType.ET_DTYPE_INT32,
-      TensorType.uint8 => ETDType.ET_DTYPE_UINT8,
-    };
+        TensorType.float32 => ETDType.ET_DTYPE_FLOAT32,
+        TensorType.int8 => ETDType.ET_DTYPE_INT8,
+        TensorType.int32 => ETDType.ET_DTYPE_INT32,
+        TensorType.uint8 => ETDType.ET_DTYPE_UINT8,
+      };
 
   /// Convert ETDType to TensorType.
   static TensorType _etDTypeToTensorType(ETDType dtype) => switch (dtype) {
-      ETDType.ET_DTYPE_FLOAT32 => TensorType.float32,
-      ETDType.ET_DTYPE_FLOAT64 => TensorType.float32, // Fallback
-      ETDType.ET_DTYPE_INT64 => TensorType.int32, // Fallback
-      ETDType.ET_DTYPE_INT32 => TensorType.int32,
-      ETDType.ET_DTYPE_INT16 => TensorType.int32, // Fallback
-      ETDType.ET_DTYPE_INT8 => TensorType.int8,
-      ETDType.ET_DTYPE_UINT8 => TensorType.uint8,
-      ETDType.ET_DTYPE_BOOL => TensorType.uint8, // Fallback
-    };
+        ETDType.ET_DTYPE_FLOAT32 => TensorType.float32,
+        ETDType.ET_DTYPE_FLOAT64 => TensorType.float32, // Fallback
+        ETDType.ET_DTYPE_INT64 => TensorType.int32, // Fallback
+        ETDType.ET_DTYPE_INT32 => TensorType.int32,
+        ETDType.ET_DTYPE_INT16 => TensorType.int32, // Fallback
+        ETDType.ET_DTYPE_INT8 => TensorType.int8,
+        ETDType.ET_DTYPE_UINT8 => TensorType.uint8,
+        ETDType.ET_DTYPE_BOOL => TensorType.uint8, // Fallback
+      };
 }

@@ -32,12 +32,12 @@ enum Backend {
 
   /// Human-readable display name for this backend.
   String get displayName => switch (this) {
-    Backend.xnnpack => 'XNNPACK',
-    Backend.coreml => 'CoreML',
-    Backend.mps => 'Metal Performance Shaders',
-    Backend.vulkan => 'Vulkan',
-    Backend.qnn => 'Qualcomm QNN',
-  };
+        Backend.xnnpack => 'XNNPACK',
+        Backend.coreml => 'CoreML',
+        Backend.mps => 'Metal Performance Shaders',
+        Backend.vulkan => 'Vulkan',
+        Backend.qnn => 'Qualcomm QNN',
+      };
 
   /// Get all available backends.
   static List<Backend> get available {
@@ -60,19 +60,19 @@ enum Backend {
 
   /// Convert to native ETBackend enum.
   ETBackend _toNative() => switch (this) {
-    Backend.xnnpack => ETBackend.ET_BACKEND_XNNPACK,
-    Backend.coreml => ETBackend.ET_BACKEND_COREML,
-    Backend.mps => ETBackend.ET_BACKEND_MPS,
-    Backend.vulkan => ETBackend.ET_BACKEND_VULKAN,
-    Backend.qnn => ETBackend.ET_BACKEND_QNN,
-  };
+        Backend.xnnpack => ETBackend.ET_BACKEND_XNNPACK,
+        Backend.coreml => ETBackend.ET_BACKEND_COREML,
+        Backend.mps => ETBackend.ET_BACKEND_MPS,
+        Backend.vulkan => ETBackend.ET_BACKEND_VULKAN,
+        Backend.qnn => ETBackend.ET_BACKEND_QNN,
+      };
 
   /// Convert from native ETBackend enum.
   static Backend _fromNative(ETBackend native) => switch (native) {
-    ETBackend.ET_BACKEND_XNNPACK => Backend.xnnpack,
-    ETBackend.ET_BACKEND_COREML => Backend.coreml,
-    ETBackend.ET_BACKEND_MPS => Backend.mps,
-    ETBackend.ET_BACKEND_VULKAN => Backend.vulkan,
-    ETBackend.ET_BACKEND_QNN => Backend.qnn,
-  };
+        ETBackend.ET_BACKEND_XNNPACK => Backend.xnnpack,
+        ETBackend.ET_BACKEND_COREML => Backend.coreml,
+        ETBackend.ET_BACKEND_MPS => Backend.mps,
+        ETBackend.ET_BACKEND_VULKAN => Backend.vulkan,
+        ETBackend.ET_BACKEND_QNN => Backend.qnn,
+      };
 }

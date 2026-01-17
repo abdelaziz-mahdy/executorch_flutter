@@ -158,8 +158,7 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   // Determine CMake build type based on user_defines debug flag
   // When debug: true is set in pubspec.yaml, use Debug prebuilt libs
   final cmakeBuildType = debugMode ? 'Debug' : 'Release';
-  logger.info(
-      '[executorch_flutter]   CMake build type: $cmakeBuildType\n');
+  logger.info('[executorch_flutter]   CMake build type: $cmakeBuildType\n');
 
   // Create CMake builder - uses native/ directory (submodule)
   final builder = CMakeBuilder.create(
