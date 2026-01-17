@@ -9,8 +9,8 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
-import '../types.dart';
 import '../generated/executorch_ffi.g.dart';
+import '../types.dart';
 import 'native_logging.dart';
 import 'native_status.dart';
 import 'native_tensor.dart';
@@ -26,21 +26,10 @@ class NativeModule implements ffi.Finalizable {
     _finalizer.attach(this, _ptr.cast(), detach: this);
   }
 
-  /// The native module pointer.
-  final ffi.Pointer<ETModule> _ptr;
-
-  /// Whether this module has been disposed.
-  bool _disposed = false;
-
-  /// Finalizer for automatic cleanup.
-  static final _finalizer = ffi.NativeFinalizer(
-    addresses.et_module_free.cast(),
-  );
-
   /// Load a model from memory buffer.
   ///
   /// [data] is the model data in .pte format.
-  static NativeModule load(Uint8List data) {
+  factory NativeModule.load(Uint8List data) {
     logDebug('NativeModule.load() called with ${data.length} bytes');
 
     // Allocate native buffer
@@ -80,7 +69,7 @@ class NativeModule implements ffi.Finalizable {
   /// Load a model from file path.
   ///
   /// [path] is the path to the .pte model file.
-  static NativeModule loadFile(String path) {
+  factory NativeModule.loadFile(String path) {
     logDebug('NativeModule.loadFile() called with path: $path');
 
     final pathPtr = path.toNativeUtf8().cast<ffi.Char>();
@@ -109,6 +98,17 @@ class NativeModule implements ffi.Finalizable {
       calloc.free(pathPtr);
     }
   }
+
+  /// The native module pointer.
+  final ffi.Pointer<ETModule> _ptr;
+
+  /// Whether this module has been disposed.
+  bool _disposed = false;
+
+  /// Finalizer for automatic cleanup.
+  static final _finalizer = ffi.NativeFinalizer(
+    addresses.et_module_free.cast(),
+  );
 
   /// Get the number of model inputs.
   int get inputCount {

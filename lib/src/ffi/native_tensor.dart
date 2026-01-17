@@ -9,8 +9,8 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
-import '../types.dart';
 import '../generated/executorch_ffi.g.dart';
+import '../types.dart';
 import 'native_status.dart';
 
 /// Wrapper around native ETTensor pointer with automatic memory management.
@@ -20,26 +20,15 @@ class NativeTensor implements ffi.Finalizable {
   /// Create a NativeTensor from a native pointer.
   ///
   /// Takes ownership of the pointer and will free it when disposed.
-  /// Internal constructor - use [fromTensorData] for public API.
+  /// Internal constructor - use [NativeTensor.fromTensorData] for public API.
   NativeTensor.fromPointer(this._ptr) {
     _finalizer.attach(this, _ptr.cast(), detach: this);
   }
 
-  /// The native tensor pointer.
-  final ffi.Pointer<ETTensor> _ptr;
-
-  /// Whether this tensor has been disposed.
-  bool _disposed = false;
-
-  /// Finalizer for automatic cleanup.
-  static final _finalizer = ffi.NativeFinalizer(
-    addresses.et_tensor_free.cast(),
-  );
-
   /// Create a NativeTensor from TensorData.
   ///
   /// Converts the Dart TensorData to a native ETTensor.
-  static NativeTensor fromTensorData(TensorData tensorData) {
+  factory NativeTensor.fromTensorData(TensorData tensorData) {
     // Convert shape to native array
     final rank = tensorData.shape.length;
     final shapePtr = calloc<ffi.Int64>(rank);
@@ -53,8 +42,7 @@ class NativeTensor implements ffi.Finalizable {
     // Allocate native data
     final dataSize = tensorData.data.length;
     final dataPtr = calloc<ffi.Uint8>(dataSize);
-    final dataList = dataPtr.asTypedList(dataSize);
-    dataList.setAll(0, tensorData.data);
+    dataPtr.asTypedList(dataSize).setAll(0, tensorData.data);
 
     // Create native tensor
     final outPtr = calloc<ffi.Pointer<ETTensor>>();
@@ -72,11 +60,23 @@ class NativeTensor implements ffi.Finalizable {
       return NativeTensor.fromPointer(outPtr.value);
     } finally {
       // Free temporary allocations
-      calloc.free(shapePtr);
-      calloc.free(dataPtr);
-      calloc.free(outPtr);
+      calloc
+        ..free(shapePtr)
+        ..free(dataPtr)
+        ..free(outPtr);
     }
   }
+
+  /// The native tensor pointer.
+  final ffi.Pointer<ETTensor> _ptr;
+
+  /// Whether this tensor has been disposed.
+  bool _disposed = false;
+
+  /// Finalizer for automatic cleanup.
+  static final _finalizer = ffi.NativeFinalizer(
+    addresses.et_tensor_free.cast(),
+  );
 
   /// Convert this native tensor to TensorData.
   TensorData toTensorData() {

@@ -189,10 +189,7 @@ class ExecutorchManagerNative implements ExecutorchManager {
   }
 
   @override
-  Future<bool> isAvailable() async {
-    // FFI is always available on native platforms
-    return _initialized;
-  }
+  Future<bool> isAvailable() async => _initialized;
 
   /// Create tensor data with validation
   ///

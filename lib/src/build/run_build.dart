@@ -199,15 +199,15 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   if (isSourceBuild) {
     logger
       ..info('[executorch_flutter] Step 4/5: Building from source\n')
-      ..info(
-          '[executorch_flutter]   This may take 15-30 minutes on first build...\n')
+      ..info('[executorch_flutter]   This may take 15-30 minutes on '
+          'first build...\n')
       ..info('[executorch_flutter]   (Faster after first build with cache)\n');
   } else {
     logger
-      ..info(
-          '[executorch_flutter] Step 4/5: Building with pre-built binaries\n')
-      ..info(
-          '[executorch_flutter]   Downloading and linking pre-built ExecuTorch...\n');
+      ..info('[executorch_flutter] Step 4/5: Building with pre-built '
+          'binaries\n')
+      ..info('[executorch_flutter]   Downloading and linking pre-built '
+          'ExecuTorch...\n');
   }
 
   await builder.run(input: input, output: output, logger: logger);

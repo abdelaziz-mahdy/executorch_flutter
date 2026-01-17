@@ -1,6 +1,12 @@
 // Copyright (c) 2026 ExecuTorch Flutter. All rights reserved.
 // Licensed under the MIT license.
 
+// TensorData and ModelLoadResult are effectively immutable (all fields are
+// final) but can't use @immutable + const constructors because Uint8List
+// and List<int?> can't be compile-time constants. The == and hashCode
+// overrides are safe because the fields are never modified after construction.
+// ignore_for_file: avoid_equals_and_hash_code_on_mutable_classes
+
 /// Core types for ExecuTorch Flutter FFI bindings.
 ///
 /// This file defines the fundamental types used throughout the library
@@ -40,7 +46,7 @@ enum TensorType {
 ///   name: 'input_0',
 /// );
 /// ```
-class TensorData {
+final class TensorData {
   /// Creates a new TensorData instance.
   ///
   /// [shape] - The dimensions of the tensor.
@@ -58,10 +64,10 @@ class TensorData {
   ///
   /// For example, `[1, 3, 224, 224]` represents a batch of 1 image
   /// with 3 channels and 224x224 pixels.
-  List<int?> shape;
+  final List<int?> shape;
 
   /// The data type of tensor elements.
-  TensorType dataType;
+  final TensorType dataType;
 
   /// The raw bytes of tensor data.
   ///
@@ -70,12 +76,12 @@ class TensorData {
   /// - int32: 4 bytes per element (little-endian)
   /// - int8: 1 byte per element
   /// - uint8: 1 byte per element
-  Uint8List data;
+  final Uint8List data;
 
   /// Optional name for the tensor.
   ///
   /// Used for debugging and model introspection.
-  String? name;
+  final String? name;
 
   @override
   bool operator ==(Object other) {
@@ -122,7 +128,7 @@ class TensorData {
 /// Model loading result.
 ///
 /// Contains the unique model ID assigned when a model is loaded.
-class ModelLoadResult {
+final class ModelLoadResult {
   /// Creates a new ModelLoadResult.
   ///
   /// [modelId] - The unique identifier for the loaded model.
@@ -134,7 +140,7 @@ class ModelLoadResult {
   ///
   /// This ID is used to reference the model in subsequent
   /// operations like inference and disposal.
-  String modelId;
+  final String modelId;
 
   @override
   bool operator ==(Object other) {

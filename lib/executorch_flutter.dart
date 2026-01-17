@@ -73,7 +73,7 @@ export 'src/ffi/backend.dart' show Backend;
 export 'src/ffi/tensor_type_extensions.dart'
     show ExtendedTensorType, TensorTypeFFI;
 export 'src/ffi/version.dart' show ExecuTorchVersion;
-// Core types - tensor data and model result types
-export 'src/types.dart' show ModelLoadResult, TensorData, TensorType;
 // Preprocessing and postprocessing utilities
 export 'src/processors/processors.dart';
+// Core types - tensor data and model result types
+export 'src/types.dart' show ModelLoadResult, TensorData, TensorType;
