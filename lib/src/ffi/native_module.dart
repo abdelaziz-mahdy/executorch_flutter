@@ -249,7 +249,7 @@ class NativeModule implements ffi.Finalizable {
 
   void _checkDisposed() {
     if (_disposed) {
-      throw ExecuTorchModelException('Model has been disposed');
+      throw const ExecuTorchModelException('Model has been disposed');
     }
   }
 

@@ -132,7 +132,7 @@ class NativeTensor implements ffi.Finalizable {
 
   void _checkDisposed() {
     if (_disposed) {
-      throw ExecuTorchMemoryException('Tensor has been disposed');
+      throw const ExecuTorchMemoryException('Tensor has been disposed');
     }
   }
 

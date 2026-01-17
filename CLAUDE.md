@@ -879,6 +879,23 @@ for (int c = 0; c < 3; c++) {
 - Use conventional commit prefixes: `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`, `ci:`
 - Keep commit messages concise and focused on the "why" not the "what"
 
+### Pre-Push Checklist
+
+**ALWAYS run these checks before pushing:**
+
+```bash
+# 1. Run analyzer (must pass with 0 issues)
+flutter analyze lib
+
+# 2. Run formatter
+dart format lib
+
+# 3. Run tests if available
+flutter test
+```
+
+If analyzer reports issues, fix them before pushing. Do NOT push code with lint errors.
+
 ### Publishing Workflow
 
 1. **Analyze**: `flutter analyze` (0 errors in `lib/`)
