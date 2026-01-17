@@ -11,7 +11,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 ## Features
 
 - ✅ **Cross-Platform Support**: Android (API 23+), iOS (13.0+), macOS (11.0+), Windows, Linux, and Web
-- ✅ **Type-Safe API**: Generated with Pigeon for reliable cross-platform communication
+- ✅ **Type-Safe API**: dart:ffi bindings with type-safe Dart wrapper classes
 - ✅ **Async Operations**: Non-blocking model loading and inference execution
 - ✅ **Multiple Models**: Support for concurrent model instances
 - ✅ **Error Handling**: Structured exception handling with clear error messages
@@ -497,7 +497,6 @@ ExecuTorchException              // Base exception
 Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for:
 
 - Development setup and prerequisites
-- Automated Pigeon code generation script
 - Integration testing workflow
 - Code standards and PR process
 - Platform-specific guidelines

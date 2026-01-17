@@ -7,66 +7,72 @@
 **Package Name**: `executorch_flutter`
 **Version**: 0.0.3
 **License**: MIT
-**Platforms**: Android, iOS, macOS, Web
+**Platforms**: Android, iOS, macOS, Windows, Linux, Web
+**Flutter Version**: 3.38+ (requires native assets hooks)
 
 ## Current Development Status
 
 - **Phase**: Package implementation complete, API simplified and finalized
 - **API**: Minimal surface with only `load()` and `forward()` - asset bundle loading supported
 - **Code Quality**: 0 lint errors in `lib/`, all dart fixes applied
-- **Build Status**: ✅ Android APK, ✅ macOS app, ✅ iOS (device only)
+- **Build Status**: ✅ Android, ✅ iOS, ✅ macOS, ✅ Windows, ✅ Linux, ✅ Web
 - **Next Step**: Publish to pub.dev
 
 ## Core Architecture
 
 ### Technology Stack
 
-- **Flutter Plugin**: Federated plugin architecture with platform-specific implementations
-- **Platform Communication**: Pigeon v22.7.0 for type-safe method channel code generation
-- **Android**: Kotlin + ExecuTorch AAR 1.0.1 + Coroutines
-- **iOS/macOS**: Swift + ExecuTorch XCFrameworks (SPM 1.0.1) + async/await
+- **Flutter Plugin**: dart:ffi with native assets hooks (Flutter 3.38+)
+- **All Platforms**: Pre-built ExecuTorch native libraries via native assets
+- **Build System**: CMake-based native asset compilation
 - **Memory Management**: User-controlled lifecycle (explicit load/dispose)
 
 ### Design Principles
 
 1. **Minimal API Surface**: Just `load()`, `forward()`, and `dispose()` - nothing more
-2. **Type Safety**: All platform communication via Pigeon-generated code (no manual method channels)
+2. **Type Safety**: dart:ffi bindings with type-safe Dart wrapper classes
 3. **Async/Await**: All model operations are non-blocking
 4. **User-Controlled Resources**: Developers explicitly manage model lifecycle (no automatic cleanup, no singleton)
 5. **Structured Errors**: Exception hierarchy with clear error categories
-6. **Platform Parity**: Identical behavior across Android, iOS, and macOS
+6. **Platform Parity**: Identical behavior across all supported platforms
 7. **Asset-First**: Models loaded from `Uint8List` bytes, enabling Flutter asset bundle loading
 
 ## Platform Support
 
 ### Android
 - **Minimum SDK**: API 23 (Android 6.0)
-- **Architectures**: arm64-v8a (primary), x86_64 (emulator)
-- **Dependencies**:
-  - ExecuTorch AAR 1.0.1 (`org.pytorch:executorch-android:1.0.1`)
-  - Available at: https://repo.maven.apache.org/maven2/org/pytorch/executorch-android/
-  - FBJNI (JNI bridge)
-  - SoLoader (native library loading)
-- **Threading**: Kotlin coroutines on background dispatcher
-- **Implementation**: `android/src/main/kotlin/com/zcreations/executorch_flutter/`
+- **Architectures**: arm64-v8a, armeabi-v7a, x86_64, x86 (all supported)
+- **Dependencies**: ExecuTorch pre-built native libraries via native assets
+- **Backend**: XNNPACK for optimized CPU inference
 
 ### iOS
 - **Minimum Version**: iOS 13.0
-- **Architectures**: arm64 (physical devices only, no simulator support)
-- **Dependencies**: ExecuTorch XCFrameworks via Swift Package Manager (SPM 1.0.1)
-  - Branch: `swiftpm-1.0.1` from https://github.com/pytorch/executorch.git
-- **Threading**: Swift async/await with Task detachment
-- **Implementation**: Shared sources via symlinks from `darwin/`
-- **Note**: Simulator support requires x86_64 ExecuTorch builds (not currently available)
+- **Architectures**: arm64 (device), arm64-simulator, x86_64-simulator (all supported)
+- **Dependencies**: ExecuTorch pre-built native libraries via native assets
+- **Backend**: XNNPACK, CoreML (optional)
 
 ### macOS
 - **Minimum Version**: macOS 11.0
-- **Architectures**: arm64 (Apple Silicon only)
-- **Dependencies**: ExecuTorch XCFrameworks via Swift Package Manager (SPM 1.0.1)
-  - Branch: `swiftpm-1.0.1` from https://github.com/pytorch/executorch.git
-- **Threading**: Swift async/await with Task detachment
-- **Implementation**: Shared sources via symlinks from `darwin/`
-- **Platform-Specific APIs**: Conditional compilation using `#if os(iOS)` / `#if os(macOS)`
+- **Architectures**: arm64 (Apple Silicon), x86_64 (Intel) - both supported
+- **Dependencies**: ExecuTorch pre-built native libraries via native assets
+- **Backend**: XNNPACK, CoreML, MPS (Metal Performance Shaders)
+
+### Windows
+- **Minimum Version**: Windows 10
+- **Architectures**: x64
+- **Dependencies**: ExecuTorch pre-built native libraries via native assets
+- **Backend**: XNNPACK, Vulkan (optional)
+
+### Linux
+- **Minimum Version**: Ubuntu 20.04+ or equivalent
+- **Architectures**: x64
+- **Dependencies**: ExecuTorch pre-built native libraries via native assets
+- **Backend**: XNNPACK, Vulkan (optional)
+
+### Web
+- **Supported Browsers**: Chrome, Firefox, Safari, Edge (modern versions)
+- **Technology**: WebAssembly (WASM) build of ExecuTorch
+- **Backend**: XNNPACK (WASM-optimized)
 
 ## Project Structure
 
@@ -76,37 +82,24 @@ executorch_flutter/
 │   ├── executorch_flutter.dart              # Main library export
 │   └── src/
 │       ├── executorch_model.dart            # ExecuTorchModel - main API (load/forward/dispose)
+│       ├── executorch_inference.dart        # ExecutorchManager facade
 │       ├── executorch_errors.dart           # Exception hierarchy
-│       ├── processors/
-│       │   ├── base_processor.dart          # BaseInputProcessor/BaseOutputProcessor
-│       │   ├── yolo_processor.dart          # YOLOv8 pre/post processing
-│       │   └── image_classification_processor.dart  # MobileNet processors
-│       └── generated/
-│           └── executorch_api.dart          # Pigeon-generated code
-├── android/
-│   └── src/main/kotlin/com/zcreations/executorch_flutter/
-│       ├── ExecutorchFlutterPlugin.kt       # Plugin registration
-│       ├── ExecutorchModelManager.kt        # Model lifecycle
-│       ├── ExecutorchTensorUtils.kt         # Tensor conversion
-│       └── Generated/ExecutorchApi.kt       # Pigeon-generated Kotlin
-├── ios/
-│   └── Classes/
-│       ├── ExecutorchFlutterPlugin.swift    # Plugin registration
-│       ├── ExecutorchModelManager.swift     # Model lifecycle
-│       ├── ExecutorchTensorUtils.swift      # Tensor conversion
-│       └── Generated/ExecutorchApi.swift    # Pigeon-generated Swift
-├── macos/
-│   └── Classes/
-│       ├── ExecutorchFlutterPlugin.swift    # macOS plugin registration
-│       ├── ExecutorchModelManager.swift     # macOS model lifecycle
-│       ├── ExecutorchTensorUtils.swift      # macOS tensor conversion
-│       └── Generated/ExecutorchApi.swift    # Pigeon-generated Swift
-├── darwin/                                   # Shared iOS/macOS sources (symlinked)
-│   ├── ExecutorchFlutterPlugin.swift
-│   ├── ExecutorchModelManager.swift
-│   └── ExecutorchTensorUtils.swift
-├── pigeons/
-│   └── executorch_api.dart                  # Pigeon interface definitions
+│       ├── types.dart                       # TensorData, TensorType definitions
+│       ├── ffi/                             # FFI layer
+│       │   ├── native_tensor.dart           # NativeTensor wrapper
+│       │   ├── backend.dart                 # Backend query functions
+│       │   ├── version.dart                 # Version query functions
+│       │   └── tensor_type_extensions.dart  # Extended tensor types
+│       ├── build/
+│       │   └── run_build.dart               # Native assets build hook
+│       ├── generated/
+│       │   └── executorch_ffi.g.dart        # ffigen-generated FFI bindings
+│       └── processors/
+│           ├── base_processor.dart          # BaseInputProcessor/BaseOutputProcessor
+│           ├── yolo_processor.dart          # YOLOv8 pre/post processing
+│           └── image_classification_processor.dart  # MobileNet processors
+├── hook/
+│   └── build.dart                           # Native assets build entry point
 ├── example/
 │   ├── lib/
 │   │   ├── main.dart                        # Example app entry
@@ -116,8 +109,6 @@ executorch_flutter/
 │   └── assets/
 │       ├── models/                          # .pte files (gitignored)
 │       └── images/                          # Test images
-├── scripts/
-│   └── generate_pigeon.sh                   # Regenerate Pigeon code
 ├── native/                                   # Git submodule: executorch_native (C/C++ FFI library)
 │   ├── src/
 │   │   ├── executorch_ffi.cpp               # FFI implementation
@@ -285,9 +276,9 @@ await model.dispose();
 - **Direct outputs**: Returns `List<TensorData>` directly (no wrapper object)
 - **Asset-first**: Recommended pattern is to bundle models in `assets/` and load via `rootBundle`
 
-### TensorData (Pigeon-generated)
+### TensorData
 
-Input/output tensor representation:
+Input/output tensor representation (defined in `lib/src/types.dart`):
 
 ```dart
 final tensor = TensorData(
@@ -363,151 +354,27 @@ ExecuTorchException              // Base exception
 **Why User-Controlled?**
 - Predictable behavior (no surprise disposals mid-inference)
 - Explicit resource management (developers know when models are in memory)
-- Platform parity (same behavior on Android, iOS, macOS)
+- Platform parity (same behavior on all platforms)
 - Simple API (just `load()` and `dispose()`, no manager required)
-
-## Pigeon Code Generation
-
-### Automated Script
-
-The package includes an automated Pigeon generation script that handles all code generation and post-processing:
-
-```bash
-./scripts/generate_pigeon.sh
-```
-
-**What it does**:
-1. Runs `dart pub global run pigeon --input pigeons/executorch_api.dart`
-2. Automatically makes Swift types `public` (required for SPM)
-3. Makes `PigeonError` class and initializer public
-4. Creates symlinks for iOS and macOS to shared darwin code
-
-**Script Features**:
-- ✅ Generates code for all platforms (Dart, Kotlin, Swift)
-- ✅ Auto-fixes Swift visibility for SPM compatibility
-- ✅ Keeps PigeonError for proper Swift error handling
-- ✅ Creates platform symlinks automatically
-- ✅ Color-coded output for easy debugging
-
-### Manual Workflow (if needed)
-
-1. **Edit interface**: Modify `pigeons/executorch_api.dart`
-2. **Generate code**: Run `./scripts/generate_pigeon.sh` (recommended) or `dart pub global run pigeon --input pigeons/executorch_api.dart`
-3. **Implement native**: Add implementations in Kotlin/Swift
-4. **Test**: Run integration tests (see below)
 
 ## Integration Testing
 
-### Automated Test Script
-
-The example app includes an automated integration test runner that tests all platforms:
+The example app includes integration tests for native platforms:
 
 ```bash
 cd example
-./scripts/run_integration_tests.sh           # Run tests on all platforms (default)
-./scripts/run_integration_tests.sh macos     # Run tests only on macOS
-./scripts/run_integration_tests.sh ios       # Run tests only on iOS
-./scripts/run_integration_tests.sh android   # Run tests only on Android
+flutter test integration_test/models_integration_test.dart -d macos   # macOS
+flutter test integration_test/models_integration_test.dart -d ios     # iOS
+flutter test integration_test/models_integration_test.dart -d android # Android
+flutter test integration_test/models_integration_test.dart -d windows # Windows
+flutter test integration_test/models_integration_test.dart -d linux   # Linux
 ```
 
-**What it does**:
-1. Checks for required model files (MobileNet, YOLO variants)
-2. Runs integration tests on available platforms:
-   - **macOS**: Tests on macOS device
-   - **iOS**: Tests on physical device (arm64 only, no simulator)
-   - **Android**: Tests on emulator or physical device (auto-launches emulator if needed)
-3. Falls back to building if no device/simulator is available
-4. Provides detailed summary of test results
-
-**Script Features**:
-- ✅ Multi-platform support (macOS, iOS, Android)
-- ✅ Auto-detects and launches Android emulator
-- ✅ Validates model files before testing
-- ✅ Fallback to build if no device available
-- ✅ Color-coded output with test summary
-- ✅ Exit codes for CI/CD integration
+**Note**: Web integration tests require special handling (no `dart:io` support). Web functionality can be tested manually by running the example app in Chrome.
 
 **Prerequisites**:
 - Models are automatically downloaded from GitHub on first use
 - To export models manually: `cd models/python && python3 main.py`
-
-### Generated Files
-
-- `lib/src/generated/executorch_api.dart` (Dart)
-- `android/src/main/kotlin/com/zcreations/executorch_flutter/generated/ExecutorchApi.kt` (Kotlin)
-- `darwin/Sources/executorch_flutter/Generated/ExecutorchApi.swift` (Shared Darwin)
-- `ios/Classes/Generated/ExecutorchApi.swift` → symlink to darwin
-- `macos/Classes/Generated/ExecutorchApi.swift` → symlink to darwin
-
-**Important**: Generated files ARE committed to version control.
-
-### Current Pigeon Interfaces
-
-```dart
-// Host API: Dart → Native
-abstract class ExecutorchHostApi {
-  ModelLoadResult load(Uint8List modelData, String modelId);
-  List<TensorData> forward(String modelId, List<TensorData> inputs);
-  void dispose(String modelId);
-}
-```
-
-**Key Changes from Earlier Iterations**:
-- `loadModel(String filePath)` → `load(Uint8List modelData)` - Models loaded from bytes, not file paths
-- `runInference()` removed → Use `forward()` directly (returns `List<TensorData>`)
-- No `InferenceResult` wrapper - `forward()` returns tensors directly
-- No `options`, `timeoutMs`, `requestId` parameters - Simplified to just inputs
-- Removed `getLoadedModels()` and `setDebugLogging()` - Minimal API surface
-
-## Platform Implementation Details
-
-### Android (Kotlin)
-
-**File**: `android/src/main/kotlin/com/zcreations/executorch_flutter/ExecutorchModelManager.kt`
-
-**Key Points**:
-- Uses `Module.load()` from ExecuTorch AAR
-- Coroutines with `Dispatchers.Default` for background execution
-- Tensor conversion via `ExecutorchTensorUtils.kt`
-- Error mapping via exception types
-
-**Threading Model**:
-```kotlin
-suspend fun load(modelData: ByteArray, modelId: String): ModelLoadResult =
-  withContext(Dispatchers.Default) {
-    // ExecuTorch Module.load() on background thread
-    // Writes bytes to temp file, loads with MMAP, deletes temp file
-  }
-```
-
-**Memory Loading**: Writes model bytes to temporary file, loads with `Module.load(path, LoadMode.MMAP)`, then deletes temp file. This enables asset bundle loading while still using ExecuTorch's memory mapping.
-
-### iOS/macOS (Swift)
-
-**Files**:
-- `darwin/ExecutorchModelManager.swift` (shared source)
-- Symlinked to `ios/executorch_flutter/Sources/executorch_flutter/`
-- Symlinked to `macos/executorch_flutter/Sources/executorch_flutter/`
-
-**Key Points**:
-- Uses `ExecuTorchModule` from XCFrameworks
-- Swift async/await with `Task.detached` for background execution
-- Tensor conversion via `ExecutorchTensorUtils.swift`
-- Platform-specific APIs using `#if os(iOS)` / `#if os(macOS)`
-
-**Threading Model**:
-```swift
-func load(modelData: FlutterStandardTypedData, modelId: String) async throws -> ModelLoadResult {
-  return try await Task.detached {
-    // ExecuTorchModule initialization on background task
-    // Writes bytes to temp file, loads module, deletes temp file
-  }.value
-}
-```
-
-**Memory Loading**: Writes model bytes to temporary file, initializes `ExecuTorchModule`, then deletes temp file. This enables asset bundle loading while working with ExecuTorch's file-based API.
-
-**Shared Sources**: iOS and macOS share the same Swift implementation via symlinks to avoid code duplication.
 
 ## Pre/Post Processors
 
@@ -846,13 +713,12 @@ for (int c = 0; c < 3; c++) {
 
 ### Adding New Features
 
-1. **Update Pigeon**: Edit `pigeons/executorch_api.dart`
-2. **Generate Code**: Run `./scripts/generate_pigeon.sh`
-3. **Implement Android**: Add Kotlin code in `android/src/main/kotlin/`
-4. **Implement iOS/macOS**: Add Swift code in `darwin/` (shared sources)
-5. **Add Dart Wrapper**: Update `lib/src/executorch_inference.dart` or `lib/src/executorch_model.dart`
-6. **Test**: Run example app on all platforms
-7. **Document**: Update README and dartdoc comments
+1. **Update C API**: Edit `native/src/executorch_ffi.h` and `native/src/executorch_ffi.cpp`
+2. **Regenerate FFI Bindings**: Run `dart run ffigen` to regenerate `lib/src/generated/executorch_ffi.g.dart`
+3. **Add Dart Wrapper**: Update `lib/src/ffi/` layer or higher-level APIs
+4. **Test**: Run example app on all platforms
+5. **Document**: Update README and dartdoc comments
+6. **Release Native**: Tag new version in `native/` submodule if C API changed
 
 ### Testing Strategy
 
@@ -865,8 +731,7 @@ for (int c = 0; c < 3; c++) {
 ### Code Style
 
 - **Dart**: Follow `dart format` and `dart analyze` recommendations
-- **Kotlin**: Android Studio default formatting
-- **Swift**: Xcode default formatting
+- **C/C++**: Follow `clang-format` conventions (used in native/ submodule)
 - **Lint**: All lint rules enabled, `dart fix --apply` used for auto-fixes
 
 ### Commit Guidelines
@@ -908,8 +773,8 @@ If analyzer reports issues, fix them before pushing. Do NOT push code with lint 
 **Files Excluded from Publishing** (`.pubignore`):
 - `specs/` (internal development docs)
 - `CLAUDE.md` (AI agent context)
-- `PIGEON_MACOS_NOTES.md` (development notes)
-- `python/` (model conversion scripts)
+- `native/` (submodule, built via native assets)
+- `models/` (submodule, large model files)
 - `tmp/` (temporary files)
 - Large example assets (users generate their own models)
 
@@ -917,15 +782,7 @@ If analyzer reports issues, fix them before pushing. Do NOT push code with lint 
 
 ### Common Issues
 
-**1. iOS Simulator Not Supported**
-- **Issue**: ExecuTorch XCFrameworks only built for arm64 (device)
-- **Solution**: Test on physical iOS devices, or rebuild XCFrameworks with x86_64 support
-
-**2. macOS Intel Not Supported**
-- **Issue**: ExecuTorch XCFrameworks only built for Apple Silicon
-- **Solution**: Use Apple Silicon Mac, or rebuild XCFrameworks with x86_64 support
-
-**3. Model Loading Fails**
+**1. Model Loading Fails**
 - **Issue**: Invalid .pte format, corrupted model, or asset not found
 - **Solution**:
   - Verify asset is listed in `pubspec.yaml` under `flutter.assets`
@@ -933,7 +790,7 @@ If analyzer reports issues, fix them before pushing. Do NOT push code with lint 
   - Verify .pte format (should be valid ExecuTorch binary)
   - Re-export model from PyTorch with correct ExecuTorch version
 
-**4. Inference Returns Error**
+**2. Inference Returns Error**
 - **Issue**: Wrong tensor shapes, data types, or model compatibility
 - **Solution**:
   - Check `model.inputShapes` and `model.outputShapes` to verify expected formats
@@ -941,13 +798,9 @@ If analyzer reports issues, fix them before pushing. Do NOT push code with lint 
   - Ensure tensor shapes match exactly (including batch dimension)
   - Check ExecuTorch version compatibility (Android: 1.0.1, iOS/macOS: SPM 1.0.1)
 
-**5. Memory Issues**
+**3. Memory Issues**
 - **Issue**: Models not disposed, accumulating in memory
 - **Solution**: Always call `dispose()` when model no longer needed
-
-**6. Platform Channel Errors**
-- **Issue**: Pigeon-generated code out of sync
-- **Solution**: Regenerate with `./scripts/generate_pigeon.sh`
 
 ### Debugging Tools
 
@@ -981,9 +834,10 @@ If analyzer reports issues, fix them before pushing. Do NOT push code with lint 
 
 ## Version History
 
-### 0.0.1 (Pre-release)
-- Initial implementation with Android, iOS, macOS support
-- Pigeon-based platform communication
+### 0.0.3 (Current)
+- Full cross-platform support: Android, iOS, macOS, Windows, Linux, Web
+- dart:ffi with native assets for native platforms
+- WebAssembly for web platform
 - User-controlled memory management
 - Example app with YOLO and MobileNet demos
 - Reference processors for common model types
@@ -998,55 +852,32 @@ If analyzer reports issues, fix them before pushing. Do NOT push code with lint 
 
 ## Known Limitations
 
-1. **iOS Simulator**: Not supported (arm64 device only)
-2. **macOS Intel**: Not supported (Apple Silicon only)
-3. **Android x86**: Not thoroughly tested (arm64-v8a primary)
-4. **Model Format**: Only `.pte` files (no PyTorch `.pt` support)
-5. **Desktop Platforms**: Windows/Linux not yet implemented
-6. **Automated Tests**: Minimal unit tests (relies on example app for integration testing)
+1. **Model Format**: Only `.pte` files (no PyTorch `.pt` support)
+2. **Automated Tests**: Minimal unit tests (relies on example app for integration testing)
 
 ## Future Considerations
 
-- Windows/Linux platform support via FFI migration
-- iOS simulator support (x86_64 build)
-- macOS Intel support (x86_64 build)
 - Streaming inference for large outputs
 - Model quantization utilities
 - Comprehensive unit/integration test suite
 - Model caching and version management
 - Optional debugging/profiling APIs
 
-## FFI Migration Documentation
+## Native Assets Architecture
 
-The package includes comprehensive documentation for migrating from Pigeon-based method channels to dart:ffi with native assets. This would enable:
+The package uses dart:ffi with Flutter's native assets system for cross-platform support:
 
-- **Additional platforms**: Linux, Windows desktop support
-- **Better performance**: Direct native calls without method channel overhead
-- **Unified codebase**: Single C wrapper instead of Kotlin/Swift implementations
-- **Zero-copy tensors**: Potential for direct memory sharing
+- **All platforms**: Unified C/C++ FFI library for ExecuTorch integration
+- **Build System**: CMake-based compilation via native assets hooks (Flutter 3.38+)
+- **Pre-built binaries**: Available from GitHub Releases for faster builds
+- **Source builds**: Optional for custom ExecuTorch configurations
 
-**Documentation files in `docs/`:**
+**Key Components:**
 
-- **`FFI_NATIVE_ASSETS_PATTERNS.md`**: Patterns extracted from opencv_dart including:
-  - C interface design with opaque pointers and status codes
-  - ffigen configuration for generating FFI bindings
-  - Native assets build system with CMake
-  - Memory management with NativeFinalizer
-  - Backend configuration system
-  - Platform-specific build configurations
-
-- **`FFI_MIGRATION_GUIDE.md`**: Step-by-step migration guide including:
-  - Phase 1: Project setup and dependencies
-  - Phase 2: C interface implementation (header + implementation)
-  - Phase 3: FFI bindings generation with ffigen
-  - Phase 4: Native assets build hook
-  - Phase 5: Dart wrapper classes
-  - Phase 6: Platform-specific integration
-  - Phase 7: Testing and validation
-  - Phase 8: Cleanup and release
-
-**Migration complexity**: Medium-High (2-4 weeks estimated)
-**Risk**: ExecuTorch doesn't have a stable C API, would need to create/maintain wrapper
+- `native/src/executorch_ffi.cpp` - C FFI implementation wrapping ExecuTorch
+- `native/CMakeLists.txt` - CMake build configuration
+- `lib/src/build/run_build.dart` - Native assets build hook
+- `lib/src/ffi/` - Dart FFI bindings
 
 ## Example App Architecture
 
@@ -1073,8 +904,8 @@ Key features:
 
 ---
 
-**Last Updated**: 2025-10-10
+**Last Updated**: 2025-01-17
 **Package Version**: 0.0.3
-**ExecuTorch Version**: 1.0.1 (Android AAR) / 1.0.1 (iOS/macOS SPM)
+**Flutter Version**: 3.38+
 **API**: Simplified to `load()` + `forward()` + `dispose()` only
-**Architecture**: Generic Settings Provider with atomic utility methods
+**Architecture**: dart:ffi with native assets hooks

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 ExecuTorch Flutter. All rights reserved.
+// Copyright (c) 2026 ExecuTorch Flutter. All rights reserved.
 // Licensed under the MIT license.
 
 // ignore_for_file: avoid_print

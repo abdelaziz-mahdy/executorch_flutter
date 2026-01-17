@@ -1,10 +1,9 @@
-// Copyright (c) 2024 ExecuTorch Flutter. All rights reserved.
+// Copyright (c) 2026 ExecuTorch Flutter. All rights reserved.
 // Licensed under the MIT license.
 
 /// Extended tensor type support for FFI layer.
 ///
-/// Provides additional tensor types beyond the Pigeon-generated
-/// TensorType enum.
+/// Provides additional tensor types beyond the basic TensorType enum.
 library;
 
 import '../generated/executorch_ffi.g.dart';
@@ -87,7 +86,7 @@ enum ExtendedTensorType {
         ETDType.ET_DTYPE_BOOL => ExtendedTensorType.bool_,
       };
 
-  /// Convert to Pigeon TensorType (with fallback for unsupported types).
+  /// Convert to TensorType (with fallback for unsupported types).
   ///
   /// Types not directly supported by TensorType will use the closest available:
   /// - float64 → float32
@@ -105,7 +104,7 @@ enum ExtendedTensorType {
         ExtendedTensorType.bool_ => TensorType.uint8,
       };
 
-  /// Create from Pigeon TensorType.
+  /// Create from TensorType.
   static ExtendedTensorType fromTensorType(TensorType type) => switch (type) {
         TensorType.float32 => ExtendedTensorType.float32,
         TensorType.int32 => ExtendedTensorType.int32,
@@ -130,7 +129,7 @@ extension TensorTypeFFI on TensorType {
 
 /// Extension on ETDType for Dart type conversions.
 extension ETDTypeDart on ETDType {
-  /// Convert to Pigeon TensorType (with fallback).
+  /// Convert to TensorType (with fallback).
   TensorType toTensorType() =>
       ExtendedTensorType.fromETDType(this).toTensorType();
 
