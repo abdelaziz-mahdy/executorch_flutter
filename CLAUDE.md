@@ -118,7 +118,20 @@ executorch_flutter/
 │       └── images/                          # Test images
 ├── scripts/
 │   └── generate_pigeon.sh                   # Regenerate Pigeon code
-└── models/                                   # Git submodule for model assets
+├── native/                                   # Git submodule: executorch_native (C/C++ FFI library)
+│   ├── src/
+│   │   ├── executorch_ffi.cpp               # FFI implementation
+│   │   └── executorch_ffi.h                 # FFI header
+│   ├── cmake/
+│   │   ├── download_prebuilt.cmake          # Pre-built binary download logic
+│   │   └── build_from_source.cmake          # Source build logic
+│   ├── scripts/
+│   │   ├── build-android.sh                 # Android build script (all ABIs)
+│   │   ├── build-apple.sh                   # iOS/macOS build script
+│   │   ├── build-linux.sh                   # Linux build script
+│   │   └── build-windows.sh                 # Windows build script
+│   └── CMakeLists.txt                       # Main CMake configuration
+└── models/                                   # Git submodule: executorch_flutter_models
     ├── python/                               # Model export scripts
     │   ├── main.py                           # Unified CLI for export
     │   ├── executorch_exporter.py            # Core exporter framework
@@ -127,6 +140,90 @@ executorch_flutter/
     ├── yolo/                                 # YOLO model files
     └── index.json                            # Model metadata index
 ```
+
+## Git Submodules
+
+This repository uses git submodules for native code and model assets. **Always be aware of submodule boundaries when making changes.**
+
+### Submodules Overview
+
+| Directory | Repository | Purpose |
+|-----------|------------|---------|
+| `native/` | `abdelaziz-mahdy/executorch_native` | C/C++ FFI library, CMake build system, platform build scripts |
+| `models/` | `abdelaziz-mahdy/executorch_flutter_models` | Model export scripts, pre-exported .pte files, labels |
+
+### Working with Submodules
+
+**Initial clone with submodules:**
+```bash
+git clone --recursive https://github.com/user/executorch_flutter.git
+# Or if already cloned:
+git submodule update --init --recursive
+```
+
+**Making changes to a submodule:**
+```bash
+# 1. Navigate to submodule directory
+cd native/  # or models/
+
+# 2. Make your changes
+# 3. Commit and push within the submodule
+git add .
+git commit -m "Your commit message"
+git push
+
+# 4. Go back to parent repo and update submodule reference
+cd ..
+git add native/  # or models/
+git commit -m "Update native submodule"
+git push
+```
+
+**Updating submodules to latest:**
+```bash
+git submodule update --remote --merge
+```
+
+### Native Submodule (`native/`)
+
+The `native/` directory contains the C/C++ FFI library that bridges Dart to ExecuTorch. This is a separate repository because:
+- It has its own CI/CD for building pre-built binaries
+- Pre-built binaries are published as GitHub Releases
+- Changes here require a new release to update prebuilts
+
+**Key files:**
+- `scripts/build-android.sh` - Builds all Android ABIs (arm64-v8a, armeabi-v7a, x86_64, x86)
+- `scripts/build-apple.sh` - Builds iOS/macOS variants
+- `cmake/download_prebuilt.cmake` - Downloads pre-built binaries from GitHub Releases
+- `CMakeLists.txt` - Main build configuration
+
+**Release workflow:**
+1. Make changes in `native/`
+2. Commit and push to `executorch_native` repository:
+   ```bash
+   cd native
+   git add .
+   git commit -m "feat: Your change description"
+   git push
+   ```
+3. Create a new tag to trigger CI builds:
+   ```bash
+   git tag v1.0.1.7
+   git push origin v1.0.1.7
+   ```
+4. Wait for GitHub Actions to build all platform variants
+5. **Update versions in both repos:**
+   - Update `_defaultPrebuiltVersion` in `lib/src/build/run_build.dart` (line ~59)
+   - Update `EXECUTORCH_PREBUILT_VERSION` in `native/CMakeLists.txt` if needed
+6. **Commit the submodule reference in the parent repo:**
+   ```bash
+   cd ..  # back to executorch_flutter root
+   git add native
+   git commit -m "chore: Update native submodule to v1.0.1.7"
+   git push
+   ```
+
+**Important:** Always commit the updated submodule reference in the parent repo after pushing changes to the submodule. Otherwise, other developers cloning the repo will get an older version of the native code.
 
 ## Key APIs
 
