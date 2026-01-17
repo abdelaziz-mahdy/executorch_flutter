@@ -49,6 +49,27 @@ This document outlines planned features and improvements for the ExecuTorch Flut
 - [ ] Performance optimization guide
 - [ ] Troubleshooting guide
 
+## Upstream Dependencies
+
+These features depend on upstream development in the Dart/Flutter ecosystem:
+
+### Web Native Assets Support
+
+**Tracking Issue**: [dart-lang/native#988](https://github.com/dart-lang/native/issues/988)
+
+Currently, native assets hooks don't fully support web targets. The Dart team is working on:
+
+- `WebUriAsset` - Provides access to web URLs for bundled assets
+- `JSAsset` / `JsModuleAsset` - JavaScript module bundling and linking
+- `WasmAsset` - WebAssembly module support with various linking modes
+
+**Impact on executorch_flutter**: Once web native assets are supported, we can:
+- Eliminate the need for manual web build setup (`setup_web.dart`)
+- Integrate WASM builds directly into the native assets pipeline
+- Provide a more seamless cross-platform developer experience
+
+**Current Workaround**: Web builds use a separate WASM compilation workflow with JS interop stubs.
+
 ## Contributing
 
 Want to work on any of these features? Check out our [Contributing Guide](CONTRIBUTING.md) and feel free to:
