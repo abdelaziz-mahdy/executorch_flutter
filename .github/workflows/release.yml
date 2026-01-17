@@ -126,13 +126,17 @@ jobs:
           # Android APK - rename for clarity
           mv release-artifacts/android/app-release.apk "release-packages/executorch_flutter_example-android-arm64-v${VERSION}.apk"
 
-          # iOS - zip the .app bundle
-          cd release-artifacts/ios
+          # iOS - recreate .app bundle structure and zip
+          mkdir -p release-artifacts/ios-app/Runner.app
+          mv release-artifacts/ios/* release-artifacts/ios-app/Runner.app/ 2>/dev/null || true
+          cd release-artifacts/ios-app
           zip -r "../../release-packages/executorch_flutter_example-ios-arm64-v${VERSION}.zip" Runner.app
           cd ../..
 
-          # macOS - zip the .app bundle
-          cd release-artifacts/macos
+          # macOS - recreate .app bundle structure and zip
+          mkdir -p release-artifacts/macos-app/executorch_flutter_example.app
+          mv release-artifacts/macos/* release-artifacts/macos-app/executorch_flutter_example.app/ 2>/dev/null || true
+          cd release-artifacts/macos-app
           zip -r "../../release-packages/executorch_flutter_example-macos-universal-v${VERSION}.zip" executorch_flutter_example.app
           cd ../..
 
