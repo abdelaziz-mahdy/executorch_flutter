@@ -126,8 +126,8 @@ jobs:
         run: flutter build macos --release
         working-directory: example
 
-      - name: Run integration tests (Release)
-        run: flutter test integration_test/models_integration_test.dart -d macos --release
+      - name: Run integration tests
+        run: flutter test integration_test/models_integration_test.dart -d macos
         working-directory: example
         timeout-minutes: 30
 
@@ -164,8 +164,8 @@ jobs:
         run: flutter build windows --release
         working-directory: example
 
-      - name: Run integration tests (Release)
-        run: flutter test integration_test/models_integration_test.dart -d windows --release
+      - name: Run integration tests
+        run: flutter test integration_test/models_integration_test.dart -d windows
         working-directory: example
         timeout-minutes: 30
 
@@ -207,8 +207,8 @@ jobs:
         run: flutter build linux --release
         working-directory: example
 
-      - name: Run integration tests (Release)
-        run: flutter test integration_test/models_integration_test.dart -d linux --release
+      - name: Run integration tests
+        run: flutter test integration_test/models_integration_test.dart -d linux
         working-directory: example
         timeout-minutes: 30
 
