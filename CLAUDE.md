@@ -869,6 +869,16 @@ for (int c = 0; c < 3; c++) {
 - **Swift**: Xcode default formatting
 - **Lint**: All lint rules enabled, `dart fix --apply` used for auto-fixes
 
+### Commit Guidelines
+
+- **DO NOT include AI co-author tags** in commit messages. Never use:
+  - `Co-Authored-By: Claude ...`
+  - `Co-Authored-By: ChatGPT ...`
+  - Any other AI attribution
+- **DO NOT mention AI tools** (Claude, Claude Code, ChatGPT, Copilot, etc.) in commit messages
+- Use conventional commit prefixes: `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`, `ci:`
+- Keep commit messages concise and focused on the "why" not the "what"
+
 ### Publishing Workflow
 
 1. **Analyze**: `flutter analyze` (0 errors in `lib/`)
