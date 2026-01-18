@@ -31,10 +31,16 @@ enum CameraProvider {
   /// Returns the default camera provider for the current platform
   static CameraProvider get defaultProvider {
     if (UniversalPlatform.isWeb) {
-      // Web has no camera support, but return opencv as placeholder
-      return CameraProvider.opencv;
+      // Web has no camera support, but return platform as placeholder
+      return CameraProvider.platform;
     }
-    // OpenCV is recommended for all platforms (more consistent)
+    if (UniversalPlatform.isAndroid || UniversalPlatform.isIOS) {
+      // Mobile: Use platform camera (Flutter camera plugin)
+      // OpenCV VideoCapture doesn't support Android Camera2 API properly
+      // See: https://github.com/rainyl/opencv_dart/discussions/33
+      return CameraProvider.platform;
+    }
+    // Desktop (macOS, Linux, Windows): OpenCV VideoCapture works
     return CameraProvider.opencv;
   }
 
