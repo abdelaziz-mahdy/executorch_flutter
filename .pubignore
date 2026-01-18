@@ -24,6 +24,8 @@ example/.flutter-plugins-dependencies
 # Internal development documentation
 specs/
 CLAUDE.md
+native/CLAUDE.md
+example/CLAUDE.md
 
 # Python scripts and tools
 python/

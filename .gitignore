@@ -54,3 +54,10 @@ example/assets/models/gemma-3-270m_xnnpack.pte
 example/assets/models/gemma-3-270m_tokenizer_config.json
 example/assets/models/gemma-3-270m_vocab.json
 example/android/.kotlin/sessions/kotlin-compiler-17735043791835568195.salive
+
+# Git submodules - explicitly tracked (not ignored)
+# These are required for the package to work:
+# - native/: Contains CMakeLists.txt for native assets build hooks
+# - models/: Contains model export scripts and metadata
+!native
+!models
