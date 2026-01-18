@@ -24,7 +24,8 @@ enum CameraProvider {
       // Desktop: Only OpenCV camera works
       return [CameraProvider.opencv];
     }
-    // Mobile (iOS/Android): Both work, but OpenCV is more consistent
+    // Mobile (iOS/Android): Both available, but platform camera recommended
+    // OpenCV VideoCapture has format issues on some Android devices
     return values.toList();
   }
 
