@@ -48,18 +48,10 @@ android {
     }
 
     dependencies {
-        implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+        // Note: ExecuTorch native libraries are provided via native assets (dart:ffi)
+        // No Gradle dependencies needed - the FFI library is built with CMake
 
-        // Kotlin coroutines for async operations
-        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
-        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-
-        // ExecuTorch dependencies (1.0.1 stable release)
-        implementation 'org.pytorch:executorch-android:1.0.1'
-        implementation 'com.facebook.soloader:soloader:0.10.5'
-        implementation 'com.facebook.fbjni:fbjni:0.7.0'
-
-        // AndroidX annotations
+        // AndroidX annotations (for @NonNull, @Nullable)
         implementation 'androidx.annotation:annotation:1.7.1'
     }
 
