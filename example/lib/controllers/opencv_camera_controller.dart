@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
@@ -26,6 +27,20 @@ class OpenCVCameraController implements CameraController {
   cv.Mat? _currentFrame;
   CameraMode _mode = CameraMode.live;
 
+  /// Returns the appropriate OpenCV API preference for the current platform
+  int _getPlatformApiPreference() {
+    if (Platform.isAndroid) {
+      return cv.CAP_ANDROID;
+    } else if (Platform.isIOS || Platform.isMacOS) {
+      return cv.CAP_AVFOUNDATION;
+    } else if (Platform.isWindows) {
+      return cv.CAP_DSHOW; // DirectShow for Windows
+    } else if (Platform.isLinux) {
+      return cv.CAP_V4L2; // Video4Linux2 for Linux
+    }
+    return cv.CAP_ANY; // Let OpenCV auto-detect
+  }
+
   @override
   Stream<Uint8List> get frameStream => _frameController.stream;
 
@@ -47,10 +62,13 @@ class OpenCVCameraController implements CameraController {
     try {
       debugPrint('🎥 OpenCVCameraController: Initializing camera (mode: $mode)');
 
-      // Initialize VideoCapture
+      // Initialize VideoCapture with platform-appropriate API
+      final int apiPreference = _getPlatformApiPreference();
+      debugPrint('🎥 OpenCVCameraController: Using API preference: $apiPreference');
+
       _capture = cv.VideoCapture.fromDevice(
         deviceId,
-        apiPreference: cv.CAP_AVFOUNDATION,
+        apiPreference: apiPreference,
       );
 
       if (_capture == null || !_capture!.isOpened) {
