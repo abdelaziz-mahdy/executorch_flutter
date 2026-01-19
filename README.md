@@ -22,16 +22,15 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 The native library size varies depending on which backends are enabled. XNNPACK is always included as the baseline CPU backend.
 
-![Library Size Comparison](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.svg)
+![Library Size Comparison](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-release.svg)
 
-| Backend | Description | Typical Size Impact |
-|---------|-------------|---------------------|
-| XNNPACK | CPU inference (default, always included) | ~8-12 MB (baseline) |
-| +CoreML | Apple Neural Engine (iOS/macOS) | +2-3 MB |
-| +MPS | Metal GPU (macOS arm64 only) | +3-4 MB |
-| +Vulkan | GPU inference (Linux, Windows, Android) | +2-3 MB |
+<details>
+<summary>Debug build sizes</summary>
 
-*Sizes vary by platform, architecture, and build type (release vs debug). See the [size report](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.json) for exact sizes per configuration.*
+![Debug Build Sizes](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-debug.svg)
+</details>
+
+*See the [JSON report](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.json) for exact sizes.*
 
 ## Installation
 
