@@ -20,15 +20,9 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 ## Library Size by Backend
 
-The native library size varies depending on which backends are enabled. XNNPACK is always included as the baseline CPU backend.
+The native library size varies depending on which backends are enabled.
 
-![Library Size Comparison](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-release.svg)
-
-<details>
-<summary>Debug build sizes</summary>
-
-![Debug Build Sizes](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-debug.svg)
-</details>
+![Library Size Comparison](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.svg)
 
 *See the [JSON report](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.json) for exact sizes.*
 
