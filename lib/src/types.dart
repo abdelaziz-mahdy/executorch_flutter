@@ -223,12 +223,8 @@ final class TensorData {
   }
 
   @override
-  int get hashCode => Object.hash(
-        Object.hashAll(shape),
-        dataType,
-        Object.hashAll(data),
-        name,
-      );
+  int get hashCode =>
+      Object.hash(Object.hashAll(shape), dataType, Object.hashAll(data), name);
 
   @override
   String toString() {
@@ -245,9 +241,7 @@ final class ModelLoadResult {
   /// Creates a new ModelLoadResult.
   ///
   /// [modelId] - The unique identifier for the loaded model.
-  ModelLoadResult({
-    required this.modelId,
-  });
+  ModelLoadResult({required this.modelId});
 
   /// The unique identifier for the loaded model.
   ///

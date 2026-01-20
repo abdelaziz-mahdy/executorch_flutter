@@ -108,8 +108,7 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   _printBuildHeader(logger, targetOS, targetArch);
 
   // Determine build mode
-  final buildMode =
-      Platform.environment['EXECUTORCH_BUILD_MODE'] ??
+  final buildMode = Platform.environment['EXECUTORCH_BUILD_MODE'] ??
       userDefines['build_mode'] as String? ??
       _defaultBuildMode;
 
@@ -155,10 +154,10 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
     OS.windows => Generator.defaultGenerator,
     OS.android => Generator.ninja,
     _ => throw ArgumentError.value(
-      targetOS,
-      'targetOS',
-      'Unsupported target OS',
-    ),
+        targetOS,
+        'targetOS',
+        'Unsupported target OS',
+      ),
   };
   logger.info('[executorch_flutter]   Generator: ${generator.name}\n');
 
@@ -200,9 +199,8 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
       if (targetOS == OS.macOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '11.0',
       if (targetOS == OS.iOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '13.0',
       // Install prefix
-      'CMAKE_INSTALL_PREFIX': input.outputDirectory
-          .resolve('install/')
-          .toFilePath(),
+      'CMAKE_INSTALL_PREFIX':
+          input.outputDirectory.resolve('install/').toFilePath(),
       // Backend defines
       ...backendDefines,
     },
@@ -327,9 +325,12 @@ Future<_PythonInfo> _verifyPythonDependencies(Logger logger) async {
 
   for (final name in pythonNames) {
     try {
-      final result = await Process.run(name, [
-        '--version',
-      ], runInShell: Platform.isWindows);
+      final result = await Process.run(
+          name,
+          [
+            '--version',
+          ],
+          runInShell: Platform.isWindows);
       if (result.exitCode == 0) {
         pythonExecutable = name;
         final output = (result.stdout as String).trim();
@@ -389,10 +390,13 @@ Please upgrade Python or use pre-built mode.
   // Check for pyyaml
   String? pyyamlVersion;
   try {
-    final result = await Process.run(pythonExecutable, [
-      '-c',
-      'import yaml; print(yaml.__version__)',
-    ], runInShell: Platform.isWindows);
+    final result = await Process.run(
+        pythonExecutable,
+        [
+          '-c',
+          'import yaml; print(yaml.__version__)',
+        ],
+        runInShell: Platform.isWindows);
     if (result.exitCode == 0) {
       pyyamlVersion = (result.stdout as String).trim();
     }
@@ -404,18 +408,24 @@ Please upgrade Python or use pre-built mode.
     // Try to install pyyaml automatically
     logger.info('[executorch_flutter]   pyyaml not found, installing...\n');
     try {
-      final installResult = await Process.run(pythonExecutable, [
-        '-m',
-        'pip',
-        'install',
-        '--user',
-        'pyyaml',
-      ], runInShell: Platform.isWindows);
+      final installResult = await Process.run(
+          pythonExecutable,
+          [
+            '-m',
+            'pip',
+            'install',
+            '--user',
+            'pyyaml',
+          ],
+          runInShell: Platform.isWindows);
       if (installResult.exitCode == 0) {
-        final verifyResult = await Process.run(pythonExecutable, [
-          '-c',
-          'import yaml; print(yaml.__version__)',
-        ], runInShell: Platform.isWindows);
+        final verifyResult = await Process.run(
+            pythonExecutable,
+            [
+              '-c',
+              'import yaml; print(yaml.__version__)',
+            ],
+            runInShell: Platform.isWindows);
         if (verifyResult.exitCode == 0) {
           pyyamlVersion = (verifyResult.stdout as String).trim();
           logger.info(

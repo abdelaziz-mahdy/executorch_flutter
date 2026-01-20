@@ -47,9 +47,7 @@ class NativeModule implements ffi.Finalizable {
         logDebug('Calling et_module_load...');
         final status = et_module_load(dataPtr, data.length, outPtr);
 
-        logDebug(
-          'et_module_load returned, status code: ${status.ref.code}',
-        );
+        logDebug('et_module_load returned, status code: ${status.ref.code}');
         checkStatus(status);
 
         final module = NativeModule._(outPtr.value);

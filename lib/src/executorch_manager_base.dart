@@ -131,25 +131,31 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
   /// Converts a list of numeric values to the appropriate byte representation
   /// based on the specified [dataType].
   static Uint8List convertNumericDataToBytes(
-      List<num> data, TensorType dataType) {
+    List<num> data,
+    TensorType dataType,
+  ) {
     switch (dataType) {
       case TensorType.float32:
-        final float32List =
-            Float32List.fromList(data.map((e) => e.toDouble()).toList());
+        final float32List = Float32List.fromList(
+          data.map((e) => e.toDouble()).toList(),
+        );
         return float32List.buffer.asUint8List();
 
       case TensorType.int32:
-        final int32List =
-            Int32List.fromList(data.map((e) => e.toInt()).toList());
+        final int32List = Int32List.fromList(
+          data.map((e) => e.toInt()).toList(),
+        );
         return int32List.buffer.asUint8List();
 
       case TensorType.int8:
         return Uint8List.fromList(
-            data.map((e) => e.toInt().clamp(-128, 127) + 128).toList());
+          data.map((e) => e.toInt().clamp(-128, 127) + 128).toList(),
+        );
 
       case TensorType.uint8:
         return Uint8List.fromList(
-            data.map((e) => e.toInt().clamp(0, 255)).toList());
+          data.map((e) => e.toInt().clamp(0, 255)).toList(),
+        );
     }
   }
 }
