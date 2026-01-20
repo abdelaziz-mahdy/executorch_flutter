@@ -49,7 +49,10 @@ android {
 
     dependencies {
         // Note: ExecuTorch native libraries are provided via native assets (dart:ffi)
-        // No Gradle dependencies needed - the FFI library is built with CMake
+        // The FFI library is built with CMake and requires libc++_shared.so
+
+        // fbjni provides libc++_shared.so which is needed by libexecutorch_ffi.so
+        implementation 'com.facebook.fbjni:fbjni:0.7.0'
 
         // AndroidX annotations (for @NonNull, @Nullable)
         implementation 'androidx.annotation:annotation:1.7.1'

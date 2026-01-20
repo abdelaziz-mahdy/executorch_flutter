@@ -1,3 +1,4 @@
+import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:universal_platform/universal_platform.dart';
 
 import 'model_definition.dart';
@@ -17,7 +18,7 @@ import '../services/model_index_service.dart';
 /// - XNNPACK: CPU-optimized, works on ALL platforms (Android, iOS, macOS, Web)
 /// - CoreML: Apple Neural Engine optimization (iOS, macOS)
 /// - MPS: Metal Performance Shaders for GPU acceleration (iOS, macOS)
-/// - Vulkan: Cross-platform GPU acceleration (Android, Linux)
+/// - Vulkan: Cross-platform GPU (Android, iOS, macOS, Windows, Linux)
 ///
 /// Model Hosting:
 /// Models are stored in a separate repository to keep the main repo lightweight.
@@ -53,10 +54,20 @@ class ModelRegistry {
     final currentPlatform = _getCurrentPlatform();
     final models = <ModelDefinition>[];
 
+    // Get available backends on this platform
+    final availableBackends = _getAvailableBackends();
+
     // Filter models by current platform
     final platformModels = index.getModelsForPlatform(currentPlatform);
 
     for (final entry in platformModels) {
+      // Check if the backend is available
+      final backend = _stringToBackend(entry.backend);
+      if (backend != null && !availableBackends.contains(backend)) {
+        // Skip models whose backend is not available
+        continue;
+      }
+
       final definition = _createModelDefinition(entry, index);
       if (definition != null) {
         models.add(definition);
@@ -64,6 +75,29 @@ class ModelRegistry {
     }
 
     return models;
+  }
+
+  /// Gets the list of available backends on the current platform
+  static Set<Backend> _getAvailableBackends() {
+    try {
+      return BackendQuery.available.toSet();
+    } catch (e) {
+      // If backend query fails, assume all backends are available
+      // This prevents blocking model loading on errors
+      return Backend.values.toSet();
+    }
+  }
+
+  /// Converts a backend string to Backend enum
+  static Backend? _stringToBackend(String backend) {
+    return switch (backend.toLowerCase()) {
+      'xnnpack' => Backend.xnnpack,
+      'coreml' => Backend.coreml,
+      'mps' => Backend.mps,
+      'vulkan' => Backend.vulkan,
+      'qnn' => Backend.qnn,
+      _ => null,
+    };
   }
 
   /// Creates a model definition from an index entry

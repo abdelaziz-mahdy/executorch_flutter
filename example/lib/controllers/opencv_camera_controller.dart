@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:universal_platform/universal_platform.dart';
 import 'camera_controller.dart';
 
 /// OpenCV-based camera controller for desktop platforms (macOS, Windows, Linux)
@@ -29,16 +30,10 @@ class OpenCVCameraController implements CameraController {
 
   /// Returns the appropriate OpenCV API preference for the current platform
   int _getPlatformApiPreference() {
-    if (Platform.isAndroid) {
-      return cv.CAP_ANDROID;
-    } else if (Platform.isIOS || Platform.isMacOS) {
-      return cv.CAP_AVFOUNDATION;
-    } else if (Platform.isWindows) {
-      return cv.CAP_DSHOW; // DirectShow for Windows
-    } else if (Platform.isLinux) {
-      return cv.CAP_V4L2; // Video4Linux2 for Linux
-    }
-    return cv.CAP_ANY; // Let OpenCV auto-detect
+    // Let OpenCV auto-detect the best backend for the platform
+    // Specifying explicit backends (CAP_ANDROID, CAP_AVFOUNDATION, etc.)
+    // can cause format compatibility issues on some devices
+    return cv.CAP_ANY;
   }
 
   @override
@@ -61,6 +56,18 @@ class OpenCVCameraController implements CameraController {
 
     try {
       debugPrint('🎥 OpenCVCameraController: Initializing camera (mode: $mode)');
+
+      // Request camera permission on mobile platforms
+      if (UniversalPlatform.isAndroid || UniversalPlatform.isIOS) {
+        debugPrint('🔐 OpenCVCameraController: Requesting camera permission...');
+        final status = await Permission.camera.request();
+        if (!status.isGranted) {
+          throw Exception(
+            'Camera permission denied. Please grant camera permission in app settings.',
+          );
+        }
+        debugPrint('✅ OpenCVCameraController: Camera permission granted');
+      }
 
       // Initialize VideoCapture with platform-appropriate API
       final int apiPreference = _getPlatformApiPreference();

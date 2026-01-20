@@ -43,31 +43,31 @@
 - **Minimum SDK**: API 23 (Android 6.0)
 - **Architectures**: arm64-v8a, armeabi-v7a, x86_64, x86 (all supported)
 - **Dependencies**: ExecuTorch pre-built native libraries via native assets
-- **Backend**: XNNPACK for optimized CPU inference
+- **Backend**: XNNPACK, Vulkan
 
 ### iOS
 - **Minimum Version**: iOS 13.0
 - **Architectures**: arm64 (device), arm64-simulator, x86_64-simulator (all supported)
 - **Dependencies**: ExecuTorch pre-built native libraries via native assets
-- **Backend**: XNNPACK, CoreML (optional)
+- **Backend**: XNNPACK, CoreML, Vulkan (via MoltenVK)
 
 ### macOS
 - **Minimum Version**: macOS 11.0
 - **Architectures**: arm64 (Apple Silicon), x86_64 (Intel) - both supported
 - **Dependencies**: ExecuTorch pre-built native libraries via native assets
-- **Backend**: XNNPACK, CoreML, MPS (Metal Performance Shaders)
+- **Backend**: XNNPACK, CoreML, MPS (Metal Performance Shaders), Vulkan (via MoltenVK)
 
 ### Windows
 - **Minimum Version**: Windows 10
 - **Architectures**: x64
 - **Dependencies**: ExecuTorch pre-built native libraries via native assets
-- **Backend**: XNNPACK, Vulkan (optional)
+- **Backend**: XNNPACK, Vulkan
 
 ### Linux
 - **Minimum Version**: Ubuntu 20.04+ or equivalent
 - **Architectures**: x64
 - **Dependencies**: ExecuTorch pre-built native libraries via native assets
-- **Backend**: XNNPACK, Vulkan (optional)
+- **Backend**: XNNPACK, Vulkan
 
 ### Web
 - **Supported Browsers**: Chrome, Firefox, Safari, Edge (modern versions)

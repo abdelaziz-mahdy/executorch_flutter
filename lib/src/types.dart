@@ -26,7 +26,7 @@ enum Backend {
   /// Apple Metal Performance Shaders backend (macOS only).
   mps,
 
-  /// Vulkan GPU compute backend (Android/Linux/Windows).
+  /// Vulkan GPU compute backend (Android/iOS/macOS/Windows/Linux).
   vulkan,
 
   /// Qualcomm Neural Processing Unit backend (Android only).
