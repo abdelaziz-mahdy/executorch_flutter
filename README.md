@@ -627,22 +627,24 @@ On Apple platforms, Vulkan runs via MoltenVK (a Vulkan-to-Metal translation laye
 brew install molten-vk
 ```
 
-### Fallback Strategy
+### Production Recommendation
 
-We recommend implementing a fallback strategy in production apps:
+**Do not use Vulkan in production apps yet.** Native crashes (SIGKILL, SIGABRT) cannot be caught by Dart's try/catch mechanism, so there's no reliable way to implement fallback logic when Vulkan fails.
+
+For production apps, use XNNPACK which is stable across all platforms:
 
 ```dart
-ExecuTorchModel model;
+// Stable approach for production
+final model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
+```
+
+**For testing Vulkan** (development/experimentation only):
+
+```dart
+// Only use Vulkan for testing - may crash on some devices
 if (BackendQuery.isAvailable(Backend.vulkan)) {
-  try {
-    model = await ExecuTorchModel.loadFromAsset('assets/models/model_vulkan.pte');
-  } catch (e) {
-    // Fallback to XNNPACK if Vulkan fails
-    print('Vulkan failed, falling back to XNNPACK: $e');
-    model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
-  }
-} else {
-  model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
+  // WARNING: If Vulkan crashes, the app will terminate
+  final model = await ExecuTorchModel.loadFromAsset('assets/models/model_vulkan.pte');
 }
 ```
 
