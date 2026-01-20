@@ -56,7 +56,7 @@ const String _packageName = 'executorch_flutter';
 const String _defaultExecutorchVersion = '1.0.1';
 
 /// Default prebuilt release version (our release tag for prebuilt downloads).
-const String _defaultPrebuiltVersion = '1.0.1.8';
+const String _defaultPrebuiltVersion = '1.0.1.20';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -240,7 +240,8 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   final enableCoreml = backends?.contains('coreml') ??
       (targetOS == OS.iOS || targetOS == OS.macOS);
   final enableMps = backends?.contains('mps') ?? (targetOS == OS.macOS);
-  final enableVulkan = backends?.contains('vulkan') ?? false;
+  // Vulkan supported on all native platforms
+  final enableVulkan = backends?.contains('vulkan') ?? true;
   final enableQnn = backends?.contains('qnn') ?? false;
 
   return {

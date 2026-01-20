@@ -458,6 +458,125 @@ void main() {
       );
     });
 
+    // Backend query tests
+    group('Backend Query Tests', () {
+      testWidgets('BackendQuery.available should return non-empty list', (
+        WidgetTester tester,
+      ) async {
+        final availableBackends = BackendQuery.available;
+
+        expect(
+          availableBackends,
+          isNotEmpty,
+          reason: 'At least one backend should be available',
+        );
+
+        print('Available backends: ${availableBackends.map((b) => b.name).join(", ")}');
+      });
+
+      testWidgets('XNNPACK backend should be available on all platforms', (
+        WidgetTester tester,
+      ) async {
+        final isXnnpackAvailable = BackendQuery.isAvailable(Backend.xnnpack);
+
+        expect(
+          isXnnpackAvailable,
+          true,
+          reason: 'XNNPACK backend should be available on all platforms',
+        );
+      });
+
+      testWidgets('BackendQuery.available should include XNNPACK', (
+        WidgetTester tester,
+      ) async {
+        final availableBackends = BackendQuery.available;
+
+        expect(
+          availableBackends.contains(Backend.xnnpack),
+          true,
+          reason: 'Available backends list should include XNNPACK',
+        );
+      });
+
+      testWidgets('Backend.displayName should return human-readable names', (
+        WidgetTester tester,
+      ) async {
+        expect(Backend.xnnpack.displayName, equals('XNNPACK'));
+        expect(Backend.coreml.displayName, equals('CoreML'));
+        expect(Backend.mps.displayName, equals('Metal Performance Shaders'));
+        expect(Backend.vulkan.displayName, equals('Vulkan'));
+        expect(Backend.qnn.displayName, equals('Qualcomm QNN'));
+      });
+
+      testWidgets('BackendQuery should handle all Backend enum values', (
+        WidgetTester tester,
+      ) async {
+        // Test that isAvailable doesn't throw for any backend
+        for (final backend in Backend.values) {
+          expect(
+            () => BackendQuery.isAvailable(backend),
+            returnsNormally,
+            reason: 'isAvailable should not throw for ${backend.name}',
+          );
+        }
+      });
+
+      testWidgets('Vulkan backend availability should be queryable', (
+        WidgetTester tester,
+      ) async {
+        // Test that we can query Vulkan availability without error
+        final isVulkanAvailable = BackendQuery.isAvailable(Backend.vulkan);
+
+        // Print result for debugging (Vulkan may or may not be available)
+        print('Vulkan backend available: $isVulkanAvailable');
+
+        // Just verify the call succeeds and returns a boolean
+        expect(isVulkanAvailable, isA<bool>());
+      });
+
+      testWidgets('Available backends list should be consistent', (
+        WidgetTester tester,
+      ) async {
+        // Get available backends twice and verify consistency
+        final list1 = BackendQuery.available;
+        final list2 = BackendQuery.available;
+
+        expect(
+          list1.length,
+          equals(list2.length),
+          reason: 'Available backends should be consistent across calls',
+        );
+
+        for (final backend in list1) {
+          expect(
+            list2.contains(backend),
+            true,
+            reason: '${backend.name} should be in both lists',
+          );
+        }
+      });
+
+      testWidgets(
+        'isAvailable should match available list for all backends',
+        (WidgetTester tester) async {
+          final availableBackends = BackendQuery.available;
+
+          for (final backend in Backend.values) {
+            final isAvailable = BackendQuery.isAvailable(backend);
+            final isInList = availableBackends.contains(backend);
+
+            expect(
+              isAvailable,
+              equals(isInList),
+              reason:
+                  '${backend.name}: isAvailable($isAvailable) should match '
+                  'presence in available list($isInList)',
+            );
+          }
+        },
+      );
+    });
+
     // Tensor shape and data type tests
     group('Tensor Shape Tests', () {
       testWidgets('Should handle 1D tensor shapes', (

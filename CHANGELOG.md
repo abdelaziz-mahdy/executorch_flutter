@@ -1,10 +1,16 @@
 # Changelog
 
-## [0.2.0] - 2026-01-16
+## [0.2.0] - Unreleased
 
 ### Added
 - Native Assets build system with prebuilt binary support
 - Build configuration via `pubspec.yaml` (debug mode, backends, versions)
+- `BackendQuery` API for runtime backend availability checks
+  - `BackendQuery.isAvailable(Backend)` - Check if a specific backend is compiled in
+  - `BackendQuery.available` - Get list of all available backends
+- Backend filtering in example app - only shows models for available backends
+- Vulkan backend enabled by default on all native platforms
+- Integration tests for backend query functionality
 - Windows x64 platform support
 - Linux x64 and arm64 platform support
 - iOS Simulator support (arm64 and x86_64)

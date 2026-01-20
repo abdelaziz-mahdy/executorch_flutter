@@ -15,7 +15,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 - ✅ **Async Operations**: Non-blocking model loading and inference execution
 - ✅ **Multiple Models**: Support for concurrent model instances
 - ✅ **Error Handling**: Structured exception handling with clear error messages
-- ✅ **Backend Support**: XNNPACK, CoreML, MPS backends
+- ✅ **Backend Support**: XNNPACK, CoreML, MPS, Vulkan backends
 - ✅ **Live Camera**: Real-time inference with camera stream support
 
 ## Library Size by Backend
@@ -127,27 +127,27 @@ See the `example/` directory for a full working application:
 ### Android
 - **Minimum SDK**: API 23 (Android 6.0)
 - **Architectures**: arm64-v8a, armeabi-v7a, x86_64, x86
-- **Supported Backends**: XNNPACK
+- **Supported Backends**: XNNPACK, Vulkan
 
 ### iOS
 - **Minimum Version**: iOS 13.0+
 - **Architectures**: arm64 (device), x86_64 + arm64 (simulator)
-- **Supported Backends**: XNNPACK, CoreML
+- **Supported Backends**: XNNPACK, CoreML, Vulkan (via MoltenVK)
 
 ### macOS
 - **Minimum Version**: macOS 11.0+ (Big Sur)
 - **Architectures**: arm64 (Apple Silicon), x86_64 (Intel)
-- **Supported Backends**: XNNPACK, CoreML, MPS (MPS on arm64 only)
+- **Supported Backends**: XNNPACK, CoreML, MPS (MPS on arm64 only), Vulkan (via MoltenVK)
 
 ### Windows
 - **Minimum Version**: Windows 10+
 - **Architecture**: x64
-- **Supported Backends**: XNNPACK
+- **Supported Backends**: XNNPACK, Vulkan
 
 ### Linux
 - **Minimum Version**: Ubuntu 20.04+ or equivalent
 - **Architectures**: x64, arm64
-- **Supported Backends**: XNNPACK
+- **Supported Backends**: XNNPACK, Vulkan
 
 ### Web
 - **Status**: Supported via WebAssembly
@@ -295,7 +295,7 @@ hooks:
 | `debug` | `bool` | `false` | Enables native debug logging and selects Debug prebuilt binaries (useful for debugging crashes) |
 | `build_mode` | `string` | `"prebuilt"` | `"prebuilt"` downloads pre-compiled binaries (fast, recommended). `"source"` builds from source (slower, requires Python 3.8+ with pyyaml) |
 | `executorch_version` | `string` | `"1.0.1"` | ExecuTorch source version (for source builds) |
-| `prebuilt_version` | `string` | `"1.0.1.8"` | Prebuilt release version (for prebuilt downloads) |
+| `prebuilt_version` | `string` | `"1.0.1.20"` | Prebuilt release version (for prebuilt downloads) |
 | `backends` | `list` | Platform-specific | List of backends to enable. Options: `xnnpack`, `coreml`, `mps`, `vulkan`, `qnn` |
 
 ### Backend Defaults by Platform
@@ -304,11 +304,11 @@ If `backends` is not specified, the following defaults are used:
 
 | Platform | Default Backends |
 |----------|------------------|
-| Android | xnnpack |
-| iOS | xnnpack, coreml |
-| macOS | xnnpack, coreml, mps |
-| Windows | xnnpack |
-| Linux | xnnpack |
+| Android | xnnpack, vulkan |
+| iOS | xnnpack, coreml, vulkan |
+| macOS | xnnpack, coreml, mps, vulkan |
+| Windows | xnnpack, vulkan |
+| Linux | xnnpack, vulkan |
 
 ### Prebuilt Binaries
 
@@ -494,6 +494,40 @@ final tensor = TensorData(
 );
 ```
 
+#### BackendQuery
+
+Query available hardware acceleration backends at runtime. Use this to check which backends are compiled into the library and filter models accordingly.
+
+```dart
+import 'package:executorch_flutter/executorch_flutter.dart';
+
+// Check if a specific backend is available
+final hasVulkan = BackendQuery.isAvailable(Backend.vulkan);
+final hasCoreML = BackendQuery.isAvailable(Backend.coreml);
+
+// Get list of all available backends
+final backends = BackendQuery.available;
+print('Available backends: ${backends.map((b) => b.displayName).join(", ")}');
+
+// Example: Filter models by available backends
+if (BackendQuery.isAvailable(Backend.vulkan)) {
+  // Load Vulkan-optimized model
+  model = await ExecuTorchModel.loadFromAsset('assets/models/model_vulkan.pte');
+} else {
+  // Fallback to XNNPACK (always available)
+  model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
+}
+```
+
+**Backend enum values:**
+
+| Backend | Display Name | Platforms |
+|---------|-------------|-----------|
+| `Backend.xnnpack` | XNNPACK | All (including Web) |
+| `Backend.coreml` | CoreML | iOS, macOS |
+| `Backend.mps` | Metal Performance Shaders | macOS |
+| `Backend.vulkan` | Vulkan | Android, iOS, macOS, Windows, Linux |
+
 ### Exception Hierarchy
 
 ```dart
@@ -529,7 +563,7 @@ For issues and questions:
 
 See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
 - Additional model type examples (segmentation, pose estimation)
-- Additional backend support (Vulkan, QNN)
+- Additional backend support (QNN)
 - Performance optimizations and more
 
 ---
