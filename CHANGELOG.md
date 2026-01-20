@@ -9,7 +9,9 @@
   - `BackendQuery.isAvailable(Backend)` - Check if a specific backend is compiled in
   - `BackendQuery.available` - Get list of all available backends
 - Backend filtering in example app - only shows models for available backends
-- Vulkan backend available as opt-in on all native platforms
+- Vulkan backend available as opt-in experimental feature on all native platforms
+  - macOS: MoltenVK bundled with prebuilt binaries (Vulkan-to-Metal translation)
+  - Known issues documented in README (Android UBO limits, experimental status)
 - Integration tests for backend query functionality
 - Windows x64 platform support
 - Linux x64 and arm64 platform support

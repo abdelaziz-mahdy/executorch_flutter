@@ -570,4 +570,82 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
 
 ---
 
+## Experimental: Vulkan Backend
+
+> **⚠️ Work in Progress**: The Vulkan backend is experimental and under active development. We encourage testing and feedback to improve stability.
+
+### Current Status
+
+Vulkan support is available as an **opt-in** backend on Android, iOS, macOS, Windows, and Linux. While prebuilt binaries with Vulkan are available, there are known issues being actively investigated:
+
+**Known Issues:**
+- **macOS**: Requires MoltenVK (Vulkan-to-Metal translation layer). Recent builds bundle MoltenVK automatically.
+- **Android**: Some devices (e.g., Pixel 10 Pro) may experience UBO (Uniform Buffer Object) size limit issues with certain models.
+- **General**: Runtime initialization may fail on some configurations.
+
+### How to Enable Vulkan
+
+Add Vulkan to your backends list in `pubspec.yaml`:
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      backends:
+        - xnnpack
+        - vulkan  # Opt-in to Vulkan
+```
+
+### Testing and Reporting Bugs
+
+We welcome testers! If you'd like to help improve Vulkan support:
+
+1. **Enable Vulkan** in your app's `pubspec.yaml` as shown above
+2. **Test with Vulkan-exported models** (models exported specifically for the Vulkan backend)
+3. **Report issues** at [GitHub Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) with:
+   - Device/platform information
+   - Model being used
+   - Full error message or crash log
+   - Steps to reproduce
+
+### Model Export for Vulkan
+
+To use Vulkan, you need models exported specifically for the Vulkan backend:
+
+```bash
+cd models/python
+python3 main.py export --vulkan
+```
+
+Or download Vulkan models from the [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models) repository (files ending with `_vulkan.pte`).
+
+### MoltenVK on macOS/iOS
+
+On Apple platforms, Vulkan runs via MoltenVK (a Vulkan-to-Metal translation layer). Recent prebuilt versions (v1.0.1.21+) bundle MoltenVK automatically. For older versions or source builds, you may need to install MoltenVK separately:
+
+```bash
+brew install molten-vk
+```
+
+### Fallback Strategy
+
+We recommend implementing a fallback strategy in production apps:
+
+```dart
+ExecuTorchModel model;
+if (BackendQuery.isAvailable(Backend.vulkan)) {
+  try {
+    model = await ExecuTorchModel.loadFromAsset('assets/models/model_vulkan.pte');
+  } catch (e) {
+    // Fallback to XNNPACK if Vulkan fails
+    print('Vulkan failed, falling back to XNNPACK: $e');
+    model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
+  }
+} else {
+  model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
+}
+```
+
+---
+
 Built with ❤️ for the Flutter and PyTorch communities.
