@@ -62,6 +62,8 @@ dependencies:
   universal_platform: ^1.1.0
 
 # Native assets build configuration
+# Note: Vulkan removed - crashes on macOS/iOS due to MoltenVK/Metal incompatibility
+# Vulkan only works on Android, Linux, and Windows
 hooks:
   user_defines:
     executorch_flutter:
@@ -69,7 +71,6 @@ hooks:
         - xnnpack
         - coreml
         - mps
-        - vulkan
 
 dev_dependencies:
   integration_test:

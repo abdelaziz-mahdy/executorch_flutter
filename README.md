@@ -579,7 +579,7 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
 Vulkan support is available as an **opt-in** backend on Android, iOS, macOS, Windows, and Linux. While prebuilt binaries with Vulkan are available, there are known issues being actively investigated:
 
 **Known Issues:**
-- **macOS**: Requires MoltenVK (Vulkan-to-Metal translation layer). Recent builds bundle MoltenVK automatically.
+- **macOS/iOS**: Vulkan is **not functional** on Apple platforms. MoltenVK (Vulkan-to-Metal translation) crashes during tensor allocation due to Metal texture descriptor validation failures. Use CoreML or MPS backends instead.
 - **Android**: Some devices (e.g., Pixel 10 Pro) may experience UBO (Uniform Buffer Object) size limit issues with certain models.
 - **General**: Runtime initialization may fail on some configurations.
 
@@ -619,13 +619,14 @@ python3 main.py export --vulkan
 
 Or download Vulkan models from the [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models) repository (files ending with `_vulkan.pte`).
 
-### MoltenVK on macOS/iOS
+### Apple Platforms (macOS/iOS)
 
-On Apple platforms, Vulkan runs via MoltenVK (a Vulkan-to-Metal translation layer). Recent prebuilt versions (v1.0.1.21+) bundle MoltenVK automatically. For older versions or source builds, you may need to install MoltenVK separately:
+**Vulkan is not supported on Apple platforms.** While MoltenVK provides Vulkan-to-Metal translation, ExecuTorch's Vulkan compute backend uses features that fail Metal's texture descriptor validation, causing crashes during model initialization.
 
-```bash
-brew install molten-vk
-```
+**Recommended alternatives for Apple platforms:**
+- **CoreML**: Best for neural network inference on Apple devices
+- **MPS (Metal Performance Shaders)**: GPU acceleration on macOS (arm64 only)
+- **XNNPACK**: Reliable CPU-based inference on all platforms
 
 ### Production Recommendation
 
