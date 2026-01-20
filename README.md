@@ -127,27 +127,27 @@ See the `example/` directory for a full working application:
 ### Android
 - **Minimum SDK**: API 23 (Android 6.0)
 - **Architectures**: arm64-v8a, armeabi-v7a, x86_64, x86
-- **Supported Backends**: XNNPACK, Vulkan
+- **Supported Backends**: XNNPACK, Vulkan (opt-in)
 
 ### iOS
 - **Minimum Version**: iOS 13.0+
 - **Architectures**: arm64 (device), x86_64 + arm64 (simulator)
-- **Supported Backends**: XNNPACK, CoreML, Vulkan (via MoltenVK)
+- **Supported Backends**: XNNPACK, CoreML, Vulkan (opt-in, via MoltenVK)
 
 ### macOS
 - **Minimum Version**: macOS 11.0+ (Big Sur)
 - **Architectures**: arm64 (Apple Silicon), x86_64 (Intel)
-- **Supported Backends**: XNNPACK, CoreML, MPS (MPS on arm64 only), Vulkan (via MoltenVK)
+- **Supported Backends**: XNNPACK, CoreML, MPS (arm64 only), Vulkan (opt-in, via MoltenVK)
 
 ### Windows
 - **Minimum Version**: Windows 10+
 - **Architecture**: x64
-- **Supported Backends**: XNNPACK, Vulkan
+- **Supported Backends**: XNNPACK, Vulkan (opt-in)
 
 ### Linux
 - **Minimum Version**: Ubuntu 20.04+ or equivalent
 - **Architectures**: x64, arm64
-- **Supported Backends**: XNNPACK, Vulkan
+- **Supported Backends**: XNNPACK, Vulkan (opt-in)
 
 ### Web
 - **Status**: Supported via WebAssembly
@@ -304,11 +304,13 @@ If `backends` is not specified, the following defaults are used:
 
 | Platform | Default Backends |
 |----------|------------------|
-| Android | xnnpack, vulkan |
-| iOS | xnnpack, coreml, vulkan |
-| macOS | xnnpack, coreml, mps, vulkan |
-| Windows | xnnpack, vulkan |
-| Linux | xnnpack, vulkan |
+| Android | xnnpack |
+| iOS | xnnpack, coreml |
+| macOS | xnnpack, coreml, mps |
+| Windows | xnnpack |
+| Linux | xnnpack |
+
+> **Note**: Vulkan is available but **opt-in only** due to runtime initialization issues on some platforms and UBO size limits on certain Android devices. To enable Vulkan, explicitly add it to your backends list in pubspec.yaml.
 
 ### Prebuilt Binaries
 

@@ -9,7 +9,7 @@
   - `BackendQuery.isAvailable(Backend)` - Check if a specific backend is compiled in
   - `BackendQuery.available` - Get list of all available backends
 - Backend filtering in example app - only shows models for available backends
-- Vulkan backend enabled by default on all native platforms
+- Vulkan backend available as opt-in on all native platforms
 - Integration tests for backend query functionality
 - Windows x64 platform support
 - Linux x64 and arm64 platform support

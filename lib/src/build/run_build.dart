@@ -240,8 +240,9 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   final enableCoreml = backends?.contains('coreml') ??
       (targetOS == OS.iOS || targetOS == OS.macOS);
   final enableMps = backends?.contains('mps') ?? (targetOS == OS.macOS);
-  // Vulkan supported on all native platforms
-  final enableVulkan = backends?.contains('vulkan') ?? true;
+  // Vulkan is opt-in only - runtime initialization issues on macOS,
+  // UBO size limits exceeded on some Android devices (e.g., Pixel 10 Pro)
+  final enableVulkan = backends?.contains('vulkan') ?? false;
   final enableQnn = backends?.contains('qnn') ?? false;
 
   return {
