@@ -1,46 +1,24 @@
-name: Publish to pub.dev
+name: Publish to pub.dev (Manual)
 
 on:
-  # Only trigger after Build & Release workflow completes successfully on a tag
-  workflow_run:
-    workflows: ["Build & Release"]
-    types: [completed]
+  # Manual trigger only - automatic publishing is handled by release.yml
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (e.g., v0.1.0)'
+        description: 'Tag to publish (e.g., v0.2.1)'
         required: true
 
 jobs:
   publish:
     name: Publish to pub.dev
     runs-on: ubuntu-latest
-    # Only run if:
-    # 1. Manual trigger, OR
-    # 2. Build & Release succeeded AND it was a tag push (not main branch)
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       startsWith(github.event.workflow_run.head_branch, 'v'))
     permissions:
       id-token: write  # Required for pub.dev OIDC authentication
     steps:
-      - name: Get tag name
-        id: tag
-        run: |
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
-          fi
-
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.tag.outputs.tag }}
+          ref: ${{ github.event.inputs.tag }}
           submodules: recursive
-
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
