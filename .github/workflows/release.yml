@@ -1,9 +1,13 @@
-name: Create Release
+name: Build & Release
 
 on:
+  # Build on every push to main
   push:
+    branches:
+      - main
     tags:
-      - 'v*'  # Only trigger on version tags like v0.2.0
+      - 'v*'  # Also trigger on version tags like v0.2.0
+  # Manual trigger for release
   workflow_dispatch:
     inputs:
       version:
@@ -16,14 +20,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Run build checks before release
+  # Run build checks on every push
   build-checks:
     name: Build Checks
     uses: ./.github/workflows/build.yml
 
-  # Get version from tag or input
+  # Get version from tag or input (only for releases)
   get-version:
     name: Get Version
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version != ''
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -40,9 +45,10 @@ jobs:
           echo "Version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-  # Create GitHub Release with example app artifacts
+  # Create GitHub Release with example app artifacts (only on tag or manual trigger)
   create-release:
     name: Create Release
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version != ''
     needs: [get-version, build-checks]
     runs-on: ubuntu-latest
     permissions:
