@@ -20,6 +20,9 @@ jobs:
           ref: ${{ github.event.inputs.tag }}
           submodules: recursive
 
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
