@@ -2,8 +2,13 @@ name: Create Release
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*'  # Only trigger on version tags like v0.2.0
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.2.0)'
+        required: true
 
 # Cancel in-progress runs when a new run is triggered
 concurrency:
@@ -11,59 +16,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Run build checks on every push to main
+  # Run build checks before release
   build-checks:
     name: Build Checks
     uses: ./.github/workflows/build.yml
 
-  # Check if version changed (only needed for release decision)
-  check-version:
-    name: Check Version Change
+  # Get version from tag or input
+  get-version:
+    name: Get Version
     runs-on: ubuntu-latest
     outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
-      version: ${{ steps.check.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check if version needs publishing
-        id: check
+      - name: Get version from tag or input
+        id: version
         run: |
-          # Get current version from pubspec.yaml
-          CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
-          echo "Current version: $CURRENT_VERSION"
-
-          # Check if tag already exists locally
-          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
-            echo "Tag v$CURRENT_VERSION already exists, skipping"
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Get package info from pub.dev API
-          PUB_DEV_RESPONSE=$(curl -s "https://pub.dev/api/packages/executorch_flutter")
-          LATEST_PUB_VERSION=$(echo "$PUB_DEV_RESPONSE" | grep -o '"version":"[^"]*"' | head -1 | sed 's/"version":"//;s/"//')
-          echo "Latest version on pub.dev: $LATEST_PUB_VERSION"
-
-          # Check if current version is already published
-          if echo "$PUB_DEV_RESPONSE" | grep -q "\"version\":\"$CURRENT_VERSION\""; then
-            echo "Version $CURRENT_VERSION already published on pub.dev, skipping"
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
           else
-            echo "Version $CURRENT_VERSION not found on pub.dev, will publish"
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            # Extract version from tag (remove 'v' prefix)
+            VERSION="${GITHUB_REF#refs/tags/v}"
           fi
+          echo "Version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-  # Create tag and GitHub Release (publish.yml handles pub.dev)
+  # Create GitHub Release with example app artifacts
   create-release:
-    name: Create Tag & Release
-    needs: [check-version, build-checks]
-    if: needs.check-version.outputs.should_release == 'true'
+    name: Create Release
+    needs: [get-version, build-checks]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -75,7 +55,7 @@ jobs:
       - name: Extract changelog for version
         id: changelog
         run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
+          VERSION="${{ needs.get-version.outputs.version }}"
           # Extract changelog section for this version
           CHANGELOG=$(awk "/^## $VERSION/,/^## [0-9]/" CHANGELOG.md | head -n -1 | tail -n +2)
           if [ -z "$CHANGELOG" ]; then
@@ -120,7 +100,7 @@ jobs:
       # Package artifacts for release
       - name: Package release artifacts
         run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
+          VERSION="${{ needs.get-version.outputs.version }}"
           mkdir -p release-packages
 
           # Android APK - rename for clarity
@@ -153,25 +133,11 @@ jobs:
           echo "Release packages:"
           ls -la release-packages/
 
-      - name: Create and push tag
-        env:
-          # Use PAT to push tag so it triggers publish workflow
-          # Create a PAT with 'contents: write' scope and add as repository secret 'RELEASE_TOKEN'
-          # If RELEASE_TOKEN is not set, falls back to GITHUB_TOKEN (won't trigger publish workflow)
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$VERSION" -m "Release v$VERSION"
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-          git push origin "v$VERSION"
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.check-version.outputs.version }}
-          name: v${{ needs.check-version.outputs.version }}
+          tag_name: v${{ needs.get-version.outputs.version }}
+          name: v${{ needs.get-version.outputs.version }}
           body: |
             ## What's Changed
 
@@ -183,15 +149,15 @@ jobs:
 
             | Platform | Architecture | Download |
             |----------|--------------|----------|
-            | Android | arm64-v8a | [APK](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-android-arm64-v${{ needs.check-version.outputs.version }}.apk) |
-            | iOS | arm64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-ios-arm64-v${{ needs.check-version.outputs.version }}.zip) |
-            | macOS | Universal | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-macos-universal-v${{ needs.check-version.outputs.version }}.zip) |
-            | Windows | x64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-windows-x64-v${{ needs.check-version.outputs.version }}.zip) |
-            | Linux | x64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/executorch_flutter_example-linux-x64-v${{ needs.check-version.outputs.version }}.zip) |
+            | Android | arm64-v8a | [APK](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-android-arm64-v${{ needs.get-version.outputs.version }}.apk) |
+            | iOS | arm64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-ios-arm64-v${{ needs.get-version.outputs.version }}.zip) |
+            | macOS | Universal | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-macos-universal-v${{ needs.get-version.outputs.version }}.zip) |
+            | Windows | x64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-windows-x64-v${{ needs.get-version.outputs.version }}.zip) |
+            | Linux | x64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-linux-x64-v${{ needs.get-version.outputs.version }}.zip) |
 
             ---
 
-            📦 [View on pub.dev](https://pub.dev/packages/executorch_flutter/versions/${{ needs.check-version.outputs.version }})
+            📦 [View on pub.dev](https://pub.dev/packages/executorch_flutter/versions/${{ needs.get-version.outputs.version }})
           draft: false
           prerelease: false
           files: |
