@@ -1,6 +1,12 @@
 # Changelog
 
-## [0.2.0] - Unreleased
+## 0.2.1
+
+### Fixed
+- Updated README with correct version references and prebuilt version (1.0.1.21)
+- Fixed library size report links (now clearly labeled as downloads)
+
+## 0.2.0
 
 ### Added
 - Native Assets build system with prebuilt binary support
