@@ -1,9 +1,10 @@
 name: Publish to pub.dev
 
 on:
-  push:
-    tags:
-      - 'v*'  # Triggers on version tags like v0.1.0
+  # Only trigger after Build & Release workflow completes successfully on a tag
+  workflow_run:
+    workflows: ["Build & Release"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -14,12 +15,28 @@ jobs:
   publish:
     name: Publish to pub.dev
     runs-on: ubuntu-latest
+    # Only run if:
+    # 1. Manual trigger, OR
+    # 2. Build & Release succeeded AND it was a tag push (not main branch)
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
     permissions:
       id-token: write  # Required for pub.dev OIDC authentication
     steps:
+      - name: Get tag name
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+          fi
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ steps.tag.outputs.tag }}
           submodules: recursive
 
       - name: Setup Dart
