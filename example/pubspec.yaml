@@ -60,6 +60,18 @@ dependencies:
   image_picker_platform_interface: any
   meta: any
   universal_platform: ^1.1.0
+
+# Native assets build configuration
+# Note: Vulkan removed - crashes on macOS/iOS due to MoltenVK/Metal incompatibility
+# Vulkan only works on Android, Linux, and Windows
+hooks:
+  user_defines:
+    executorch_flutter:
+      backends:
+        - xnnpack
+        - coreml
+        - mps
+
 dev_dependencies:
   integration_test:
     sdk: flutter

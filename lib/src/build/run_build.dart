@@ -56,7 +56,7 @@ const String _packageName = 'executorch_flutter';
 const String _defaultExecutorchVersion = '1.0.1';
 
 /// Default prebuilt release version (our release tag for prebuilt downloads).
-const String _defaultPrebuiltVersion = '1.0.1.20';
+const String _defaultPrebuiltVersion = '1.0.1.21';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -130,12 +130,14 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   String? pythonExecutable;
   if (isSourceBuild) {
     logger.info(
-        '\n[executorch_flutter] Step 1/5: Checking Python dependencies\n');
+      '\n[executorch_flutter] Step 1/5: Checking Python dependencies\n',
+    );
     final pythonInfo = await _verifyPythonDependencies(logger);
     pythonExecutable = pythonInfo.executable;
   } else {
     logger.info(
-        '\n[executorch_flutter] Step 1/5: Skipping Python check (prebuilt mode)\n');
+      '\n[executorch_flutter] Step 1/5: Skipping Python check (prebuilt mode)\n',
+    );
   }
 
   // Step 2: Configure backends
@@ -151,8 +153,11 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
     OS.macOS || OS.iOS => Generator.xcode,
     OS.windows => Generator.defaultGenerator,
     OS.android => Generator.ninja,
-    _ =>
-      throw ArgumentError.value(targetOS, 'targetOS', 'Unsupported target OS'),
+    _ => throw ArgumentError.value(
+        targetOS,
+        'targetOS',
+        'Unsupported target OS',
+      ),
   };
   logger.info('[executorch_flutter]   Generator: ${generator.name}\n');
 
@@ -205,15 +210,21 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   if (isSourceBuild) {
     logger
       ..info('[executorch_flutter] Step 4/5: Building from source\n')
-      ..info('[executorch_flutter]   This may take 15-30 minutes on '
-          'first build...\n')
+      ..info(
+        '[executorch_flutter]   This may take 15-30 minutes on '
+        'first build...\n',
+      )
       ..info('[executorch_flutter]   (Faster after first build with cache)\n');
   } else {
     logger
-      ..info('[executorch_flutter] Step 4/5: Building with pre-built '
-          'binaries\n')
-      ..info('[executorch_flutter]   Downloading and linking pre-built '
-          'ExecuTorch...\n');
+      ..info(
+        '[executorch_flutter] Step 4/5: Building with pre-built '
+        'binaries\n',
+      )
+      ..info(
+        '[executorch_flutter]   Downloading and linking pre-built '
+        'ExecuTorch...\n',
+      );
   }
 
   await builder.run(input: input, output: output, logger: logger);
@@ -235,13 +246,30 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   final userDefines = input.userDefines;
   final backends = userDefines['backends'] as List?;
 
-  // Default backends based on target OS
+  // Platform support for each backend
+  final isApplePlatform = targetOS == OS.iOS || targetOS == OS.macOS;
+  final supportsCoreml = isApplePlatform;
+  final supportsMps = targetOS == OS.macOS;
+  // Vulkan available on all native platforms (native assets don't run for web)
+  // Note: On Apple platforms, Vulkan via MoltenVK may crash - use at own risk
+  const supportsVulkan = true;
+
+  // Enable backends: user-specified AND platform-supported
+  // XNNPACK is available on all platforms
   final enableXnnpack = backends?.contains('xnnpack') ?? true;
-  final enableCoreml = backends?.contains('coreml') ??
-      (targetOS == OS.iOS || targetOS == OS.macOS);
-  final enableMps = backends?.contains('mps') ?? (targetOS == OS.macOS);
-  // Vulkan supported on all native platforms
-  final enableVulkan = backends?.contains('vulkan') ?? true;
+
+  // CoreML only on Apple platforms
+  final enableCoreml =
+      supportsCoreml && (backends?.contains('coreml') ?? isApplePlatform);
+
+  // MPS only on macOS
+  final enableMps =
+      supportsMps && (backends?.contains('mps') ?? (targetOS == OS.macOS));
+
+  // Vulkan opt-in and only on supported platforms
+  final enableVulkan =
+      supportsVulkan && (backends?.contains('vulkan') ?? false);
+
   final enableQnn = backends?.contains('qnn') ?? false;
 
   return {
@@ -298,10 +326,11 @@ Future<_PythonInfo> _verifyPythonDependencies(Logger logger) async {
   for (final name in pythonNames) {
     try {
       final result = await Process.run(
-        name,
-        ['--version'],
-        runInShell: Platform.isWindows,
-      );
+          name,
+          [
+            '--version',
+          ],
+          runInShell: Platform.isWindows);
       if (result.exitCode == 0) {
         pythonExecutable = name;
         final output = (result.stdout as String).trim();
@@ -355,16 +384,19 @@ Please upgrade Python or use pre-built mode.
   }
 
   logger.info(
-      '[executorch_flutter]   Python: $pythonVersion ($pythonExecutable)\n');
+    '[executorch_flutter]   Python: $pythonVersion ($pythonExecutable)\n',
+  );
 
   // Check for pyyaml
   String? pyyamlVersion;
   try {
     final result = await Process.run(
-      pythonExecutable,
-      ['-c', 'import yaml; print(yaml.__version__)'],
-      runInShell: Platform.isWindows,
-    );
+        pythonExecutable,
+        [
+          '-c',
+          'import yaml; print(yaml.__version__)',
+        ],
+        runInShell: Platform.isWindows);
     if (result.exitCode == 0) {
       pyyamlVersion = (result.stdout as String).trim();
     }
@@ -377,20 +409,28 @@ Please upgrade Python or use pre-built mode.
     logger.info('[executorch_flutter]   pyyaml not found, installing...\n');
     try {
       final installResult = await Process.run(
-        pythonExecutable,
-        ['-m', 'pip', 'install', '--user', 'pyyaml'],
-        runInShell: Platform.isWindows,
-      );
+          pythonExecutable,
+          [
+            '-m',
+            'pip',
+            'install',
+            '--user',
+            'pyyaml',
+          ],
+          runInShell: Platform.isWindows);
       if (installResult.exitCode == 0) {
         final verifyResult = await Process.run(
-          pythonExecutable,
-          ['-c', 'import yaml; print(yaml.__version__)'],
-          runInShell: Platform.isWindows,
-        );
+            pythonExecutable,
+            [
+              '-c',
+              'import yaml; print(yaml.__version__)',
+            ],
+            runInShell: Platform.isWindows);
         if (verifyResult.exitCode == 0) {
           pyyamlVersion = (verifyResult.stdout as String).trim();
           logger.info(
-              '[executorch_flutter]   pyyaml installed: $pyyamlVersion\n');
+            '[executorch_flutter]   pyyaml installed: $pyyamlVersion\n',
+          );
         }
       }
     } catch (_) {
@@ -441,11 +481,13 @@ void _logBackendConfiguration(Logger logger, Map<String, String?> defines) {
 
   if (enabledBackends.isNotEmpty) {
     logger.info(
-        '[executorch_flutter]   Enabled: ${enabledBackends.join(", ")}\n');
+      '[executorch_flutter]   Enabled: ${enabledBackends.join(", ")}\n',
+    );
   }
   if (disabledBackends.isNotEmpty) {
     logger.info(
-        '[executorch_flutter]   Disabled: ${disabledBackends.join(", ")}\n');
+      '[executorch_flutter]   Disabled: ${disabledBackends.join(", ")}\n',
+    );
   }
 }
 

@@ -182,8 +182,10 @@ class TensorUtils {
     final height = depth > 0 ? data[0][0].length : 0;
     final width = height > 0 ? data[0][0][0].length : 0;
     final flatData = data
-        .expand((batchItem) =>
-            batchItem.expand((plane) => plane.expand((row) => row)))
+        .expand(
+          (batchItem) =>
+              batchItem.expand((plane) => plane.expand((row) => row)),
+        )
         .toList();
 
     return ExecutorchManager.instance.createTensorData(

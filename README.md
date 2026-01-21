@@ -127,27 +127,27 @@ See the `example/` directory for a full working application:
 ### Android
 - **Minimum SDK**: API 23 (Android 6.0)
 - **Architectures**: arm64-v8a, armeabi-v7a, x86_64, x86
-- **Supported Backends**: XNNPACK, Vulkan
+- **Supported Backends**: XNNPACK, Vulkan (opt-in)
 
 ### iOS
 - **Minimum Version**: iOS 13.0+
 - **Architectures**: arm64 (device), x86_64 + arm64 (simulator)
-- **Supported Backends**: XNNPACK, CoreML, Vulkan (via MoltenVK)
+- **Supported Backends**: XNNPACK, CoreML, Vulkan (opt-in, via MoltenVK)
 
 ### macOS
 - **Minimum Version**: macOS 11.0+ (Big Sur)
 - **Architectures**: arm64 (Apple Silicon), x86_64 (Intel)
-- **Supported Backends**: XNNPACK, CoreML, MPS (MPS on arm64 only), Vulkan (via MoltenVK)
+- **Supported Backends**: XNNPACK, CoreML, MPS (arm64 only), Vulkan (opt-in, via MoltenVK)
 
 ### Windows
 - **Minimum Version**: Windows 10+
 - **Architecture**: x64
-- **Supported Backends**: XNNPACK, Vulkan
+- **Supported Backends**: XNNPACK, Vulkan (opt-in)
 
 ### Linux
 - **Minimum Version**: Ubuntu 20.04+ or equivalent
 - **Architectures**: x64, arm64
-- **Supported Backends**: XNNPACK, Vulkan
+- **Supported Backends**: XNNPACK, Vulkan (opt-in)
 
 ### Web
 - **Status**: Supported via WebAssembly
@@ -304,11 +304,13 @@ If `backends` is not specified, the following defaults are used:
 
 | Platform | Default Backends |
 |----------|------------------|
-| Android | xnnpack, vulkan |
-| iOS | xnnpack, coreml, vulkan |
-| macOS | xnnpack, coreml, mps, vulkan |
-| Windows | xnnpack, vulkan |
-| Linux | xnnpack, vulkan |
+| Android | xnnpack |
+| iOS | xnnpack, coreml |
+| macOS | xnnpack, coreml, mps |
+| Windows | xnnpack |
+| Linux | xnnpack |
+
+> **Note**: Vulkan is available but **opt-in only** due to runtime initialization issues on some platforms and UBO size limits on certain Android devices. To enable Vulkan, explicitly add it to your backends list in pubspec.yaml.
 
 ### Prebuilt Binaries
 
@@ -565,6 +567,87 @@ See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
 - Additional model type examples (segmentation, pose estimation)
 - Additional backend support (QNN)
 - Performance optimizations and more
+
+---
+
+## Experimental: Vulkan Backend
+
+> **⚠️ Work in Progress**: The Vulkan backend is experimental and under active development. We encourage testing and feedback to improve stability.
+
+### Current Status
+
+Vulkan support is available as an **opt-in** backend on Android, iOS, macOS, Windows, and Linux. While prebuilt binaries with Vulkan are available, there are known issues being actively investigated:
+
+**Known Issues:**
+- **macOS/iOS**: Vulkan is **not functional** on Apple platforms. MoltenVK (Vulkan-to-Metal translation) crashes during tensor allocation due to Metal texture descriptor validation failures. Use CoreML or MPS backends instead.
+- **Android**: Some devices (e.g., Pixel 10 Pro) may experience UBO (Uniform Buffer Object) size limit issues with certain models.
+- **General**: Runtime initialization may fail on some configurations.
+
+### How to Enable Vulkan
+
+Add Vulkan to your backends list in `pubspec.yaml`:
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      backends:
+        - xnnpack
+        - vulkan  # Opt-in to Vulkan
+```
+
+### Testing and Reporting Bugs
+
+We welcome testers! If you'd like to help improve Vulkan support:
+
+1. **Enable Vulkan** in your app's `pubspec.yaml` as shown above
+2. **Test with Vulkan-exported models** (models exported specifically for the Vulkan backend)
+3. **Report issues** at [GitHub Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) with:
+   - Device/platform information
+   - Model being used
+   - Full error message or crash log
+   - Steps to reproduce
+
+### Model Export for Vulkan
+
+To use Vulkan, you need models exported specifically for the Vulkan backend:
+
+```bash
+cd models/python
+python3 main.py export --vulkan
+```
+
+Or download Vulkan models from the [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models) repository (files ending with `_vulkan.pte`).
+
+### Apple Platforms (macOS/iOS)
+
+**Vulkan is not supported on Apple platforms.** While MoltenVK provides Vulkan-to-Metal translation, ExecuTorch's Vulkan compute backend uses features that fail Metal's texture descriptor validation, causing crashes during model initialization.
+
+**Recommended alternatives for Apple platforms:**
+- **CoreML**: Best for neural network inference on Apple devices
+- **MPS (Metal Performance Shaders)**: GPU acceleration on macOS (arm64 only)
+- **XNNPACK**: Reliable CPU-based inference on all platforms
+
+### Production Recommendation
+
+**Do not use Vulkan in production apps yet.** Native crashes (SIGKILL, SIGABRT) cannot be caught by Dart's try/catch mechanism, so there's no reliable way to implement fallback logic when Vulkan fails.
+
+For production apps, use XNNPACK which is stable across all platforms:
+
+```dart
+// Stable approach for production
+final model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
+```
+
+**For testing Vulkan** (development/experimentation only):
+
+```dart
+// Only use Vulkan for testing - may crash on some devices
+if (BackendQuery.isAvailable(Backend.vulkan)) {
+  // WARNING: If Vulkan crashes, the app will terminate
+  final model = await ExecuTorchModel.loadFromAsset('assets/models/model_vulkan.pte');
+}
+```
 
 ---
 

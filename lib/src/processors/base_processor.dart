@@ -257,7 +257,8 @@ abstract class ExecuTorchProcessor<T, R> {
       // Validate input
       if (!preprocessor.validateInput(input)) {
         throw InvalidInputException(
-            'Input validation failed for ${preprocessor.inputTypeName}');
+          'Input validation failed for ${preprocessor.inputTypeName}',
+        );
       }
 
       // Preprocess input
@@ -265,7 +266,8 @@ abstract class ExecuTorchProcessor<T, R> {
 
       if (inputs.isEmpty) {
         throw const PreprocessingException(
-            'Preprocessing produced no output tensors');
+          'Preprocessing produced no output tensors',
+        );
       }
 
       // Run inference (throws exception on failure)
@@ -288,7 +290,9 @@ abstract class ExecuTorchProcessor<T, R> {
         rethrow;
       }
       throw GenericProcessorException(
-          'Unexpected error during processing: $e', e);
+        'Unexpected error during processing: $e',
+        e,
+      );
     }
   }
 }

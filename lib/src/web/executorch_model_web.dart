@@ -81,9 +81,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
         outputShapes: outputShapes,
       );
     } catch (e) {
-      throw ExecuTorchModelException(
-        'Failed to load model: $e',
-      );
+      throw ExecuTorchModelException('Failed to load model: $e');
     }
   }
 
@@ -138,10 +136,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
       // Convert JavaScript outputs back to Dart
       return _convertTensorsFromJS(jsOutputs);
     } catch (e) {
-      throw ExecuTorchInferenceException(
-        'Inference failed: $e',
-        e.toString(),
-      );
+      throw ExecuTorchInferenceException('Inference failed: $e', e.toString());
     }
   }
 
@@ -163,9 +158,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
 
       _isDisposed = true;
     } catch (e) {
-      throw ExecuTorchModelException(
-        'Failed to dispose model: $e',
-      );
+      throw ExecuTorchModelException('Failed to dispose model: $e');
     }
   }
 
@@ -175,13 +168,15 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
 
   /// Convert Dart TensorData list to JavaScript TensorData array
   List<js.TensorData> _convertTensorsToJS(List<TensorData> tensors) => tensors
-      .map((tensor) => js.TensorData(
-            shape: tensor.shape.map((dim) => (dim ?? 0).toJS).toList().jsify()
-                as JSArray<JSNumber>,
-            dataType: _tensorTypeToString(tensor.dataType),
-            data: tensor.data.toJSUint8Array(),
-            name: tensor.name,
-          ))
+      .map(
+        (tensor) => js.TensorData(
+          shape: tensor.shape.map((dim) => (dim ?? 0).toJS).toList().jsify()
+              as JSArray<JSNumber>,
+          dataType: _tensorTypeToString(tensor.dataType),
+          data: tensor.data.toJSUint8Array(),
+          name: tensor.name,
+        ),
+      )
       .toList();
 
   /// Convert JavaScript TensorData array to Dart TensorData list
@@ -224,9 +219,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
       case 'uint8':
         return TensorType.uint8;
       default:
-        throw ExecuTorchValidationException(
-          'Unknown tensor type: $type',
-        );
+        throw ExecuTorchValidationException('Unknown tensor type: $type');
     }
   }
 }

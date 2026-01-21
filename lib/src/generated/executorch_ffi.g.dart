@@ -17,9 +17,7 @@ import '' as self;
 /// Free status structure and its strings.
 /// Safe to call with NULL.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ETStatus>)>()
-external void et_status_free(
-  ffi.Pointer<ETStatus> status,
-);
+external void et_status_free(ffi.Pointer<ETStatus> status);
 
 /// Create a tensor from data.
 ///
@@ -34,12 +32,13 @@ external void et_status_free(
 /// Memory: data is copied, caller retains ownership of original
 @ffi.Native<
     ffi.Pointer<ETStatus> Function(
-        ffi.Pointer<ffi.Void>,
-        ffi.Size,
-        ffi.Pointer<ffi.Int64>,
-        ffi.Int32,
-        ffi.UnsignedInt,
-        ffi.Pointer<ffi.Pointer<ETTensor>>)>(symbol: "et_tensor_create")
+      ffi.Pointer<ffi.Void>,
+      ffi.Size,
+      ffi.Pointer<ffi.Int64>,
+      ffi.Int32,
+      ffi.UnsignedInt,
+      ffi.Pointer<ffi.Pointer<ETTensor>>,
+    )>(symbol: "et_tensor_create")
 external ffi.Pointer<ETStatus> _et_tensor_create(
   ffi.Pointer<ffi.Void> data,
   int data_size,
@@ -57,64 +56,44 @@ ffi.Pointer<ETStatus> et_tensor_create(
   ETDType dtype,
   ffi.Pointer<ffi.Pointer<ETTensor>> out,
 ) =>
-    _et_tensor_create(
-      data,
-      data_size,
-      shape,
-      rank,
-      dtype.value,
-      out,
-    );
+    _et_tensor_create(data, data_size, shape, rank, dtype.value, out);
 
 /// Get tensor data type.
 @ffi.Native<ffi.UnsignedInt Function(ffi.Pointer<ETTensor>)>(
-    symbol: "et_tensor_dtype", isLeaf: true)
-external int _et_tensor_dtype(
-  ffi.Pointer<ETTensor> tensor,
-);
+  symbol: "et_tensor_dtype",
+  isLeaf: true,
+)
+external int _et_tensor_dtype(ffi.Pointer<ETTensor> tensor);
 
-ETDType et_tensor_dtype(
-  ffi.Pointer<ETTensor> tensor,
-) =>
-    ETDType.fromValue(_et_tensor_dtype(
-      tensor,
-    ));
+ETDType et_tensor_dtype(ffi.Pointer<ETTensor> tensor) =>
+    ETDType.fromValue(_et_tensor_dtype(tensor));
 
 /// Get tensor rank (number of dimensions).
 @ffi.Native<ffi.Int32 Function(ffi.Pointer<ETTensor>)>(isLeaf: true)
-external int et_tensor_rank(
-  ffi.Pointer<ETTensor> tensor,
-);
+external int et_tensor_rank(ffi.Pointer<ETTensor> tensor);
 
 /// Get tensor shape array.
 ///
 /// @return Pointer to internal shape array (do not free)
 @ffi.Native<ffi.Pointer<ffi.Int64> Function(ffi.Pointer<ETTensor>)>(
-    isLeaf: true)
-external ffi.Pointer<ffi.Int64> et_tensor_shape(
-  ffi.Pointer<ETTensor> tensor,
-);
+  isLeaf: true,
+)
+external ffi.Pointer<ffi.Int64> et_tensor_shape(ffi.Pointer<ETTensor> tensor);
 
 /// Get tensor data size in bytes.
 @ffi.Native<ffi.Size Function(ffi.Pointer<ETTensor>)>(isLeaf: true)
-external int et_tensor_data_size(
-  ffi.Pointer<ETTensor> tensor,
-);
+external int et_tensor_data_size(ffi.Pointer<ETTensor> tensor);
 
 /// Get tensor data pointer.
 ///
 /// @return Pointer to internal data (do not free, valid until tensor freed)
 @ffi.Native<ffi.Pointer<ffi.Void> Function(ffi.Pointer<ETTensor>)>(isLeaf: true)
-external ffi.Pointer<ffi.Void> et_tensor_data(
-  ffi.Pointer<ETTensor> tensor,
-);
+external ffi.Pointer<ffi.Void> et_tensor_data(ffi.Pointer<ETTensor> tensor);
 
 /// Free tensor handle.
 /// Safe to call with NULL.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ETTensor>)>()
-external void et_tensor_free(
-  ffi.Pointer<ETTensor> tensor,
-);
+external void et_tensor_free(ffi.Pointer<ETTensor> tensor);
 
 /// Load model from memory buffer.
 ///
@@ -127,7 +106,10 @@ external void et_tensor_free(
 /// Thread Safety: Function is thread-safe
 @ffi.Native<
     ffi.Pointer<ETStatus> Function(
-        ffi.Pointer<ffi.Uint8>, ffi.Size, ffi.Pointer<ffi.Pointer<ETModule>>)>()
+      ffi.Pointer<ffi.Uint8>,
+      ffi.Size,
+      ffi.Pointer<ffi.Pointer<ETModule>>,
+    )>()
 external ffi.Pointer<ETStatus> et_module_load(
   ffi.Pointer<ffi.Uint8> data,
   int data_size,
@@ -141,7 +123,9 @@ external ffi.Pointer<ETStatus> et_module_load(
 /// @return Status (caller must free)
 @ffi.Native<
     ffi.Pointer<ETStatus> Function(
-        ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ETModule>>)>()
+      ffi.Pointer<ffi.Char>,
+      ffi.Pointer<ffi.Pointer<ETModule>>,
+    )>()
 external ffi.Pointer<ETStatus> et_module_load_file(
   ffi.Pointer<ffi.Char> path,
   ffi.Pointer<ffi.Pointer<ETModule>> out,
@@ -149,15 +133,11 @@ external ffi.Pointer<ETStatus> et_module_load_file(
 
 /// Get number of model inputs.
 @ffi.Native<ffi.Int32 Function(ffi.Pointer<ETModule>)>(isLeaf: true)
-external int et_module_input_count(
-  ffi.Pointer<ETModule> module,
-);
+external int et_module_input_count(ffi.Pointer<ETModule> module);
 
 /// Get number of model outputs.
 @ffi.Native<ffi.Int32 Function(ffi.Pointer<ETModule>)>(isLeaf: true)
-external int et_module_output_count(
-  ffi.Pointer<ETModule> module,
-);
+external int et_module_output_count(ffi.Pointer<ETModule> module);
 
 /// Run forward pass (inference).
 ///
@@ -172,11 +152,12 @@ external int et_module_output_count(
 /// Thread Safety: Not thread-safe for same module, use mutex if concurrent
 @ffi.Native<
     ffi.Pointer<ETStatus> Function(
-        ffi.Pointer<ETModule>,
-        ffi.Pointer<ffi.Pointer<ETTensor>>,
-        ffi.Int32,
-        ffi.Pointer<ffi.Pointer<ffi.Pointer<ETTensor>>>,
-        ffi.Pointer<ffi.Int32>)>()
+      ffi.Pointer<ETModule>,
+      ffi.Pointer<ffi.Pointer<ETTensor>>,
+      ffi.Int32,
+      ffi.Pointer<ffi.Pointer<ffi.Pointer<ETTensor>>>,
+      ffi.Pointer<ffi.Int32>,
+    )>()
 external ffi.Pointer<ETStatus> et_module_forward(
   ffi.Pointer<ETModule> module,
   ffi.Pointer<ffi.Pointer<ETTensor>> inputs,
@@ -188,26 +169,20 @@ external ffi.Pointer<ETStatus> et_module_forward(
 /// Free module handle.
 /// Safe to call with NULL.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ETModule>)>()
-external void et_module_free(
-  ffi.Pointer<ETModule> module,
-);
+external void et_module_free(ffi.Pointer<ETModule> module);
 
 /// Check if backend is available (compiled in).
 ///
 /// @param backend  Backend to check
 /// @return 1 if available, 0 if not
 @ffi.Native<ffi.Int32 Function(ffi.UnsignedInt)>(
-    symbol: "et_backend_available", isLeaf: true)
-external int _et_backend_available(
-  int backend,
-);
+  symbol: "et_backend_available",
+  isLeaf: true,
+)
+external int _et_backend_available(int backend);
 
-int et_backend_available(
-  ETBackend backend,
-) =>
-    _et_backend_available(
-      backend.value,
-    );
+int et_backend_available(ETBackend backend) =>
+    _et_backend_available(backend.value);
 
 /// Get list of available backends.
 ///
@@ -215,11 +190,9 @@ int et_backend_available(
 /// @param max_count  Maximum number of backends to return
 /// @return Number of available backends
 @ffi.Native<ffi.Int32 Function(ffi.Pointer<ffi.UnsignedInt>, ffi.Int32)>(
-    isLeaf: true)
-external int et_backend_list(
-  ffi.Pointer<ffi.UnsignedInt> out,
-  int max_count,
-);
+  isLeaf: true,
+)
+external int et_backend_list(ffi.Pointer<ffi.UnsignedInt> out, int max_count);
 
 /// Get library version string.
 ///
@@ -245,17 +218,13 @@ external void et_tensor_array_free(
 
 /// Free a string allocated by this library.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
-external void et_string_free(
-  ffi.Pointer<ffi.Char> str,
-);
+external void et_string_free(ffi.Pointer<ffi.Char> str);
 
 /// Enable or disable debug logging.
 ///
 /// @param enabled  0=off, non-zero=on
 @ffi.Native<ffi.Void Function(ffi.Int32)>()
-external void et_set_debug_enabled(
-  int enabled,
-);
+external void et_set_debug_enabled(int enabled);
 
 const addresses = _SymbolAddresses();
 

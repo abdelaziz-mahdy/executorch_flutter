@@ -64,13 +64,19 @@ ExecuTorchException _mapErrorCode(int code, String message, String? location) {
   final errorCode = ETErrorCode.fromValue(code);
   return switch (errorCode) {
     ETErrorCode.ET_OK => throw StateError('Should not map ET_OK to exception'),
-    ETErrorCode.ET_INVALID_ARGUMENT =>
-      ExecuTorchValidationException(message, details),
+    ETErrorCode.ET_INVALID_ARGUMENT => ExecuTorchValidationException(
+        message,
+        details,
+      ),
     ETErrorCode.ET_OUT_OF_MEMORY => ExecuTorchMemoryException(message, details),
-    ETErrorCode.ET_MODEL_LOAD_FAILED =>
-      ExecuTorchModelException(message, details),
-    ETErrorCode.ET_INFERENCE_FAILED =>
-      ExecuTorchInferenceException(message, details),
+    ETErrorCode.ET_MODEL_LOAD_FAILED => ExecuTorchModelException(
+        message,
+        details,
+      ),
+    ETErrorCode.ET_INFERENCE_FAILED => ExecuTorchInferenceException(
+        message,
+        details,
+      ),
     ETErrorCode.ET_INVALID_STATE => ExecuTorchModelException(message, details),
     ETErrorCode.ET_UNSUPPORTED => ExecuTorchPlatformException(message, details),
     ETErrorCode.ET_IO_ERROR => ExecuTorchIOException(message, details),
