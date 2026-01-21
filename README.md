@@ -22,15 +22,9 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 The native library size varies depending on which backends are enabled.
 
-![Release Build Sizes](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-release.svg)
+📊 **[View Release Build Sizes (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-release.svg)** | **[View Debug Build Sizes (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-debug.svg)** | **[JSON Report](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.json)**
 
-<details>
-<summary>Debug build sizes</summary>
-
-![Debug Build Sizes](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-debug.svg)
-</details>
-
-*See the [JSON report](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.json) for all configurations.*
+*Size reports are auto-generated for each release. Click the links above to view detailed size breakdowns by platform and backend.*
 
 ## Installation
 
@@ -41,7 +35,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  executorch_flutter: ^0.0.1
+  executorch_flutter: ^0.2.0
 ```
 
 ## Basic Usage
@@ -278,8 +272,8 @@ hooks:
       # ExecuTorch source version - for source builds (default: "1.0.1")
       executorch_version: "1.0.1"
 
-      # Prebuilt release version - for prebuilt downloads (default: "1.0.1.8")
-      prebuilt_version: "1.0.1.8"
+      # Prebuilt release version - for prebuilt downloads (default: "1.0.1.21")
+      prebuilt_version: "1.0.1.21"
 
       # Backend selection (platform-specific defaults apply)
       backends:
@@ -295,7 +289,7 @@ hooks:
 | `debug` | `bool` | `false` | Enables native debug logging and selects Debug prebuilt binaries (useful for debugging crashes) |
 | `build_mode` | `string` | `"prebuilt"` | `"prebuilt"` downloads pre-compiled binaries (fast, recommended). `"source"` builds from source (slower, requires Python 3.8+ with pyyaml) |
 | `executorch_version` | `string` | `"1.0.1"` | ExecuTorch source version (for source builds) |
-| `prebuilt_version` | `string` | `"1.0.1.20"` | Prebuilt release version (for prebuilt downloads) |
+| `prebuilt_version` | `string` | `"1.0.1.21"` | Prebuilt release version (for prebuilt downloads) |
 | `backends` | `list` | Platform-specific | List of backends to enable. Options: `xnnpack`, `coreml`, `mps`, `vulkan`, `qnn` |
 
 ### Backend Defaults by Platform
@@ -359,7 +353,7 @@ hooks:
 hooks:
   user_defines:
     executorch_flutter:
-      prebuilt_version: "1.0.1.8"
+      prebuilt_version: "1.0.1.21"
 ```
 
 ## Advanced Usage
