@@ -1,10 +1,13 @@
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:image/image.dart' as img;
 
 import '../models/model_input.dart';
 import '../models/model_settings.dart';
 import 'base_processor.dart';
+import 'imagelib/imagelib_movenet_preprocessor.dart';
+import 'opencv/opencv_movenet_preprocessor_stub.dart'
+    if (dart.library.io) 'opencv/opencv_movenet_preprocessor.dart';
+import 'shaders/gpu_movenet_preprocessor.dart';
 
 /// Preprocessing configuration for MoveNet
 class MoveNetPreprocessConfig {
@@ -39,54 +42,17 @@ class MoveNetInputProcessor extends InputProcessor<ModelInput> {
       throw UnsupportedError('Unsupported input type: ${input.runtimeType}');
     }
 
-    // Use CPU preprocessing (GPU shader can be added later)
-    return _preprocessCpu(bytes);
-  }
-
-  Future<List<TensorData>> _preprocessCpu(Uint8List imageBytes) async {
-    // Decode image
-    final decodedImage = img.decodeImage(imageBytes);
-    if (decodedImage == null) {
-      throw Exception('Failed to decode image');
+    // Select preprocessor based on settings
+    switch (preprocessingProvider) {
+      case PreprocessingProvider.gpu:
+        final preprocessor = GpuMoveNetPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
+      case PreprocessingProvider.opencv:
+        final preprocessor = OpenCVMoveNetPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
+      case PreprocessingProvider.imageLib:
+        final preprocessor = ImageLibMoveNetPreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
     }
-
-    // Convert to RGB
-    final rgbImage = decodedImage.convert(numChannels: 3);
-
-    // Resize to target size (simple resize, MoveNet doesn't use letterbox)
-    final resized = img.copyResize(
-      rgbImage,
-      width: config.targetSize,
-      height: config.targetSize,
-    );
-
-    // Convert to tensor in NHWC format with normalization to [0, 1]
-    // MoveNet uses NHWC format (batch, height, width, channels)
-    final floats = Float32List(
-      1 * config.targetSize * config.targetSize * 3,
-    );
-
-    int index = 0;
-    for (int y = 0; y < config.targetSize; y++) {
-      for (int x = 0; x < config.targetSize; x++) {
-        final pixel = resized.getPixel(x, y);
-        floats[index++] = pixel.r / 255.0;
-        floats[index++] = pixel.g / 255.0;
-        floats[index++] = pixel.b / 255.0;
-      }
-    }
-
-    debugPrint(
-      '📊 MoveNet Tensor shape: [1, ${config.targetSize}, ${config.targetSize}, 3] (NHWC)',
-    );
-
-    return [
-      TensorData(
-        shape: [1, config.targetSize, config.targetSize, 3].cast<int?>(),
-        dataType: TensorType.float32,
-        data: floats.buffer.asUint8List(),
-        name: 'input',
-      ),
-    ];
   }
 }

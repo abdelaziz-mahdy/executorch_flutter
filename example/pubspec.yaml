@@ -104,6 +104,8 @@ flutter:
   shaders:
     - shaders/yolo_preprocess.frag
     - shaders/mobilenet_preprocess.frag
+    - shaders/movenet_preprocess.frag
+    - shaders/blazeface_preprocess.frag
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

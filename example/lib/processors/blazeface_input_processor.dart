@@ -1,10 +1,13 @@
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:image/image.dart' as img;
 
 import '../models/model_input.dart';
 import '../models/model_settings.dart';
 import 'base_processor.dart';
+import 'imagelib/imagelib_blazeface_preprocessor.dart';
+import 'opencv/opencv_blazeface_preprocessor_stub.dart'
+    if (dart.library.io) 'opencv/opencv_blazeface_preprocessor.dart';
+import 'shaders/gpu_blazeface_preprocessor.dart';
 
 /// Preprocessing configuration for BlazeFace
 class BlazeFacePreprocessConfig {
@@ -39,55 +42,17 @@ class BlazeFaceInputProcessor extends InputProcessor<ModelInput> {
       throw UnsupportedError('Unsupported input type: ${input.runtimeType}');
     }
 
-    // Use CPU preprocessing (GPU shader can be added later)
-    return _preprocessCpu(bytes);
-  }
-
-  Future<List<TensorData>> _preprocessCpu(Uint8List imageBytes) async {
-    // Decode image
-    final decodedImage = img.decodeImage(imageBytes);
-    if (decodedImage == null) {
-      throw Exception('Failed to decode image');
+    // Select preprocessor based on settings
+    switch (preprocessingProvider) {
+      case PreprocessingProvider.gpu:
+        final preprocessor = GpuBlazeFacePreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
+      case PreprocessingProvider.opencv:
+        final preprocessor = OpenCVBlazeFacePreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
+      case PreprocessingProvider.imageLib:
+        final preprocessor = ImageLibBlazeFacePreprocessor(config: config);
+        return await preprocessor.preprocess(bytes);
     }
-
-    // Convert to RGB
-    final rgbImage = decodedImage.convert(numChannels: 3);
-
-    // Resize to target size
-    final resized = img.copyResize(
-      rgbImage,
-      width: config.targetSize,
-      height: config.targetSize,
-    );
-
-    // Convert to tensor in NHWC format with normalization to [-1, 1]
-    // BlazeFace uses NHWC format and expects values in [-1, 1] range
-    final floats = Float32List(
-      1 * config.targetSize * config.targetSize * 3,
-    );
-
-    int index = 0;
-    for (int y = 0; y < config.targetSize; y++) {
-      for (int x = 0; x < config.targetSize; x++) {
-        final pixel = resized.getPixel(x, y);
-        // Normalize to [-1, 1]: (value / 127.5) - 1
-        floats[index++] = (pixel.r / 127.5) - 1.0;
-        floats[index++] = (pixel.g / 127.5) - 1.0;
-        floats[index++] = (pixel.b / 127.5) - 1.0;
-      }
-    }
-
-    debugPrint(
-      '📊 BlazeFace Tensor shape: [1, ${config.targetSize}, ${config.targetSize}, 3] (NHWC)',
-    );
-
-    return [
-      TensorData(
-        shape: [1, config.targetSize, config.targetSize, 3].cast<int?>(),
-        dataType: TensorType.float32,
-        data: floats.buffer.asUint8List(),
-        name: 'input',
-      ),
-    ];
   }
 }

@@ -5,6 +5,7 @@ import '../models/model_input.dart';
 import '../models/model_settings.dart';
 import 'base_processor.dart';
 import 'image_processor.dart';
+import 'imagelib/imagelib_mobilenet_preprocessor.dart';
 import 'opencv/opencv_imagenet_preprocessor_stub.dart'
     if (dart.library.io) 'opencv/opencv_imagenet_preprocessor.dart';
 
@@ -39,7 +40,7 @@ class MobileNetInputProcessor extends InputProcessor<ModelInput> {
         final preprocessor = OpenCVImageNetPreprocessor(config: config);
         return await preprocessor.preprocess(bytes);
       case PreprocessingProvider.imageLib:
-        final preprocessor = ImageNetPreprocessor(config: config);
+        final preprocessor = ImageLibMobileNetPreprocessor(config: config);
         return await preprocessor.preprocess(bytes);
     }
   }
