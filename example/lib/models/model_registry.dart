@@ -4,6 +4,10 @@ import 'package:universal_platform/universal_platform.dart';
 import 'model_definition.dart';
 import 'yolo_model_definition.dart';
 import 'mobilenet_model_definition.dart';
+import 'movenet_model_definition.dart';
+import 'blazeface_model_definition.dart';
+import 'yolo_pose_model_definition.dart';
+import 'yolo_face_model_definition.dart';
 import '../services/model_index_service.dart';
 
 /// Central registry of all available models
@@ -130,6 +134,46 @@ class ModelRegistry {
           labelsRemoteUrl: entry.labelsRemoteUrl ??
               index.getLabelsUrl('yolo') ??
               _cocoLabelsUrl,
+        );
+
+      case 'movenet':
+        return MoveNetModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 192,
+          fileSizeMB: entry.sizeMB,
+        );
+
+      case 'blazeface':
+        return BlazeFaceModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 128,
+          fileSizeMB: entry.sizeMB,
+        );
+
+      case 'yolo-pose':
+        return YoloPoseModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 640,
+          fileSizeMB: entry.sizeMB,
+        );
+
+      case 'yolo-face':
+        return YoloFaceModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 640,
+          fileSizeMB: entry.sizeMB,
         );
 
       default:
