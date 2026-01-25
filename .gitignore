@@ -44,6 +44,7 @@ macos/executorch_flutter/Sources/executorch_flutter/
 
 # Internal development documentation
 specs/
+**/docs/plans/
 
 # Temporary Wasm build artifacts and examples
 web/wasm/tmp/
