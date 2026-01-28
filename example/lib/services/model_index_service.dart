@@ -13,7 +13,7 @@ class ModelIndexEntry {
   final String modelName;
   final String category;
   final String backend;
-  final String hash;
+  final String? hash;
   final int size;
   final double sizeMB;
   final int? inputSize;
@@ -28,7 +28,7 @@ class ModelIndexEntry {
     required this.modelName,
     required this.category,
     required this.backend,
-    required this.hash,
+    this.hash,
     required this.size,
     required this.sizeMB,
     required this.inputSize,
@@ -45,7 +45,7 @@ class ModelIndexEntry {
       modelName: json['modelName'] as String,
       category: json['category'] as String,
       backend: json['backend'] as String,
-      hash: json['hash'] as String,
+      hash: json['hash'] as String?,
       size: json['size'] as int,
       sizeMB: (json['sizeMB'] as num).toDouble(),
       inputSize: json['inputSize'] as int?,
@@ -89,14 +89,14 @@ class ModelIndexEntry {
 class LabelsIndexEntry {
   final String name;
   final String category;
-  final String hash;
+  final String? hash;
   final int size;
   final String remoteUrl;
 
   const LabelsIndexEntry({
     required this.name,
     required this.category,
-    required this.hash,
+    this.hash,
     required this.size,
     required this.remoteUrl,
   });
@@ -105,7 +105,7 @@ class LabelsIndexEntry {
     return LabelsIndexEntry(
       name: json['name'] as String,
       category: json['category'] as String,
-      hash: json['hash'] as String,
+      hash: json['hash'] as String?,
       size: json['size'] as int,
       remoteUrl: json['remoteUrl'] as String,
     );
@@ -115,7 +115,7 @@ class LabelsIndexEntry {
 /// Represents the full model index
 class ModelIndex {
   final String version;
-  final String generated;
+  final String? generated;
   final String baseUrl;
   final List<ModelIndexEntry> models;
   final List<LabelsIndexEntry> labels;
@@ -123,25 +123,25 @@ class ModelIndex {
 
   const ModelIndex({
     required this.version,
-    required this.generated,
+    this.generated,
     required this.baseUrl,
     required this.models,
     required this.labels,
-    required this.backends,
+    this.backends = const {},
   });
 
   factory ModelIndex.fromJson(Map<String, dynamic> json) {
     return ModelIndex(
       version: json['version'] as String,
-      generated: json['generated'] as String,
+      generated: json['generated'] as String?,
       baseUrl: json['baseUrl'] as String,
       models: (json['models'] as List<dynamic>)
           .map((e) => ModelIndexEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
-      labels: (json['labels'] as List<dynamic>)
-          .map((e) => LabelsIndexEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      backends: json['backends'] as Map<String, dynamic>,
+      labels: (json['labels'] as List<dynamic>?)
+          ?.map((e) => LabelsIndexEntry.fromJson(e as Map<String, dynamic>))
+          .toList() ?? [],
+      backends: json['backends'] as Map<String, dynamic>? ?? {},
     );
   }
 
@@ -150,7 +150,8 @@ class ModelIndex {
   }
 
   List<ModelIndexEntry> getModelsForPlatform(String platform) {
-    return models.where((m) => m.platforms.contains(platform)).toList();
+    // If platforms list is empty, assume model works on all platforms (backward compatibility)
+    return models.where((m) => m.platforms.isEmpty || m.platforms.contains(platform)).toList();
   }
 
   String? getLabelsUrl(String category) {
