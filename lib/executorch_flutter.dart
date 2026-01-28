@@ -92,3 +92,5 @@ export 'src/types.dart'
         TensorData,
         TensorType,
         TensorTypeExtension;
+// Plugin version constant (ExecuTorch version this plugin is built against)
+export 'src/version.dart' show executorchVersion;

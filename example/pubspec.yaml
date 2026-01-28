@@ -31,6 +31,9 @@ dependencies:
   # HTTP client for downloading models from network
   http: ^1.6.0
 
+  # Cryptographic hashing for model integrity verification
+  crypto: ^3.0.6
+
   # Path provider for file system access
   path_provider: ^2.1.3
 

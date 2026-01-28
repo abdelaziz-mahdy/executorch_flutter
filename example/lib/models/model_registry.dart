@@ -41,9 +41,12 @@ class ModelRegistry {
   static const String _cocoLabelsUrl = '$_baseUrl/yolo/labels.txt';
 
   /// Loads all available models from the index.json
-  static Future<List<ModelDefinition>> loadAll() async {
+  ///
+  /// [version] - The ExecuTorch version to load models for.
+  ///             If null, uses [ModelIndexService.selectedVersion].
+  static Future<List<ModelDefinition>> loadAll({String? version}) async {
     try {
-      final index = await ModelIndexService.fetchIndex();
+      final index = await ModelIndexService.fetchIndex(version: version);
       return _buildModelsFromIndex(index);
     } catch (e) {
       // Fallback to hardcoded models if index fetch fails
@@ -51,6 +54,19 @@ class ModelRegistry {
       print('Warning: Failed to fetch model index, using fallback: $e');
       return _fallbackModels();
     }
+  }
+
+  /// Fetches the list of available ExecuTorch versions
+  static Future<ModelVersions> fetchAvailableVersions() async {
+    return ModelIndexService.fetchVersions();
+  }
+
+  /// Gets the currently selected version
+  static String get selectedVersion => ModelIndexService.selectedVersion;
+
+  /// Sets the selected version
+  static set selectedVersion(String version) {
+    ModelIndexService.selectedVersion = version;
   }
 
   /// Builds model definitions from the fetched index
@@ -117,6 +133,7 @@ class ModelRegistry {
           description: entry.description,
           remoteUrl: entry.remoteUrl,
           inputSize: entry.inputSize ?? 224,
+          hash: entry.hash,
           fileSizeMB: entry.sizeMB,
           labelsRemoteUrl: entry.labelsRemoteUrl ??
               index.getLabelsUrl('mobilenet') ??
@@ -130,6 +147,7 @@ class ModelRegistry {
           description: entry.description,
           remoteUrl: entry.remoteUrl,
           inputSize: entry.inputSize ?? 640,
+          hash: entry.hash,
           fileSizeMB: entry.sizeMB,
           labelsRemoteUrl: entry.labelsRemoteUrl ??
               index.getLabelsUrl('yolo') ??
@@ -143,6 +161,7 @@ class ModelRegistry {
           description: entry.description,
           remoteUrl: entry.remoteUrl,
           inputSize: entry.inputSize ?? 192,
+          hash: entry.hash,
           fileSizeMB: entry.sizeMB,
         );
 
@@ -153,6 +172,7 @@ class ModelRegistry {
           description: entry.description,
           remoteUrl: entry.remoteUrl,
           inputSize: entry.inputSize ?? 128,
+          hash: entry.hash,
           fileSizeMB: entry.sizeMB,
         );
 
@@ -163,6 +183,7 @@ class ModelRegistry {
           description: entry.description,
           remoteUrl: entry.remoteUrl,
           inputSize: entry.inputSize ?? 640,
+          hash: entry.hash,
           fileSizeMB: entry.sizeMB,
         );
 
@@ -173,6 +194,7 @@ class ModelRegistry {
           description: entry.description,
           remoteUrl: entry.remoteUrl,
           inputSize: entry.inputSize ?? 640,
+          hash: entry.hash,
           fileSizeMB: entry.sizeMB,
         );
 

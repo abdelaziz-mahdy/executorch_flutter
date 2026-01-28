@@ -24,6 +24,7 @@ class YoloFaceModelDefinition
     required super.description,
     required super.remoteUrl,
     required super.inputSize,
+    super.hash,
     super.fileSizeMB,
   }) : super(icon: Icons.face_retouching_natural);
 

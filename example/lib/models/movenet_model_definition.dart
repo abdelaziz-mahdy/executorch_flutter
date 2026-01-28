@@ -23,6 +23,7 @@ class MoveNetModelDefinition
     required super.description,
     required super.remoteUrl,
     required super.inputSize,
+    super.hash,
     super.fileSizeMB,
   }) : super(icon: Icons.accessibility_new);
 

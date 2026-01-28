@@ -24,6 +24,7 @@ class YoloModelDefinition
     required super.description,
     required super.remoteUrl,
     required super.inputSize,
+    super.hash,
     super.fileSizeMB,
     required this.labelsRemoteUrl,
   }) : super(icon: Icons.center_focus_strong);

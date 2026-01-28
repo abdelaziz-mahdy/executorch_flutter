@@ -4,16 +4,18 @@
 /// Web platform implementation of version query functions.
 library;
 
+import '../version.dart' as version_constants;
+
 /// Library version information.
 abstract final class ExecuTorchVersion {
   /// Get the library version string.
   ///
-  /// On web, returns a placeholder version since the WASM module
-  /// may not expose version information directly.
-  static String get version => '1.0.0-web';
+  /// On web, returns the package version with a "-web" suffix since the WASM
+  /// module may not expose version information directly.
+  static String get version => '${version_constants.executorchVersion}-web';
 
   /// Get the linked ExecuTorch version string.
   ///
-  /// On web, returns a placeholder version.
-  static String get executorchVersion => '1.0.0';
+  /// On web, returns the version constant from version.dart.
+  static String get executorchVersion => version_constants.executorchVersion;
 }

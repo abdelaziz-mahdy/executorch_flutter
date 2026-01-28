@@ -4,27 +4,32 @@ import 'package:http/http.dart' as http;
 
 import 'model_download_service.dart';
 
-// Web uses in-memory storage only (IndexedDB could be added for persistence)
+// Web uses in-memory storage organized by version/model path
+// Structure: { "1.0.1/mobilenet_v3_small": Uint8List, ... }
 final Map<String, Uint8List> _webCache = {};
 
 /// Get local path for a model (not used on web)
-Future<String?> getLocalPath(String modelName) async {
+Future<String?> getLocalPath(String path) async {
   return null;
 }
 
 /// Check if a model is cached
-Future<bool> isModelCached(String modelName) async {
-  return _webCache.containsKey(modelName);
+Future<bool> hasModel(String path) async {
+  return _webCache.containsKey(path);
 }
 
 /// Get cached model bytes
-Future<Uint8List?> getCachedModelBytes(String modelName) async {
-  return _webCache[modelName];
+Future<Uint8List?> getModel(String path) async {
+  return _webCache[path];
 }
 
-/// Download model from remote URL
-Future<Uint8List> downloadModel({
-  required String modelName,
+/// Save model to cache
+Future<void> saveModel(String path, Uint8List data) async {
+  _webCache[path] = data;
+}
+
+/// Download from URL with progress
+Future<Uint8List> downloadFromUrl({
   required String remoteUrl,
   DownloadProgressCallback? onProgress,
 }) async {
@@ -52,29 +57,34 @@ Future<Uint8List> downloadModel({
       }
     }
 
-    final data = Uint8List.fromList(bytes);
-
-    // Cache in memory
-    _webCache[modelName] = data;
-
-    return data;
+    return Uint8List.fromList(bytes);
   } finally {
     client.close();
   }
 }
 
 /// Delete a cached model
-Future<void> deleteModel(String modelName) async {
-  _webCache.remove(modelName);
+Future<void> deleteModel(String path) async {
+  _webCache.remove(path);
 }
 
 /// Clear all cached models
-Future<void> clearCache() async {
+Future<void> clearAll() async {
   _webCache.clear();
 }
 
+/// Clear cached models for a specific version
+Future<void> clearVersion(String version) async {
+  final keysToRemove = _webCache.keys
+      .where((key) => key.startsWith('$version/'))
+      .toList();
+  for (final key in keysToRemove) {
+    _webCache.remove(key);
+  }
+}
+
 /// Get total cache size
-Future<int> getCacheSize() async {
+Future<int> getTotalSize() async {
   int size = 0;
   for (final bytes in _webCache.values) {
     size += bytes.length;

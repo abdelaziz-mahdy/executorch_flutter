@@ -18,6 +18,7 @@ abstract class ModelDefinition<TInput extends ModelInput, TResult> {
     required this.icon,
     required this.inputSize,
     required this.remoteUrl,
+    this.hash,
     this.fileSizeMB = 0,
     this.showPerformanceOverlay = true,
   });
@@ -30,6 +31,9 @@ abstract class ModelDefinition<TInput extends ModelInput, TResult> {
 
   /// Remote URL to download the model from (GitHub raw content URL)
   final String remoteUrl;
+
+  /// SHA-256 hash for integrity verification (optional)
+  final String? hash;
 
   /// Approximate file size in MB (for display purposes)
   final double fileSizeMB;
