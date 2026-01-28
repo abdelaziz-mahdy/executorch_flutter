@@ -25,9 +25,18 @@
   - Automatic re-download on hash mismatch (stale cache detection)
   - Decorator pattern architecture for ModelDownloadService
 
+### Removed
+- **User-overridable ExecuTorch version**: The `executorch_version` option in
+  `pubspec.yaml` user_defines has been removed
+  - Package version is now tied to ExecuTorch version (1:1 mapping)
+  - Users who need older ExecuTorch versions should use older package versions
+  - Simplifies build system and ensures runtime/model version consistency
+
 ### Fixed
 - Fixed WASM build script triggering unnecessary native builds
   - `build_wasm.sh` now copies files directly instead of using `dart run`
+- Fixed model dropdown being empty when switching to versions without `platforms`
+  field in index.json (backward compatibility with 1.0.1 models)
 
 ## 0.2.1
 
