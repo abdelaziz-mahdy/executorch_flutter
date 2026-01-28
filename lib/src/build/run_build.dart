@@ -24,13 +24,16 @@
 ///     executorch_flutter:
 ///       debug: true
 ///       build_mode: "prebuilt"  # or "source"
-///       executorch_version: "1.1.0"
 ///       backends:
 ///         - xnnpack
 ///         - coreml
 ///         - mps
 ///         - vulkan
 /// ```
+///
+/// Note: The ExecuTorch version is fixed per package version and cannot be
+/// overridden. Use a different package version for different ExecuTorch
+/// versions.
 ///
 /// ## Environment Variables
 /// - `EXECUTORCH_BUILD_MODE`: Override build mode ("prebuilt" or "source")
@@ -116,13 +119,10 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   final isSourceBuild = buildMode == 'source';
   logger.info('[executorch_flutter] Build mode: $buildMode\n');
 
-  // Get ExecuTorch version (uses constant from version.dart as default)
-  final etVersion =
-      userDefines['executorch_version'] as String? ?? executorchVersion;
   // Get prebuilt version (for prebuilt downloads)
   final prebuiltVersion =
       userDefines['prebuilt_version'] as String? ?? _defaultPrebuiltVersion;
-  logger.info('[executorch_flutter] ExecuTorch version: v$etVersion\n');
+  logger.info('[executorch_flutter] ExecuTorch version: v$executorchVersion\n');
   if (!isSourceBuild) {
     logger.info('[executorch_flutter] Prebuilt version: v$prebuiltVersion\n');
   }
@@ -187,7 +187,7 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
       // Build mode
       'EXECUTORCH_BUILD_MODE': buildMode,
       // ExecuTorch source version (for source builds)
-      'EXECUTORCH_VERSION': etVersion,
+      'EXECUTORCH_VERSION': executorchVersion,
       // Prebuilt release version (for prebuilt downloads)
       'EXECUTORCH_PREBUILT_VERSION': prebuiltVersion,
       // Python executable (only for source builds)
