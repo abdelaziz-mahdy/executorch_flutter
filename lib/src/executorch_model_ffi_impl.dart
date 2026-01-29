@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'executorch_model.dart';
+import 'ffi/native_logging.dart';
 import 'ffi/native_module.dart';
 import 'types.dart';
 
@@ -39,6 +40,8 @@ class ExecuTorchModelFfiImpl extends ExecuTorchModel {
 
 /// Load an ExecuTorchModel from a file path using FFI.
 Future<ExecuTorchModel> load(String filePath) async {
+  // Ensure debug logging is enabled before model loading
+  ensureNativeLoggingInitialized();
   final module = NativeModule.loadFile(filePath);
   final modelId = _generateModelId(filePath);
   return ExecuTorchModelFfiImpl._(module, modelId);
@@ -46,6 +49,8 @@ Future<ExecuTorchModel> load(String filePath) async {
 
 /// Load an ExecuTorchModel from bytes using FFI.
 Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) async {
+  // Ensure debug logging is enabled before model loading
+  ensureNativeLoggingInitialized();
   final module = NativeModule.load(modelBytes);
   final modelId = _generateModelId('bytes_${modelBytes.length}');
   return ExecuTorchModelFfiImpl._(module, modelId);
@@ -53,6 +58,8 @@ Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) async {
 
 /// Load an ExecuTorchModel from asset bundle using FFI.
 Future<ExecuTorchModel> loadFromAsset(String assetPath) async {
+  // Ensure debug logging is enabled before model loading
+  ensureNativeLoggingInitialized();
   final byteData = await rootBundle.load(assetPath);
   final bytes = byteData.buffer.asUint8List();
   final module = NativeModule.load(bytes);
