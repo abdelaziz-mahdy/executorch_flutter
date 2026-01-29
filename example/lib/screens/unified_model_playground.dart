@@ -375,6 +375,129 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     );
   }
 
+  void _showRuntimeInfoDialog() {
+    // Get available backends
+    final availableBackends = BackendQuery.available;
+    final allBackends = Backend.values;
+
+    // Get version info
+    final ffiVersion = ExecuTorchVersion.version;
+    final etVersion = ExecuTorchVersion.executorchVersion;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline),
+            SizedBox(width: 8),
+            Text('Runtime Info'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Version section
+              Text(
+                'Version',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              _buildInfoRow('ExecuTorch', etVersion),
+              _buildInfoRow('FFI Library', ffiVersion),
+              _buildInfoRow('Plugin', executorchVersion),
+              const Divider(height: 24),
+
+              // Backends section
+              Text(
+                'Backends',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              ...allBackends.map((backend) {
+                final isAvailable = availableBackends.contains(backend);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isAvailable ? Icons.check_circle : Icons.cancel,
+                        color: isAvailable ? Colors.green : Colors.red,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(backend.displayName),
+                      const Spacer(),
+                      Text(
+                        isAvailable ? 'Available' : 'Not compiled',
+                        style: TextStyle(
+                          color: isAvailable ? Colors.green : Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const Divider(height: 24),
+
+              // Platform section
+              Text(
+                'Platform',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              _buildInfoRow(
+                'OS',
+                UniversalPlatform.isWeb
+                    ? 'Web'
+                    : UniversalPlatform.isAndroid
+                        ? 'Android'
+                        : UniversalPlatform.isIOS
+                            ? 'iOS'
+                            : UniversalPlatform.isMacOS
+                                ? 'macOS'
+                                : UniversalPlatform.isWindows
+                                    ? 'Windows'
+                                    : UniversalPlatform.isLinux
+                                        ? 'Linux'
+                                        : 'Unknown',
+              ),
+              _buildInfoRow('Selected Version', _selectedVersion),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
   void _showSettingsDialog() {
     if (_controller == null) return;
 
@@ -428,6 +551,12 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         title: const Text('Model Playground'),
         elevation: 0,
         actions: [
+          // Info button - shows runtime info (backends, version)
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: _showRuntimeInfoDialog,
+            tooltip: 'Runtime Info',
+          ),
           // Settings button - only shown when a model is selected
           if (_controller != null)
             IconButton(
