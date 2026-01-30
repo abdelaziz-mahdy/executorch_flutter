@@ -192,7 +192,9 @@ class CachedModelDataSource implements ModelDataSource {
     final cached = await getModel(key);
     if (cached != null) {
       // Verify hash if provided
-      if (expectedHash != null && !verifyHash(cached, expectedHash)) {
+      if (expectedHash != null &&
+          expectedHash.isNotEmpty &&
+          !verifyHash(cached, expectedHash)) {
         // Hash mismatch - delete stale cache and re-download
         await deleteModel(key);
       } else {
@@ -204,7 +206,9 @@ class CachedModelDataSource implements ModelDataSource {
     final data = await _inner.fetchModel(key, remoteUrl, onProgress: onProgress);
 
     // Verify downloaded data if hash provided
-    if (expectedHash != null && !verifyHash(data, expectedHash)) {
+    if (expectedHash != null &&
+        expectedHash.isNotEmpty &&
+        !verifyHash(data, expectedHash)) {
       throw Exception(
         'Downloaded model hash mismatch. Expected: $expectedHash, '
         'Got: ${computeHash(data)}',
@@ -360,18 +364,35 @@ class ModelDownloadService extends ChangeNotifier {
       final urlWithCacheBuster = ModelIndexService.addCacheBuster(remoteUrl);
 
       // Download with caching and hash verification
-      final bytes = await _dataSource.fetchModelWithHash(
-        key,
-        urlWithCacheBuster,
-        expectedHash ?? '', // Empty string skips verification
-        onProgress: (progress, received, total) {
-          _downloadStates[modelName] = _downloadStates[modelName]!.copyWith(
-            progress: progress,
-          );
-          notifyListeners();
-          onProgress?.call(progress, received, total);
-        },
-      );
+      final Uint8List bytes;
+      if (expectedHash != null && expectedHash.isNotEmpty) {
+        // Use hash verification when hash is provided
+        bytes = await _dataSource.fetchModelWithHash(
+          key,
+          urlWithCacheBuster,
+          expectedHash,
+          onProgress: (progress, received, total) {
+            _downloadStates[modelName] = _downloadStates[modelName]!.copyWith(
+              progress: progress,
+            );
+            notifyListeners();
+            onProgress?.call(progress, received, total);
+          },
+        );
+      } else {
+        // Skip hash verification when hash is not provided
+        bytes = await _dataSource.fetchModel(
+          key,
+          urlWithCacheBuster,
+          onProgress: (progress, received, total) {
+            _downloadStates[modelName] = _downloadStates[modelName]!.copyWith(
+              progress: progress,
+            );
+            notifyListeners();
+            onProgress?.call(progress, received, total);
+          },
+        );
+      }
 
       // Update state to downloaded
       final info = ModelDownloadInfo(

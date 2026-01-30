@@ -26,6 +26,7 @@ void main() {
       final info = await downloadService.downloadModel(
         modelName: entry.name,
         remoteUrl: entry.remoteUrl,
+        expectedHash: entry.hash,
         onProgress: (progress, received, total) {
           if (progress == 0.0 || progress == 0.5 || progress == 1.0) {
             print('   ${(progress * 100).toStringAsFixed(0)}% downloaded');
