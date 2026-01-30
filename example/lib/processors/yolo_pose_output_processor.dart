@@ -55,8 +55,26 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
 
     debugPrint('🔍 YOLO-Pose output shape: $shape');
 
-    // Detect transposed format: [1, 56, 8400] vs [1, 8400, 56]
-    final isTransposed = shape.length >= 3 && shape[1] < shape[2];
+    // Validate shape has at least 2 dimensions (excluding batch)
+    if (shape.length < 2) {
+      debugPrint('❌ Unexpected shape: $shape, expected at least [batch, features, predictions]');
+      return const PoseDetectionResult(poses: []);
+    }
+
+    // Handle both 2D and 3D shapes
+    // 3D: [1, 56, 8400] or [1, 8400, 56]
+    // 2D: [56, 8400] or [8400, 56]
+    final bool isTransposed;
+    if (shape.length >= 3) {
+      // Detect transposed format: [1, 56, 8400] vs [1, 8400, 56]
+      isTransposed = shape[1] < shape[2];
+    } else if (shape.length == 2) {
+      // 2D shape: [56, 8400] vs [8400, 56]
+      isTransposed = shape[0] < shape[1];
+    } else {
+      debugPrint('❌ Cannot determine format for shape: $shape');
+      return const PoseDetectionResult(poses: []);
+    }
 
     final poses = isTransposed
         ? _parseTransposedOutput(floatData, shape)
@@ -78,11 +96,22 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
     return PoseDetectionResult(poses: limited);
   }
 
-  /// Parse transposed format [1, 56, 8400]
+  /// Parse transposed format [1, 56, 8400] or [56, 8400]
   List<DetectedPose> _parseTransposedOutput(
       Float32List floatData, List<int> shape) {
-    final numPredictions = shape[2]; // 8400
+    // Handle both 3D [1, 56, 8400] and 2D [56, 8400] shapes
+    final numFeatures = shape.length >= 3 ? shape[1] : shape[0]; // 56
+    final numPredictions = shape.length >= 3 ? shape[2] : shape[1]; // 8400
     final poses = <DetectedPose>[];
+
+    // Validate float data size
+    final expectedSize = numFeatures * numPredictions;
+    if (floatData.length < expectedSize) {
+      debugPrint('❌ Float data too small: ${floatData.length} < $expectedSize');
+      return poses;
+    }
+
+    debugPrint('📊 Parsing transposed pose: features=$numFeatures, predictions=$numPredictions');
 
     for (int i = 0; i < numPredictions; i++) {
       // bbox: x, y, w, h
@@ -131,12 +160,22 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
     return poses;
   }
 
-  /// Parse normal format [1, 8400, 56]
+  /// Parse normal format [1, 8400, 56] or [8400, 56]
   List<DetectedPose> _parseNormalOutput(
       Float32List floatData, List<int> shape) {
-    final numPredictions = shape[1]; // 8400
-    final stride = shape.length >= 3 ? shape[2] : 56; // 56
+    // Handle both 3D [1, 8400, 56] and 2D [8400, 56] shapes
+    final numPredictions = shape.length >= 3 ? shape[1] : shape[0]; // 8400
+    final stride = shape.length >= 3 ? shape[2] : shape[1]; // 56
     final poses = <DetectedPose>[];
+
+    // Validate float data size
+    final expectedSize = numPredictions * stride;
+    if (floatData.length < expectedSize) {
+      debugPrint('❌ Float data too small: ${floatData.length} < $expectedSize');
+      return poses;
+    }
+
+    debugPrint('📊 Parsing normal pose: predictions=$numPredictions, stride=$stride');
 
     for (int i = 0; i < numPredictions; i++) {
       final offset = i * stride;

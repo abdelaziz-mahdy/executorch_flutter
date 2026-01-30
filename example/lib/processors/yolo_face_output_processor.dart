@@ -55,8 +55,26 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
 
     debugPrint('🔍 YOLO-Face output shape: $shape');
 
-    // Detect transposed format
-    final isTransposed = shape.length >= 3 && shape[1] < shape[2];
+    // Validate shape has at least 2 dimensions (excluding batch)
+    if (shape.length < 2) {
+      debugPrint('❌ Unexpected shape: $shape, expected at least [batch, features, predictions]');
+      return const FaceDetectionResult(faces: []);
+    }
+
+    // Handle both 2D and 3D shapes
+    // 3D: [1, 20, 8400] or [1, 8400, 20]
+    // 2D: [20, 8400] or [8400, 20]
+    final bool isTransposed;
+    if (shape.length >= 3) {
+      // Detect transposed format: [1, 20, 8400] vs [1, 8400, 20]
+      isTransposed = shape[1] < shape[2];
+    } else if (shape.length == 2) {
+      // 2D shape: [20, 8400] vs [8400, 20]
+      isTransposed = shape[0] < shape[1];
+    } else {
+      debugPrint('❌ Cannot determine format for shape: $shape');
+      return const FaceDetectionResult(faces: []);
+    }
 
     final faces = isTransposed
         ? _parseTransposedOutput(floatData, shape)
@@ -78,12 +96,22 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
     return FaceDetectionResult(faces: limited);
   }
 
-  /// Parse transposed format [1, N, 8400] where N is features
+  /// Parse transposed format [1, N, 8400] or [N, 8400] where N is features
   List<DetectedFace> _parseTransposedOutput(
       Float32List floatData, List<int> shape) {
-    final numFeatures = shape[1];
-    final numPredictions = shape[2];
+    // Handle both 3D [1, N, 8400] and 2D [N, 8400] shapes
+    final numFeatures = shape.length >= 3 ? shape[1] : shape[0];
+    final numPredictions = shape.length >= 3 ? shape[2] : shape[1];
     final faces = <DetectedFace>[];
+
+    // Validate float data size
+    final expectedSize = numFeatures * numPredictions;
+    if (floatData.length < expectedSize) {
+      debugPrint('❌ Float data too small: ${floatData.length} < $expectedSize');
+      return faces;
+    }
+
+    debugPrint('📊 Parsing transposed face: features=$numFeatures, predictions=$numPredictions');
 
     // Detect format based on number of features
     // Common formats:
@@ -135,12 +163,22 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
     return faces;
   }
 
-  /// Parse normal format [1, 8400, N]
+  /// Parse normal format [1, 8400, N] or [8400, N]
   List<DetectedFace> _parseNormalOutput(
       Float32List floatData, List<int> shape) {
-    final numPredictions = shape[1];
-    final numFeatures = shape.length >= 3 ? shape[2] : 15;
+    // Handle both 3D [1, 8400, N] and 2D [8400, N] shapes
+    final numPredictions = shape.length >= 3 ? shape[1] : shape[0];
+    final numFeatures = shape.length >= 3 ? shape[2] : shape[1];
     final faces = <DetectedFace>[];
+
+    // Validate float data size
+    final expectedSize = numPredictions * numFeatures;
+    if (floatData.length < expectedSize) {
+      debugPrint('❌ Float data too small: ${floatData.length} < $expectedSize');
+      return faces;
+    }
+
+    debugPrint('📊 Parsing normal face: predictions=$numPredictions, features=$numFeatures');
 
     final hasClass = numFeatures >= 16;
     final landmarkOffset = hasClass ? 6 : 5;

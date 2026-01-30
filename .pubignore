@@ -10,8 +10,8 @@ example/ios/.gitignore
 example/macos/.gitignore
 ios/.gitignore
 
-# Build artifacts and generated files
-build/
+# Build artifacts and generated files (root level only, not lib/src/build/)
+/build/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies

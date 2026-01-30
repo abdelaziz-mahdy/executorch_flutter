@@ -60,7 +60,7 @@ const String _packageName = 'executorch_flutter';
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
 /// releases for the same ExecuTorch version.
-const String _defaultPrebuiltVersion = '$executorchVersion.2';
+const String _defaultPrebuiltVersion = '$executorchVersion.3';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';

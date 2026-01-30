@@ -340,24 +340,43 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
         .where((dim) => dim != null)
         .map((dim) => dim!)
         .toList();
-    if (shape.length < 2) return [];
+
+    // Validate shape has at least 2 dimensions
+    if (shape.length < 2) {
+      debugPrint('❌ Unexpected shape: $shape, expected at least [batch, features, predictions]');
+      return [];
+    }
 
     // Detect format:
-    // Transposed: [batch, features, predictions] = [1, 84, 8400] - features is SMALL
-    // Normal: [batch, predictions, features] = [1, 8400, 84] - predictions is LARGE
-    final isTransposed = shape.length >= 3 && shape[1] < shape[2];
+    // Handle both 2D and 3D shapes
+    // 3D Transposed: [batch, features, predictions] = [1, 84, 8400] - features is SMALL
+    // 3D Normal: [batch, predictions, features] = [1, 8400, 84] - predictions is LARGE
+    // 2D Transposed: [features, predictions] = [84, 8400]
+    // 2D Normal: [predictions, features] = [8400, 84]
+    final bool isTransposed;
+    if (shape.length >= 3) {
+      isTransposed = shape[1] < shape[2];
+    } else {
+      // 2D shape
+      isTransposed = shape[0] < shape[1];
+    }
 
     int outputColumn; // number of features (84 or 85)
     int outputRow; // number of predictions (8400, 25200, etc)
 
     if (isTransposed) {
-      outputColumn = shape[1]; // features
-      outputRow = shape[2]; // predictions
+      outputColumn = shape.length >= 3 ? shape[1] : shape[0]; // features
+      outputRow = shape.length >= 3 ? shape[2] : shape[1]; // predictions
     } else {
-      outputRow = shape.length >= 2 ? shape[1] : 0; // predictions
-      outputColumn = shape.length >= 3
-          ? shape[2]
-          : (outputs.length ~/ outputRow); // features
+      outputRow = shape.length >= 3 ? shape[1] : shape[0]; // predictions
+      outputColumn = shape.length >= 3 ? shape[2] : shape[1]; // features
+    }
+
+    // Validate float data size
+    final expectedSize = outputRow * outputColumn;
+    if (outputs.length < expectedSize) {
+      debugPrint('❌ Float data too small: ${outputs.length} < $expectedSize');
+      return [];
     }
 
     debugPrint(
