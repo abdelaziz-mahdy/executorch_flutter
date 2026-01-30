@@ -38,6 +38,13 @@
 - Fixed model dropdown being empty when switching to versions without `platforms`
   field in index.json (backward compatibility with 1.0.1 models)
 
+## 0.2.2
+
+### Fixed
+- Fixed `.pubignore` pattern `build/` excluding `lib/src/build/run_build.dart` from published package
+  - This caused "No such file or directory" errors when using the package from pub.dev
+  - Changed to `/build/` to only match root-level build directory
+
 ## 0.2.1
 
 ### Fixed
