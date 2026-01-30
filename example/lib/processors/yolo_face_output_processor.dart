@@ -115,11 +115,18 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
 
     // Detect format based on number of features
     // Common formats:
+    // - 5: 4 bbox + 1 conf (no landmarks - basic face detector)
     // - 15: 4 bbox + 1 conf + 10 landmarks (5*2)
     // - 16: 4 bbox + 1 conf + 1 class + 10 landmarks
     // - 20: 4 bbox + 1 conf + 1 class + 10 landmarks + 4 (visibility)
     final hasClass = numFeatures >= 16;
     final landmarkOffset = hasClass ? 6 : 5;
+    // Need at least 15 features to have landmarks (5 bbox/conf + 10 landmark coords)
+    final hasLandmarks = numFeatures >= 15;
+
+    if (!hasLandmarks) {
+      debugPrint('⚠️ Model has no landmarks (features=$numFeatures < 15), returning faces without landmarks');
+    }
 
     for (int i = 0; i < numPredictions; i++) {
       final cx = floatData[0 * numPredictions + i];
@@ -136,20 +143,22 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
           height: (h / inputHeight).clamp(0.0, 1.0),
         );
 
-        // Parse 5 landmarks (left_eye, right_eye, nose, left_mouth, right_mouth)
+        // Parse 5 landmarks only if the model supports them
         final landmarks = <FaceLandmark>[];
-        for (int k = 0; k < 5; k++) {
-          final lmX = floatData[(landmarkOffset + k * 2) * numPredictions + i] /
-              inputWidth;
-          final lmY =
-              floatData[(landmarkOffset + k * 2 + 1) * numPredictions + i] /
-                  inputHeight;
+        if (hasLandmarks) {
+          for (int k = 0; k < 5; k++) {
+            final lmX = floatData[(landmarkOffset + k * 2) * numPredictions + i] /
+                inputWidth;
+            final lmY =
+                floatData[(landmarkOffset + k * 2 + 1) * numPredictions + i] /
+                    inputHeight;
 
-          landmarks.add(FaceLandmark.fromYoloFace(
-            type: YoloFaceLandmarkType.values[k],
-            x: lmX.clamp(0.0, 1.0),
-            y: lmY.clamp(0.0, 1.0),
-          ));
+            landmarks.add(FaceLandmark.fromYoloFace(
+              type: YoloFaceLandmarkType.values[k],
+              x: lmX.clamp(0.0, 1.0),
+              y: lmY.clamp(0.0, 1.0),
+            ));
+          }
         }
 
         faces.add(DetectedFace(
@@ -182,6 +191,12 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
 
     final hasClass = numFeatures >= 16;
     final landmarkOffset = hasClass ? 6 : 5;
+    // Need at least 15 features to have landmarks (5 bbox/conf + 10 landmark coords)
+    final hasLandmarks = numFeatures >= 15;
+
+    if (!hasLandmarks) {
+      debugPrint('⚠️ Model has no landmarks (features=$numFeatures < 15), returning faces without landmarks');
+    }
 
     for (int i = 0; i < numPredictions; i++) {
       final offset = i * numFeatures;
@@ -200,17 +215,20 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
           height: (h / inputHeight).clamp(0.0, 1.0),
         );
 
+        // Parse 5 landmarks only if the model supports them
         final landmarks = <FaceLandmark>[];
-        for (int k = 0; k < 5; k++) {
-          final lmOffset = offset + landmarkOffset + k * 2;
-          final lmX = floatData[lmOffset] / inputWidth;
-          final lmY = floatData[lmOffset + 1] / inputHeight;
+        if (hasLandmarks) {
+          for (int k = 0; k < 5; k++) {
+            final lmOffset = offset + landmarkOffset + k * 2;
+            final lmX = floatData[lmOffset] / inputWidth;
+            final lmY = floatData[lmOffset + 1] / inputHeight;
 
-          landmarks.add(FaceLandmark.fromYoloFace(
-            type: YoloFaceLandmarkType.values[k],
-            x: lmX.clamp(0.0, 1.0),
-            y: lmY.clamp(0.0, 1.0),
-          ));
+            landmarks.add(FaceLandmark.fromYoloFace(
+              type: YoloFaceLandmarkType.values[k],
+              x: lmX.clamp(0.0, 1.0),
+              y: lmY.clamp(0.0, 1.0),
+            ));
+          }
         }
 
         faces.add(DetectedFace(

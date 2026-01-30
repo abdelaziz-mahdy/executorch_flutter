@@ -70,7 +70,7 @@ dependencies:
 hooks:
   user_defines:
     executorch_flutter:
-      debug: true
+      # debug: true
       backends:
         - xnnpack
         - coreml
