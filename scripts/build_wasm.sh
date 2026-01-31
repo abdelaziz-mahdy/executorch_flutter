@@ -196,11 +196,14 @@ echo -e "${GREEN}========================================"
 echo "Build successful!"
 echo "========================================${NC}"
 
-# Run setup_web.dart to copy files to example project
+# Copy files to example project directly (avoid dart run which triggers native build hooks)
 echo ""
 echo -e "${BLUE}Setting up web files for example project...${NC}"
-cd "${PACKAGE_ROOT}/example"
-dart run ../bin/setup_web.dart
+EXAMPLE_WASM_DIR="${PACKAGE_ROOT}/example/web/wasm"
+mkdir -p "${EXAMPLE_WASM_DIR}"
+cp "${WEB_WASM_DIR}/executorch.js" "${EXAMPLE_WASM_DIR}/"
+cp "${WEB_WASM_DIR}/executorch.wasm" "${EXAMPLE_WASM_DIR}/"
+echo -e "${GREEN}✅ Copied WASM files to example/web/wasm/${NC}"
 
 echo ""
 echo -e "${GREEN}✅ Web setup complete!${NC}"

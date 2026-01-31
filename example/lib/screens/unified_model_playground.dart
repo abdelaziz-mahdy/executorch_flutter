@@ -21,6 +21,10 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   List<ModelDefinition>? _availableModels;
   ModelController? _controller;
 
+  // Version state
+  List<String> _availableVersions = [executorchVersion];
+  String _selectedVersion = executorchVersion;
+
   // Loading state
   bool _isLoadingModels = true;
   bool _isLoadingModel = false;
@@ -35,7 +39,53 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   @override
   void initState() {
     super.initState();
-    _loadAvailableModels();
+    _loadVersionsAndModels();
+  }
+
+  Future<void> _loadVersionsAndModels() async {
+    // First load available versions
+    try {
+      final versions = await ModelRegistry.fetchAvailableVersions();
+      setState(() {
+        _availableVersions = versions.versions;
+        // Keep selected version if it's still valid, otherwise use latest
+        if (!_availableVersions.contains(_selectedVersion)) {
+          _selectedVersion = versions.latest;
+        }
+      });
+    } catch (e) {
+      debugPrint('Failed to load versions: $e');
+      // Keep default version
+    }
+
+    // Then load models for selected version
+    await _loadAvailableModels();
+  }
+
+  Future<void> _onVersionChanged(String version) async {
+    if (version == _selectedVersion) return;
+
+    // Dispose current model if any
+    final oldController = _controller;
+    if (oldController != null) {
+      oldController.removeListener(_onControllerChanged);
+      setState(() {
+        _controller = null;
+      });
+      await oldController.dispose();
+    }
+
+    setState(() {
+      _selectedVersion = version;
+      _isLoadingModels = true;
+      _availableModels = null;
+    });
+
+    // Update the service's selected version
+    ModelRegistry.selectedVersion = version;
+
+    // Reload models for the new version
+    await _loadAvailableModels();
   }
 
   void _onControllerChanged() {
@@ -53,7 +103,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
 
   Future<void> _loadAvailableModels() async {
     try {
-      final models = await ModelRegistry.loadAll();
+      final models = await ModelRegistry.loadAll(version: _selectedVersion);
       setState(() {
         _availableModels = models;
         _isLoadingModels = false;
@@ -87,8 +137,11 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       // Download model from remote URL (or use cached version)
       final downloadService = ModelDownloadService.instance;
 
-      // Check if model needs to be downloaded
-      final isCached = await downloadService.isModelCached(model.name);
+      // Check if model needs to be downloaded (version-aware)
+      final isCached = await downloadService.isModelCached(
+        model.name,
+        version: _selectedVersion,
+      );
       if (!isCached) {
         setState(() {
           _isDownloading = true;
@@ -96,9 +149,12 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         });
       }
 
+      // Download with version-aware caching and hash verification
       final downloadInfo = await downloadService.downloadModel(
         modelName: model.name,
         remoteUrl: model.remoteUrl,
+        version: _selectedVersion,
+        expectedHash: model.hash,
         onProgress: (progress, received, total) {
           if (mounted) {
             setState(() {
@@ -319,6 +375,129 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     );
   }
 
+  void _showRuntimeInfoDialog() {
+    // Get available backends
+    final availableBackends = BackendQuery.available;
+    final allBackends = Backend.values;
+
+    // Get version info
+    final ffiVersion = ExecuTorchVersion.version;
+    final etVersion = ExecuTorchVersion.executorchVersion;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline),
+            SizedBox(width: 8),
+            Text('Runtime Info'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Version section
+              Text(
+                'Version',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              _buildInfoRow('ExecuTorch', etVersion),
+              _buildInfoRow('FFI Library', ffiVersion),
+              _buildInfoRow('Plugin', executorchVersion),
+              const Divider(height: 24),
+
+              // Backends section
+              Text(
+                'Backends',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              ...allBackends.map((backend) {
+                final isAvailable = availableBackends.contains(backend);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isAvailable ? Icons.check_circle : Icons.cancel,
+                        color: isAvailable ? Colors.green : Colors.red,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(backend.displayName),
+                      const Spacer(),
+                      Text(
+                        isAvailable ? 'Available' : 'Not compiled',
+                        style: TextStyle(
+                          color: isAvailable ? Colors.green : Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const Divider(height: 24),
+
+              // Platform section
+              Text(
+                'Platform',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              _buildInfoRow(
+                'OS',
+                UniversalPlatform.isWeb
+                    ? 'Web'
+                    : UniversalPlatform.isAndroid
+                        ? 'Android'
+                        : UniversalPlatform.isIOS
+                            ? 'iOS'
+                            : UniversalPlatform.isMacOS
+                                ? 'macOS'
+                                : UniversalPlatform.isWindows
+                                    ? 'Windows'
+                                    : UniversalPlatform.isLinux
+                                        ? 'Linux'
+                                        : 'Unknown',
+              ),
+              _buildInfoRow('Selected Version', _selectedVersion),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
   void _showSettingsDialog() {
     if (_controller == null) return;
 
@@ -372,6 +551,12 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         title: const Text('Model Playground'),
         elevation: 0,
         actions: [
+          // Info button - shows runtime info (backends, version)
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: _showRuntimeInfoDialog,
+            tooltip: 'Runtime Info',
+          ),
           // Settings button - only shown when a model is selected
           if (_controller != null)
             IconButton(
@@ -455,38 +640,111 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
   Widget _buildModelSelector() {
     return Container(
       padding: const EdgeInsets.all(16),
-      child: DropdownButtonFormField<ModelDefinition>(
-        initialValue: _controller?.definition,
-        decoration: InputDecoration(
-          labelText: 'Select Model',
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        items: _availableModels?.map((model) {
-          return DropdownMenuItem(
-            value: model,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(model.icon, size: 20),
-                const SizedBox(width: 12),
-                Flexible(
-                  fit: FlexFit.loose,
-                  child: Text(
-                    model.fileSizeMB > 0
-                        ? '${model.displayName} (${model.fileSizeMB.toStringAsFixed(1)} MB)'
-                        : model.displayName,
-                    overflow: TextOverflow.ellipsis,
+      child: Column(
+        children: [
+          // Version selector row
+          Row(
+            children: [
+              // Version dropdown (compact)
+              SizedBox(
+                width: 120,
+                child: DropdownButtonFormField<String>(
+                  initialValue: _selectedVersion,
+                  decoration: InputDecoration(
+                    labelText: 'Version',
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
+                  items: _availableVersions.map((version) {
+                    final isCurrentPlugin = version == executorchVersion;
+                    return DropdownMenuItem(
+                      value: version,
+                      child: Text(
+                        isCurrentPlugin ? '$version ✓' : version,
+                        style: TextStyle(
+                          fontWeight:
+                              isCurrentPlugin ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: _isLoadingModel || _isLoadingModels
+                      ? null
+                      : (version) {
+                          if (version != null) _onVersionChanged(version);
+                        },
                 ),
-              ],
+              ),
+              const SizedBox(width: 12),
+              // Model dropdown (expanded)
+              Expanded(
+                child: DropdownButtonFormField<ModelDefinition>(
+                  initialValue: _controller?.definition,
+                  decoration: InputDecoration(
+                    labelText: 'Select Model',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: _availableModels?.map((model) {
+                    return DropdownMenuItem(
+                      value: model,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(model.icon, size: 20),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            fit: FlexFit.loose,
+                            child: Text(
+                              model.fileSizeMB > 0
+                                  ? '${model.displayName} (${model.fileSizeMB.toStringAsFixed(1)} MB)'
+                                  : model.displayName,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: _isLoadingModel
+                      ? null
+                      : (model) {
+                          if (model != null) _selectModel(model);
+                        },
+                ),
+              ),
+            ],
+          ),
+          // Version info hint
+          if (_selectedVersion != executorchVersion)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Using models for ExecuTorch $_selectedVersion (plugin built with $executorchVersion)',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        }).toList(),
-        onChanged: _isLoadingModel
-            ? null
-            : (model) {
-                if (model != null) _selectModel(model);
-              },
+        ],
       ),
     );
   }

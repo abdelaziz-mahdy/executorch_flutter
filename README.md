@@ -1,8 +1,30 @@
 # ExecuTorch Flutter
 
-A Flutter plugin package using ExecuTorch to allow model inference on Android, iOS, macOS, Windows, Linux, and Web platforms.
+A Flutter plugin for on-device ML inference using PyTorch ExecuTorch, supporting Android, iOS, macOS, Windows, Linux, and Web.
 
-**📦 [pub.dev](https://pub.dev/packages/executorch_flutter)** | **🌐 [Live Demo](https://abdelaziz-mahdy.github.io/executorch_flutter/)** | **🔧 [Example App](example/)**
+**[pub.dev](https://pub.dev/packages/executorch_flutter)** | **[Live Demo](https://abdelaziz-mahdy.github.io/executorch_flutter/)** | **[Example App](example/)**
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Platform Support](#platform-support)
+- [API Reference](#api-reference)
+- [Build Configuration](#build-configuration)
+- [Advanced Usage](#advanced-usage)
+- [Web Platform](#web-platform)
+- [Example Application](#example-application)
+- [Model Export](#converting-pytorch-models-to-executorch)
+- [Troubleshooting](#troubleshooting)
+- [Vulkan Backend (Experimental)](#experimental-vulkan-backend)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## Overview
 
@@ -10,576 +32,367 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 ## Features
 
-- ✅ **Cross-Platform Support**: Android (API 23+), iOS (13.0+), macOS (11.0+), Windows, Linux, and Web
-- ✅ **Type-Safe API**: dart:ffi bindings with type-safe Dart wrapper classes
-- ✅ **Async Operations**: Non-blocking model loading and inference execution
-- ✅ **Multiple Models**: Support for concurrent model instances
-- ✅ **Error Handling**: Structured exception handling with clear error messages
-- ✅ **Backend Support**: XNNPACK, CoreML, MPS, Vulkan backends
-- ✅ **Live Camera**: Real-time inference with camera stream support
+- **Cross-Platform**: Android (API 23+), iOS (13.0+), macOS (11.0+), Windows, Linux, and Web
+- **Type-Safe API**: dart:ffi bindings with type-safe Dart wrapper classes
+- **Async Operations**: Non-blocking model loading and inference
+- **Multiple Models**: Support for concurrent model instances
+- **Error Handling**: Structured exception handling with clear error messages
+- **Backend Support**: XNNPACK, CoreML, MPS, Vulkan backends
+- **Live Camera**: Real-time inference with camera stream support
 
-## Library Size by Backend
+### Library Size by Backend
 
-The native library size varies depending on which backends are enabled.
+<!-- NATIVE_VERSION_START -->
+**[Download Release Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.1.0.4/size-report-release.svg)** | **[Debug Size (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.1.0.4/size-report-debug.svg)** | **[JSON Report](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.1.0.4/size-report.json)**
+<!-- NATIVE_VERSION_END -->
 
-📊 **[Download Release Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-release.svg)** | **[Download Debug Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-debug.svg)** | **[JSON Report](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.json)**
-
-*Size reports are auto-generated for each release. Download the SVG files to view detailed size breakdowns by platform and backend.*
+---
 
 ## Installation
 
-**Requirements:**
-- Flutter 3.38+ (first version with native assets hooks support)
-
-Add to your `pubspec.yaml`:
+**Requirements:** Flutter 3.38+ (first version with native assets hooks)
 
 ```yaml
 dependencies:
-  executorch_flutter: ^0.2.1
+  # PACKAGE_VERSION_START
+  executorch_flutter: ^0.3.0
+  # PACKAGE_VERSION_END
 ```
 
-## Basic Usage
+---
 
-The package provides a simple, intuitive API that matches native ExecuTorch patterns:
+## Quick Start
 
 ### 1. Load a Model
 
 ```dart
 import 'package:executorch_flutter/executorch_flutter.dart';
 
-// Recommended: Load from Flutter assets (works on all platforms including web)
+// Load from Flutter assets (recommended - works on all platforms)
 final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
 ```
 
 ### 2. Run Inference
 
 ```dart
-// Prepare input tensor
 final inputTensor = TensorData(
   shape: [1, 3, 224, 224],
   dataType: TensorType.float32,
   data: yourImageBytes,
 );
 
-// Run inference
 final outputs = await model.forward([inputTensor]);
 
-// Process outputs
 for (var output in outputs) {
-  print('Output shape: ${output.shape}');
-  print('Output type: ${output.dataType}');
+  print('Shape: ${output.shape}, Type: ${output.dataType}');
 }
+```
 
-// Clean up when done
+### 3. Clean Up
+
+```dart
 await model.dispose();
 ```
 
-### 3. Loading Models
+### Model Loading Options
 
-**From Assets (Recommended - works on all platforms including web):**
+| Method | Platforms | Use Case |
+|--------|-----------|----------|
+| `loadFromAsset(path)` | All (including web) | Bundled assets |
+| `loadFromBytes(bytes)` | All (including web) | Downloaded/cached models |
+| `load(filePath)` | Native only | External file paths |
+
 ```dart
-// Simply use the asset path - no manual file copying needed
-final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
-final outputs = await model.forward([inputTensor]);
-await model.dispose();
-```
-
-**From Bytes (works on all platforms):**
-```dart
-import 'package:flutter/services.dart' show rootBundle;
-
+// From bytes
 final byteData = await rootBundle.load('assets/models/model.pte');
 final model = await ExecuTorchModel.loadFromBytes(byteData.buffer.asUint8List());
-final outputs = await model.forward([inputTensor]);
-await model.dispose();
-```
 
-**From File Path (native platforms only):**
-```dart
-// Only available on Android, iOS, macOS, Windows, Linux - not on web
+// From file path (native platforms only)
 final model = await ExecuTorchModel.load('/path/to/model.pte');
-final outputs = await model.forward([inputTensor]);
-await model.dispose();
 ```
 
-### Complete Examples
+---
 
-See the `example/` directory for a full working application:
+## Platform Support
 
-- **[Unified Model Playground](example/lib/screens/unified_model_playground.dart)** - Complete app with MobileNet classification and YOLO object detection, supporting both static images and live camera
+| Platform | Min Version | Architectures | Backends |
+|----------|-------------|---------------|----------|
+| **Android** | API 23 | arm64-v8a, armeabi-v7a, x86_64, x86 | XNNPACK, Vulkan* |
+| **iOS** | 13.0+ | arm64, x86_64+arm64 (sim) | XNNPACK, CoreML, Vulkan* |
+| **macOS** | 11.0+ | arm64, x86_64 | XNNPACK, CoreML, MPS, Vulkan* |
+| **Windows** | 10+ | x64 | XNNPACK, Vulkan* |
+| **Linux** | Ubuntu 20.04+ | x64, arm64 | XNNPACK, Vulkan* |
+| **Web** | Modern browsers | WebAssembly | XNNPACK (Wasm SIMD) |
 
-## Supported Model Formats
+*\*Vulkan is opt-in and experimental. See [Vulkan Backend](#experimental-vulkan-backend).*
 
-- **ExecuTorch (.pte)**: Optimized PyTorch models converted to ExecuTorch format
-- **Input Types**: float32, int8, int32, uint8 tensors
-- **Model Size**: Tested with models up to 500MB
+### Platform Configuration
 
-> 📖 **Need to export your PyTorch models?** See the [Official ExecuTorch Export Guide](https://pytorch.org/executorch/stable/tutorials/export-to-executorch-tutorial.html) for converting PyTorch models to ExecuTorch format with platform-specific optimizations.
+If you encounter deployment target errors, update your project settings:
 
-## Platform Requirements
+<details>
+<summary><b>iOS Deployment Target (iOS 13.0+)</b></summary>
 
-### Android
-- **Minimum SDK**: API 23 (Android 6.0)
-- **Architectures**: arm64-v8a, armeabi-v7a, x86_64, x86
-- **Supported Backends**: XNNPACK, Vulkan (opt-in)
+1. Open `ios/Runner.xcworkspace` in Xcode
+2. Select **Runner** target → **Build Settings**
+3. Search "iOS Deployment Target" → Set to **13.0**
+</details>
 
-### iOS
-- **Minimum Version**: iOS 13.0+
-- **Architectures**: arm64 (device), x86_64 + arm64 (simulator)
-- **Supported Backends**: XNNPACK, CoreML, Vulkan (opt-in, via MoltenVK)
+<details>
+<summary><b>macOS Deployment Target (macOS 11.0+)</b></summary>
 
-### macOS
-- **Minimum Version**: macOS 11.0+ (Big Sur)
-- **Architectures**: arm64 (Apple Silicon), x86_64 (Intel)
-- **Supported Backends**: XNNPACK, CoreML, MPS (arm64 only), Vulkan (opt-in, via MoltenVK)
+1. Open `macos/Runner.xcworkspace` in Xcode
+2. Select **Runner** target → **Build Settings**
+3. Search "macOS Deployment Target" → Set to **11.0**
+</details>
 
-### Windows
-- **Minimum Version**: Windows 10+
-- **Architecture**: x64
-- **Supported Backends**: XNNPACK, Vulkan (opt-in)
-
-### Linux
-- **Minimum Version**: Ubuntu 20.04+ or equivalent
-- **Architectures**: x64, arm64
-- **Supported Backends**: XNNPACK, Vulkan (opt-in)
-
-### Web
-- **Status**: Supported via WebAssembly
-- **Runtime**: WebAssembly (Wasm) with XNNPACK backend
-- **Supported Backends**: XNNPACK (Wasm SIMD)
-
-#### Web Performance
-
-Web with XNNPACK is ~6-10x slower than native, but fully functional for interactive use.
-
-| Platform | Backend | YOLO11n Inference | Total (E2E) |
-|----------|---------|-------------------|-------------|
-| Native (macOS/iOS/Android) | XNNPACK | ~50-100ms | ~150-200ms |
-| Web | XNNPACK (Wasm SIMD) | ~622ms | ~855ms |
-
-**Web Performance Breakdown (YOLO11n):**
-
-| Stage | Time | % of Total |
-|-------|------|------------|
-| Preprocessing | ~154ms | 18% |
-| Inference | ~622ms | 73% |
-| Postprocessing | ~79ms | 9% |
-
-**When to use Web:**
-- ✅ Demos and prototyping
-- ✅ Interactive inference (sub-second response)
-- ✅ Accessibility (no app install required)
-- ❌ Real-time camera inference
-- ❌ High-throughput batch processing
-
-#### Web Setup
-
-1. **Run the setup script** to copy required JavaScript and Wasm files:
-
+After updating, run:
 ```bash
-dart run executorch_flutter:setup_web
+flutter clean && flutter pub get && flutter build <platform>
 ```
 
-2. **Add the script tag** to your `web/index.html` (before the Flutter bootstrap script):
-
-```html
-<head>
-  <!-- ... other head elements ... -->
-
-  <!-- ExecuTorch Wasm wrapper - must load before Flutter -->
-  <script src="js/executorch_wrapper.js"></script>
-</head>
-<body>
-  <script src="flutter_bootstrap.js" async></script>
-</body>
-```
-
-3. **Use XNNPACK models** - Web uses the same XNNPACK-exported models as native platforms.
-
-> **Note**: File-based model loading is not supported on web - models are loaded from bytes or remote URLs.
-
-## Platform Configuration
-
-When adding `executorch_flutter` to an existing Flutter project, you may need to update the minimum deployment targets. If you see build errors mentioning platform versions, follow these steps:
-
-### iOS Deployment Target (iOS 13.0+)
-
-If you get an error like: `The package product 'executorch-flutter' requires minimum platform version 13.0 for the iOS platform`
-
-**Update using Xcode (Recommended):**
-1. Open your Flutter project in Xcode:
-   - Navigate to your project folder
-   - Open `ios/Runner.xcworkspace` (NOT the `.xcodeproj` file)
-2. In Xcode's left sidebar, click on **Runner** (the blue project icon at the top)
-3. Make sure **Runner** is selected under "TARGETS" (not under "PROJECT")
-4. Click the **Build Settings** tab at the top
-5. In the search bar, type: `iOS Deployment Target`
-6. You'll see "iOS Deployment Target" with a version number (like 13.0)
-7. Click on the version number and change it to **13.0**
-8. Close Xcode
-
-### macOS Deployment Target (macOS 11.0+)
-
-If you get an error like: `The package product 'executorch-flutter' requires minimum platform version 11.0 for the macOS platform`
-
-**Update using Xcode (Recommended):**
-1. Open your Flutter project in Xcode:
-   - Navigate to your project folder
-   - Open `macos/Runner.xcworkspace` (NOT the `.xcodeproj` file)
-2. In Xcode's left sidebar, click on **Runner** (the blue project icon at the top)
-3. Make sure **Runner** is selected under "TARGETS" (not under "PROJECT")
-4. Click the **Build Settings** tab at the top
-5. In the search bar, type: `macOS Deployment Target`
-6. You'll see "macOS Deployment Target" with a version number (like 10.15)
-7. Click on the version number and change it to **11.0**
-8. Close Xcode
-
-### Verification
-
-After updating deployment targets, clean and rebuild:
-
-```bash
-# Clean build artifacts
-flutter clean
-
-# Get dependencies
-flutter pub get
-
-# Build for your target platform
-flutter build ios --debug --no-codesign  # For iOS
-flutter build macos --debug               # For macOS
-flutter build apk --debug                 # For Android
-```
-
-## Build Configuration
-
-The package supports build-time configuration through Flutter's `hooks` system in your app's `pubspec.yaml`. This allows you to customize the build behavior without modifying package code.
-
-### Configuration Options
-
-Add the following to your **app's** `pubspec.yaml` (not the package):
-
-```yaml
-hooks:
-  user_defines:
-    executorch_flutter:
-      # Enable debug logging and use Debug prebuilt binaries
-      debug: true
-
-      # Build mode: "prebuilt" (default) or "source"
-      build_mode: "prebuilt"
-
-      # ExecuTorch source version - for source builds (default: "1.0.1")
-      executorch_version: "1.0.1"
-
-      # Prebuilt release version - for prebuilt downloads (default: "1.0.1.21")
-      prebuilt_version: "1.0.1.21"
-
-      # Backend selection (platform-specific defaults apply)
-      backends:
-        - xnnpack
-        - coreml
-        - mps
-```
-
-### Available Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `debug` | `bool` | `false` | Enables native debug logging and selects Debug prebuilt binaries (useful for debugging crashes) |
-| `build_mode` | `string` | `"prebuilt"` | `"prebuilt"` downloads pre-compiled binaries (fast, recommended). `"source"` builds from source (slower, requires Python 3.8+ with pyyaml) |
-| `executorch_version` | `string` | `"1.0.1"` | ExecuTorch source version (for source builds) |
-| `prebuilt_version` | `string` | `"1.0.1.21"` | Prebuilt release version (for prebuilt downloads) |
-| `backends` | `list` | Platform-specific | List of backends to enable. Options: `xnnpack`, `coreml`, `mps`, `vulkan`, `qnn` |
-
-### Backend Defaults by Platform
-
-If `backends` is not specified, the following defaults are used:
-
-| Platform | Default Backends |
-|----------|------------------|
-| Android | xnnpack |
-| iOS | xnnpack, coreml |
-| macOS | xnnpack, coreml, mps |
-| Windows | xnnpack |
-| Linux | xnnpack |
-
-> **Note**: Vulkan is available but **opt-in only** due to runtime initialization issues on some platforms and UBO size limits on certain Android devices. To enable Vulkan, explicitly add it to your backends list in pubspec.yaml.
-
-### Prebuilt Binaries
-
-Prebuilt binaries are maintained by the package maintainer and hosted at [executorch_native](https://github.com/abdelaziz-mahdy/executorch_native). The prebuilt mode downloads these pre-compiled libraries automatically during the Flutter build process.
-
-**Available prebuilt configurations:**
-- Release and Debug builds for each platform
-- Platform-specific backend combinations (see table above)
-
-**Request new backends or platforms:** If you need a backend or platform configuration that isn't currently available in prebuilt mode, please [open an issue](https://github.com/abdelaziz-mahdy/executorch_native/issues) on the executorch_native repository.
-
-### Environment Variables
-
-You can also override configuration via environment variables:
-
-| Variable | Description |
-|----------|-------------|
-| `EXECUTORCH_BUILD_MODE` | Override build mode ("prebuilt" or "source") |
-| `EXECUTORCH_CACHE_DIR` | Custom cache directory for downloaded/built artifacts |
-| `EXECUTORCH_DISABLE_DOWNLOAD` | Set to "1" to skip prebuilt download (requires `EXECUTORCH_INSTALL_DIR`) |
-| `EXECUTORCH_INSTALL_DIR` | Path to local ExecuTorch installation |
-
-### Example Configurations
-
-**Debug build with verbose logging:**
-```yaml
-hooks:
-  user_defines:
-    executorch_flutter:
-      debug: true
-```
-
-**Build from source with specific backends:**
-```yaml
-hooks:
-  user_defines:
-    executorch_flutter:
-      build_mode: "source"
-      backends:
-        - xnnpack
-        - vulkan
-```
-
-**Use a specific prebuilt version:**
-```yaml
-hooks:
-  user_defines:
-    executorch_flutter:
-      prebuilt_version: "1.0.1.21"
-```
-
-## Advanced Usage
-
-### Preprocessing Strategies
-
-The example app demonstrates three preprocessing approaches for common model types:
-
-#### 1. GPU Preprocessing (Default, Recommended)
-Hardware-accelerated preprocessing using Flutter Fragment Shaders:
-- **Performance**: ~75ms on web, comparable to OpenCV on native
-- **Platform Support**: All platforms including web
-- **Dependencies**: None (native Flutter APIs)
-- **Use Case**: Real-time camera inference, high frame rates, web apps
-
-**📖 [Complete GPU Preprocessing Tutorial](example/GPU_PREPROCESSING.md)** - Step-by-step guide with GLSL shader examples
-
-**Reference implementations:** [example/lib/processors/shaders/](example/lib/processors/shaders/)
-
-#### 2. OpenCV Preprocessing
-High-performance C++ library preprocessing:
-- **Performance**: High-performance (very close to GPU on native)
-- **Platform Support**: Native platforms only (not available on web)
-- **Dependencies**: opencv_dart package
-- **Use Case**: Advanced image processing, computer vision operations
-
-See **[OpenCV Processors](example/lib/processors/opencv/)** for implementations.
-
-#### 3. CPU Preprocessing (image library)
-Pure Dart image processing:
-- **Performance**: ~560ms on web, slower than GPU/OpenCV
-- **Platform Support**: All platforms
-- **Dependencies**: image package
-- **Use Case**: Simple preprocessing, debugging, fallback option
-
-See the [example app](example/) for complete processor implementations using the strategy pattern.
-
-## Example Application
-
-The `example/` directory contains a comprehensive demo app showcasing:
-
-- **[Unified Model Playground](example/lib/screens/unified_model_playground.dart)** - Main playground supporting multiple model types
-  - MobileNet V3 image classification
-  - YOLO object detection (v5, v8, v11)
-  - Static image and live camera modes
-  - Reactive settings (thresholds, top-K, preprocessing providers)
-  - Performance monitoring and metrics
-
-## Converting PyTorch Models to ExecuTorch
-
-To use your PyTorch models with this package, convert them to ExecuTorch format (`.pte` files).
-
-**📖 Official ExecuTorch Export Guide**: [PyTorch ExecuTorch Documentation](https://pytorch.org/executorch/stable/getting-started-architecture.html)
-
-**Key Resources:**
-- [ExecuTorch Export Tutorial](https://pytorch.org/executorch/stable/tutorials/export-to-executorch-tutorial.html)
-- [XNNPACK Backend Delegation](https://pytorch.org/executorch/stable/tutorial-xnnpack-delegate-lowering.html)
-- [Supported Operators](https://pytorch.org/executorch/stable/ir-ops-set-definition.html)
-
-**Example App Models:**
-
-Models are automatically downloaded from GitHub on first use. To export models manually:
-
-```bash
-# Export all models with all available backends
-cd models/python
-python3 main.py
-```
-
-This will:
-- ✅ Export MobileNet V3 (all backends: XNNPACK, CoreML, MPS, Vulkan)
-- ✅ Export YOLO11n, YOLOv8n, YOLOv5n (all backends)
-- ✅ Generate labels files
-- ✅ Generate index.json for dynamic model discovery
-
-**Model Hosting:**
-
-Models are hosted in a separate repository for faster cloning:
-- Repository: [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models)
-- Models are downloaded and cached locally on first use
-- index.json provides model metadata (size, hash, platforms)
-
-## Development Status
-
-This project is actively developed following these principles:
-
-- **Test-First Development**: Comprehensive testing before implementation
-- **Platform Parity**: Consistent behavior across Android and iOS
-- **Performance-First**: Optimized for mobile device constraints
-- **Documentation-Driven**: Clear examples and API documentation
+---
 
 ## API Reference
 
-### Core Classes
-
-#### ExecuTorchModel
-
-The primary class for model management and inference.
+### ExecuTorchModel
 
 ```dart
-// Load from Flutter asset bundle (recommended - all platforms including web)
+// Load methods
 static Future<ExecuTorchModel> loadFromAsset(String assetPath)
-
-// Load from bytes (all platforms including web)
 static Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes)
+static Future<ExecuTorchModel> load(String filePath)  // Native only
 
-// Load from file path (native platforms only - Android, iOS, macOS, Windows, Linux)
-static Future<ExecuTorchModel> load(String filePath)
-
-// Execute inference (matches native module.forward())
+// Inference
 Future<List<TensorData>> forward(List<TensorData> inputs)
 
-// Release model resources
+// Lifecycle
 Future<void> dispose()
-
-// Check if model is disposed
 bool get isDisposed
 ```
 
-**Native API Mapping:**
-- **Android (Kotlin)**: `Module.load()` → `module.forward()`
-- **iOS/macOS (Swift)**: `Module()` + `load("forward")` → `module.forward()`
-
-#### TensorData
-
-Input/output tensor representation:
+### TensorData
 
 ```dart
 final tensor = TensorData(
-  shape: [1, 3, 224, 224],           // Tensor dimensions
-  dataType: TensorType.float32,      // Data type (float32, int32, int8, uint8)
-  data: Uint8List(...),              // Raw bytes
-  name: 'input_0',                   // Optional tensor name
+  shape: [1, 3, 224, 224],       // Dimensions
+  dataType: TensorType.float32,  // float32, int32, int8, uint8
+  data: Uint8List(...),          // Raw bytes
+  name: 'input_0',               // Optional
 );
 ```
 
-#### BackendQuery
+### BackendQuery
 
-Query available hardware acceleration backends at runtime. Use this to check which backends are compiled into the library and filter models accordingly.
+Query available backends at runtime:
 
 ```dart
-import 'package:executorch_flutter/executorch_flutter.dart';
-
-// Check if a specific backend is available
-final hasVulkan = BackendQuery.isAvailable(Backend.vulkan);
-final hasCoreML = BackendQuery.isAvailable(Backend.coreml);
-
-// Get list of all available backends
-final backends = BackendQuery.available;
-print('Available backends: ${backends.map((b) => b.displayName).join(", ")}');
-
-// Example: Filter models by available backends
-if (BackendQuery.isAvailable(Backend.vulkan)) {
-  // Load Vulkan-optimized model
-  model = await ExecuTorchModel.loadFromAsset('assets/models/model_vulkan.pte');
+// Check specific backend
+if (BackendQuery.isAvailable(Backend.coreml)) {
+  model = await ExecuTorchModel.loadFromAsset('assets/model_coreml.pte');
 } else {
-  // Fallback to XNNPACK (always available)
-  model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
+  model = await ExecuTorchModel.loadFromAsset('assets/model_xnnpack.pte');
 }
+
+// List all available backends
+final backends = BackendQuery.available;
+print('Available: ${backends.map((b) => b.displayName).join(", ")}');
 ```
 
-**Backend enum values:**
-
 | Backend | Display Name | Platforms |
-|---------|-------------|-----------|
-| `Backend.xnnpack` | XNNPACK | All (including Web) |
+|---------|--------------|-----------|
+| `Backend.xnnpack` | XNNPACK | All |
 | `Backend.coreml` | CoreML | iOS, macOS |
 | `Backend.mps` | Metal Performance Shaders | macOS |
 | `Backend.vulkan` | Vulkan | Android, iOS, macOS, Windows, Linux |
 
 ### Exception Hierarchy
 
-```dart
-ExecuTorchException              // Base exception
-├── ExecuTorchModelException     // Model loading/lifecycle errors
-├── ExecuTorchInferenceException // Inference execution errors
-├── ExecuTorchValidationException // Tensor validation errors
-├── ExecuTorchMemoryException    // Memory/resource errors
-├── ExecuTorchIOException        // File I/O errors
-└── ExecuTorchPlatformException  // Platform communication errors
+```
+ExecuTorchException (base)
+├── ExecuTorchModelException      // Model loading/lifecycle
+├── ExecuTorchInferenceException  // Inference execution
+├── ExecuTorchValidationException // Tensor validation
+├── ExecuTorchMemoryException     // Memory/resources
+├── ExecuTorchIOException         // File I/O
+└── ExecuTorchPlatformException   // Platform communication
 ```
 
-## Contributing
+---
 
-Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for:
+## Build Configuration
 
-- Development setup and prerequisites
-- Integration testing workflow
-- Code standards and PR process
-- Platform-specific guidelines
+Configure the native build in your app's `pubspec.yaml`:
 
-## License
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      debug: false              # Enable debug logging
+      build_mode: "prebuilt"    # "prebuilt" or "source"
+      prebuilt_version: "1.0.1.21"
+      backends:
+        - xnnpack
+        - coreml
+        - mps
+```
 
-MIT License - see [LICENSE](LICENSE) file for details.
+### Options
 
-## Support
+| Option | Default | Description |
+|--------|---------|-------------|
+| `debug` | `false` | Debug logging + debug binaries |
+| `build_mode` | `"prebuilt"` | `"prebuilt"` (fast) or `"source"` (custom) |
+| `prebuilt_version` | Current | Prebuilt release version |
+| `backends` | Platform-specific | Backends to enable |
 
-For issues and questions:
-- 📖 Check the [Official ExecuTorch Documentation](https://pytorch.org/executorch/stable/getting-started-architecture.html)
-- 🐛 [Report issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) on GitHub for bugs and feature requests
+### Default Backends by Platform
 
-## Roadmap
+| Platform | Defaults |
+|----------|----------|
+| Android | xnnpack |
+| iOS | xnnpack, coreml |
+| macOS | xnnpack, coreml, mps |
+| Windows/Linux | xnnpack |
 
-See our [Roadmap](ROADMAP.md) for planned features and improvements, including:
-- Additional model type examples (segmentation, pose estimation)
-- Additional backend support (QNN)
-- Performance optimizations and more
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `EXECUTORCH_BUILD_MODE` | Override build mode |
+| `EXECUTORCH_CACHE_DIR` | Custom cache directory |
+| `EXECUTORCH_DISABLE_DOWNLOAD` | Skip prebuilt download |
+| `EXECUTORCH_INSTALL_DIR` | Local ExecuTorch path |
+
+---
+
+## Advanced Usage
+
+### Preprocessing Strategies
+
+The example app demonstrates three preprocessing approaches:
+
+| Strategy | Performance | Platforms | Dependencies |
+|----------|-------------|-----------|--------------|
+| **GPU Shader** | ~75ms (web), comparable to OpenCV (native) | All | None |
+| **OpenCV** | Very fast | Native only | opencv_dart |
+| **CPU (image lib)** | ~560ms (web), slower | All | image |
+
+**[GPU Preprocessing Tutorial](example/GPU_PREPROCESSING.md)** - Step-by-step guide with GLSL shader examples.
+
+---
+
+## Web Platform
+
+Web runs via WebAssembly with XNNPACK backend.
+
+### Performance
+
+| Metric | Native | Web (Wasm) |
+|--------|--------|------------|
+| YOLO11n Inference | ~50-100ms | ~622ms |
+| Total E2E | ~150-200ms | ~855ms |
+
+**When to use Web:**
+- Demos and prototyping
+- Interactive inference (sub-second)
+- No app install required
+
+**Not recommended for:**
+- Real-time camera inference
+- High-throughput batch processing
+
+### Setup
+
+1. Run setup script:
+   ```bash
+   dart run executorch_flutter:setup_web
+   ```
+
+2. Add to `web/index.html`:
+   ```html
+   <head>
+     <script src="js/executorch_wrapper.js"></script>
+   </head>
+   ```
+
+3. Use XNNPACK models (same as native).
+
+---
+
+## Example Application
+
+The `example/` directory includes:
+
+- **Unified Model Playground** - Multiple model types in one interface
+- **MobileNet V3** - Image classification (1000 ImageNet classes)
+- **YOLO** - Object detection (v5, v8, v11)
+- **Camera Mode** - Real-time inference
+- **Settings** - Thresholds, preprocessing, performance overlay
+
+```bash
+cd example
+flutter run -d macos  # or ios, android, windows, linux, chrome
+```
+
+---
+
+## Converting PyTorch Models to ExecuTorch
+
+Convert your PyTorch models to `.pte` format:
+
+**[Official ExecuTorch Export Guide](https://pytorch.org/executorch/stable/tutorials/export-to-executorch-tutorial.html)**
+
+**Example app models** are hosted at [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models) and downloaded automatically.
+
+To export manually:
+```bash
+cd models/python
+python3 main.py
+```
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><b>Model loading fails</b></summary>
+
+- Verify asset is listed in `pubspec.yaml`
+- Check model bytes: `modelBytes.lengthInBytes > 0`
+- Re-export with correct ExecuTorch version
+</details>
+
+<details>
+<summary><b>Inference returns error</b></summary>
+
+- Check `model.inputShapes` / `model.outputShapes`
+- Verify tensor data types match expectations
+- Ensure shapes match exactly (including batch dimension)
+</details>
+
+<details>
+<summary><b>Memory issues</b></summary>
+
+- Always call `dispose()` when done
+- Don't load too many models simultaneously
+</details>
 
 ---
 
 ## Experimental: Vulkan Backend
 
-> **⚠️ Work in Progress**: The Vulkan backend is experimental and under active development. We encourage testing and feedback to improve stability.
+> **Warning**: Vulkan is experimental and opt-in.
 
-### Current Status
+### Status
 
-Vulkan support is available as an **opt-in** backend on Android, iOS, macOS, Windows, and Linux. While prebuilt binaries with Vulkan are available, there are known issues being actively investigated:
+| Platform | Status |
+|----------|--------|
+| Android | Works on most devices; some UBO size issues |
+| Windows/Linux | Generally functional |
+| macOS/iOS | **Not functional** - MoltenVK crashes |
 
-**Known Issues:**
-- **macOS/iOS**: Vulkan is **not functional** on Apple platforms. MoltenVK (Vulkan-to-Metal translation) crashes during tensor allocation due to Metal texture descriptor validation failures. Use CoreML or MPS backends instead.
-- **Android**: Some devices (e.g., Pixel 10 Pro) may experience UBO (Uniform Buffer Object) size limit issues with certain models.
-- **General**: Runtime initialization may fail on some configurations.
-
-### How to Enable Vulkan
-
-Add Vulkan to your backends list in `pubspec.yaml`:
+### Enable Vulkan
 
 ```yaml
 hooks:
@@ -587,62 +400,33 @@ hooks:
     executorch_flutter:
       backends:
         - xnnpack
-        - vulkan  # Opt-in to Vulkan
+        - vulkan
 ```
 
-### Testing and Reporting Bugs
+### Recommendations
 
-We welcome testers! If you'd like to help improve Vulkan support:
+- **Production**: Use XNNPACK (stable everywhere)
+- **Apple platforms**: Use CoreML or MPS instead of Vulkan
+- **Testing**: Report issues with device info and logs
 
-1. **Enable Vulkan** in your app's `pubspec.yaml` as shown above
-2. **Test with Vulkan-exported models** (models exported specifically for the Vulkan backend)
-3. **Report issues** at [GitHub Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues) with:
-   - Device/platform information
-   - Model being used
-   - Full error message or crash log
-   - Steps to reproduce
-
-### Model Export for Vulkan
-
-To use Vulkan, you need models exported specifically for the Vulkan backend:
-
-```bash
-cd models/python
-python3 main.py export --vulkan
-```
-
-Or download Vulkan models from the [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models) repository (files ending with `_vulkan.pte`).
-
-### Apple Platforms (macOS/iOS)
-
-**Vulkan is not supported on Apple platforms.** While MoltenVK provides Vulkan-to-Metal translation, ExecuTorch's Vulkan compute backend uses features that fail Metal's texture descriptor validation, causing crashes during model initialization.
-
-**Recommended alternatives for Apple platforms:**
-- **CoreML**: Best for neural network inference on Apple devices
-- **MPS (Metal Performance Shaders)**: GPU acceleration on macOS (arm64 only)
-- **XNNPACK**: Reliable CPU-based inference on all platforms
-
-### Production Recommendation
-
-**Do not use Vulkan in production apps yet.** Native crashes (SIGKILL, SIGABRT) cannot be caught by Dart's try/catch mechanism, so there's no reliable way to implement fallback logic when Vulkan fails.
-
-For production apps, use XNNPACK which is stable across all platforms:
-
-```dart
-// Stable approach for production
-final model = await ExecuTorchModel.loadFromAsset('assets/models/model_xnnpack.pte');
-```
-
-**For testing Vulkan** (development/experimentation only):
-
-```dart
-// Only use Vulkan for testing - may crash on some devices
-if (BackendQuery.isAvailable(Backend.vulkan)) {
-  // WARNING: If Vulkan crashes, the app will terminate
-  final model = await ExecuTorchModel.loadFromAsset('assets/models/model_vulkan.pte');
-}
-```
+**[Report Vulkan Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues)**
 
 ---
 
-Built with ❤️ for the Flutter and PyTorch communities.
+## Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+MIT License - see [LICENSE](LICENSE).
+
+## Support
+
+- [Official ExecuTorch Documentation](https://pytorch.org/executorch/stable/getting-started-architecture.html)
+- [Report Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues)
+- [Roadmap](ROADMAP.md)
+
+---
+
+Built with love for the Flutter and PyTorch communities.

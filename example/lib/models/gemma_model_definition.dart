@@ -21,6 +21,7 @@ class GemmaModelDefinition
     required super.description,
     required super.remoteUrl,
     required super.inputSize, // Sequence length (e.g., 128)
+    super.hash,
     super.fileSizeMB,
     required this.vocabRemoteUrl,
   }) : super(icon: Icons.auto_awesome);

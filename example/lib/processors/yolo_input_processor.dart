@@ -4,6 +4,7 @@ import '../models/model_input.dart';
 import '../models/model_settings.dart';
 import 'base_processor.dart';
 import 'yolo_processor.dart';
+import 'imagelib/imagelib_yolo_preprocessor.dart';
 import 'opencv/opencv_yolo_preprocessor_stub.dart'
     if (dart.library.io) 'opencv/opencv_yolo_preprocessor.dart';
 import 'shaders/gpu_yolo_preprocessor.dart';
@@ -39,7 +40,7 @@ class YoloInputProcessor extends InputProcessor<ModelInput> {
         final preprocessor = OpenCVYoloPreprocessor(config: config);
         return await preprocessor.preprocess(bytes);
       case PreprocessingProvider.imageLib:
-        final preprocessor = YoloPreprocessor(config: config);
+        final preprocessor = ImageLibYoloPreprocessor(config: config);
         return await preprocessor.preprocess(bytes);
     }
   }

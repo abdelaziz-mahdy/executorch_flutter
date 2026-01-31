@@ -4,6 +4,10 @@ import 'package:universal_platform/universal_platform.dart';
 import 'model_definition.dart';
 import 'yolo_model_definition.dart';
 import 'mobilenet_model_definition.dart';
+import 'movenet_model_definition.dart';
+import 'blazeface_model_definition.dart';
+import 'yolo_pose_model_definition.dart';
+import 'yolo_face_model_definition.dart';
 import '../services/model_index_service.dart';
 
 /// Central registry of all available models
@@ -37,9 +41,12 @@ class ModelRegistry {
   static const String _cocoLabelsUrl = '$_baseUrl/yolo/labels.txt';
 
   /// Loads all available models from the index.json
-  static Future<List<ModelDefinition>> loadAll() async {
+  ///
+  /// [version] - The ExecuTorch version to load models for.
+  ///             If null, uses [ModelIndexService.selectedVersion].
+  static Future<List<ModelDefinition>> loadAll({String? version}) async {
     try {
-      final index = await ModelIndexService.fetchIndex();
+      final index = await ModelIndexService.fetchIndex(version: version);
       return _buildModelsFromIndex(index);
     } catch (e) {
       // Fallback to hardcoded models if index fetch fails
@@ -47,6 +54,19 @@ class ModelRegistry {
       print('Warning: Failed to fetch model index, using fallback: $e');
       return _fallbackModels();
     }
+  }
+
+  /// Fetches the list of available ExecuTorch versions
+  static Future<ModelVersions> fetchAvailableVersions() async {
+    return ModelIndexService.fetchVersions();
+  }
+
+  /// Gets the currently selected version
+  static String get selectedVersion => ModelIndexService.selectedVersion;
+
+  /// Sets the selected version
+  static set selectedVersion(String version) {
+    ModelIndexService.selectedVersion = version;
   }
 
   /// Builds model definitions from the fetched index
@@ -113,6 +133,7 @@ class ModelRegistry {
           description: entry.description,
           remoteUrl: entry.remoteUrl,
           inputSize: entry.inputSize ?? 224,
+          hash: entry.hash,
           fileSizeMB: entry.sizeMB,
           labelsRemoteUrl: entry.labelsRemoteUrl ??
               index.getLabelsUrl('mobilenet') ??
@@ -126,10 +147,55 @@ class ModelRegistry {
           description: entry.description,
           remoteUrl: entry.remoteUrl,
           inputSize: entry.inputSize ?? 640,
+          hash: entry.hash,
           fileSizeMB: entry.sizeMB,
           labelsRemoteUrl: entry.labelsRemoteUrl ??
               index.getLabelsUrl('yolo') ??
               _cocoLabelsUrl,
+        );
+
+      case 'movenet':
+        return MoveNetModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 192,
+          hash: entry.hash,
+          fileSizeMB: entry.sizeMB,
+        );
+
+      case 'blazeface':
+        return BlazeFaceModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 128,
+          hash: entry.hash,
+          fileSizeMB: entry.sizeMB,
+        );
+
+      case 'yolo-pose':
+        return YoloPoseModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 640,
+          hash: entry.hash,
+          fileSizeMB: entry.sizeMB,
+        );
+
+      case 'yolo-face':
+        return YoloFaceModelDefinition(
+          name: '${entry.modelName}_${entry.backend}',
+          displayName: entry.displayName,
+          description: entry.description,
+          remoteUrl: entry.remoteUrl,
+          inputSize: entry.inputSize ?? 640,
+          hash: entry.hash,
+          fileSizeMB: entry.sizeMB,
         );
 
       default:

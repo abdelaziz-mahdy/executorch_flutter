@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.3.0
+
+### Changed
+- **ExecuTorch 1.1.0**: Upgraded from ExecuTorch 1.0.1 to 1.1.0
+  - Updated native prebuilt binaries version to 1.1.0.4
+  - Rebuilt WebAssembly binaries with ExecuTorch 1.1.0
+  - Updated Dockerfile.wasm to use v1.1.0 tag
+- **CI/CD Improvements**: Unified release workflow for native binaries
+  - All platform builds now orchestrated by single release workflow
+  - Size comparison reports auto-generated after all builds complete
+  - README version links auto-updated when prebuilt version changes
+
+### Added
+- **Version-aware model loading**: Models are now loaded from version-specific directories
+  - Model index URLs now include version path segment (e.g., `/1.1.0/index.json`)
+  - Supports multiple ExecuTorch versions in the models repository
+- **Single source of truth for version**: `executorchVersion` constant in `lib/src/version.dart`
+  - Used by native build system, web platform, and model loading
+  - Eliminates duplicate version constants across the codebase
+- **New models support**: YOLO-Pose and YOLO-Face models available in 1.1.0
+- **Example app version selector**: UI to load models from different ExecuTorch versions
+  - Test compatibility of old/new models with the current runtime
+  - Decorator pattern architecture for ModelIndexService (clean separation of HTTP and caching)
+- **Version-aware model caching**: Models cached by ExecuTorch version
+  - Cache structure: `models/{version}/{modelName}.pte`
+  - SHA-256 hash verification ensures cached models match expected content
+  - Automatic re-download on hash mismatch (stale cache detection)
+  - Decorator pattern architecture for ModelDownloadService
+
+### Removed
+- **User-overridable ExecuTorch version**: The `executorch_version` option in
+  `pubspec.yaml` user_defines has been removed
+  - Package version is now tied to ExecuTorch version (1:1 mapping)
+  - Users who need older ExecuTorch versions should use older package versions
+  - Simplifies build system and ensures runtime/model version consistency
+
+### Fixed
+- **iOS Simulator detection**: Build now fails early with clear error when iOS Simulator
+  prebuilts are unavailable, instead of failing at runtime with cryptic library load errors
+  - Added proper platform detection to distinguish iOS device vs simulator builds
+  - Shows helpful error message with available options (use device or build from source)
+- **CoreML compilation**: Fixed CoreML backend compilation issues on iOS/macOS
+- Fixed WASM build script triggering unnecessary native builds
+  - `build_wasm.sh` now copies files directly instead of using `dart run`
+- Fixed model dropdown being empty when switching to versions without `platforms`
+  field in index.json (backward compatibility with 1.0.1 models)
+- Fixed model download hash verification failing when hash is empty or null
+
 ## 0.2.2
 
 ### Fixed

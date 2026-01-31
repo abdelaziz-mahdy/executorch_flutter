@@ -16,31 +16,48 @@ Future<Directory> _getModelsDir() async {
   return modelsDir;
 }
 
-/// Get local path for a model
-Future<String> getLocalPath(String modelName) async {
+/// Get local path for a model (path includes version subdirectory)
+Future<String?> getLocalPath(String path) async {
   final modelsDir = await _getModelsDir();
-  return '${modelsDir.path}/$modelName.pte';
+  return '${modelsDir.path}/$path.pte';
 }
 
 /// Check if a model is cached locally
-Future<bool> isModelCached(String modelName) async {
-  final path = await getLocalPath(modelName);
-  return File(path).exists();
+Future<bool> hasModel(String path) async {
+  final localPath = await getLocalPath(path);
+  if (localPath == null) return false;
+  return File(localPath).exists();
 }
 
 /// Get cached model bytes
-Future<Uint8List?> getCachedModelBytes(String modelName) async {
-  final path = await getLocalPath(modelName);
-  final file = File(path);
+Future<Uint8List?> getModel(String path) async {
+  final localPath = await getLocalPath(path);
+  if (localPath == null) return null;
+  final file = File(localPath);
   if (await file.exists()) {
     return file.readAsBytes();
   }
   return null;
 }
 
-/// Download model from remote URL
-Future<Uint8List> downloadModel({
-  required String modelName,
+/// Save model to cache
+Future<void> saveModel(String path, Uint8List data) async {
+  final localPath = await getLocalPath(path);
+  if (localPath == null) return;
+
+  final file = File(localPath);
+
+  // Create parent directories if needed (for version subdirectory)
+  final parent = file.parent;
+  if (!await parent.exists()) {
+    await parent.create(recursive: true);
+  }
+
+  await file.writeAsBytes(data);
+}
+
+/// Download from URL with progress
+Future<Uint8List> downloadFromUrl({
   required String remoteUrl,
   DownloadProgressCallback? onProgress,
 }) async {
@@ -68,44 +85,48 @@ Future<Uint8List> downloadModel({
       }
     }
 
-    final data = Uint8List.fromList(bytes);
-
-    // Save to cache
-    final path = await getLocalPath(modelName);
-    await File(path).writeAsBytes(data);
-
-    return data;
+    return Uint8List.fromList(bytes);
   } finally {
     client.close();
   }
 }
 
 /// Delete a cached model
-Future<void> deleteModel(String modelName) async {
-  final path = await getLocalPath(modelName);
-  final file = File(path);
+Future<void> deleteModel(String path) async {
+  final localPath = await getLocalPath(path);
+  if (localPath == null) return;
+  final file = File(localPath);
   if (await file.exists()) {
     await file.delete();
   }
 }
 
 /// Clear all cached models
-Future<void> clearCache() async {
+Future<void> clearAll() async {
   final modelsDir = await _getModelsDir();
   if (await modelsDir.exists()) {
     await modelsDir.delete(recursive: true);
   }
 }
 
+/// Clear cached models for a specific version
+Future<void> clearVersion(String version) async {
+  final modelsDir = await _getModelsDir();
+  final versionDir = Directory('${modelsDir.path}/$version');
+  if (await versionDir.exists()) {
+    await versionDir.delete(recursive: true);
+  }
+}
+
 /// Get total cache size
-Future<int> getCacheSize() async {
+Future<int> getTotalSize() async {
   final modelsDir = await _getModelsDir();
   if (!await modelsDir.exists()) {
     return 0;
   }
 
   int size = 0;
-  await for (final entity in modelsDir.list()) {
+  await for (final entity in modelsDir.list(recursive: true)) {
     if (entity is File) {
       size += await entity.length();
     }

@@ -21,7 +21,7 @@ ffi-native:
 # Header files to parse
 headers:
   entry-points:
-    - src/executorch_ffi.h
+    - native/src/executorch_ffi.h
 
 # Function configuration
 functions:
@@ -56,11 +56,36 @@ enums:
 
 # Struct handling
 structs:
-  # Keep ETStatus as Struct for direct access
+  # Only include our structs, exclude system structs
   include:
     - ETStatus
+    - ETModule
+    - ETTensor
 
-# Exclude system macros
+# Exclude system types and macros
+typedefs:
+  exclude:
+    - '__.*'
+    - '_.*'
+    - '.*pthread.*'
+    - '.*darwin.*'
+    - 'u_int.*'
+    - 'int_.*'
+    - 'uint_.*'
+    - 'register_t'
+    - 'syscall_arg_t'
+    - 'user_.*'
+    - 'wint_t'
+    - 'intmax_t'
+    - 'uintmax_t'
+    - 'ptrdiff_t'
+    - 'rsize_t'
+
+globals:
+  exclude:
+    - '__.*'
+    - '_.*'
+
 macros:
   exclude:
     - '__.*'
