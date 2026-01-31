@@ -52,12 +52,12 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 **Requirements:** Flutter 3.38+ (first version with native assets hooks)
 
+<!-- PACKAGE_VERSION_START -->
 ```yaml
 dependencies:
-  # PACKAGE_VERSION_START
   executorch_flutter: ^0.3.0
-  # PACKAGE_VERSION_END
 ```
+<!-- PACKAGE_VERSION_END -->
 
 ---
 
