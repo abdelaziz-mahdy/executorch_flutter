@@ -1,155 +1,141 @@
 # ExecuTorch Flutter Example App
 
-A comprehensive demonstration of the `executorch_flutter` plugin featuring:
+A comprehensive demonstration of the `executorch_flutter` plugin featuring multiple model types, live camera inference, and configurable preprocessing.
 
-- 🎯 **Unified Model Playground** - Single interface for multiple model types
-- 📸 **Live Camera Inference** - Real-time object detection and classification
-- 🖼️ **Static Image Processing** - Upload and analyze images from gallery
-- ⚙️ **Configurable Settings** - Adjust thresholds, preprocessing methods, and more
-- 📊 **Performance Monitoring** - Real-time FPS and inference time tracking
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Supported Models](#supported-models)
+- [Quick Start](#quick-start)
+- [Preprocessing Options](#preprocessing-options)
+- [Project Structure](#project-structure)
+- [Exporting Models](#exporting-your-own-models)
+- [Testing](#testing)
+- [Platform Requirements](#platform-requirements)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
+---
+
+## Features
+
+- **Unified Model Playground** - Single interface for multiple model types
+- **Live Camera Inference** - Real-time object detection and classification
+- **Static Image Processing** - Upload and analyze images from gallery
+- **Configurable Settings** - Adjust thresholds, preprocessing methods, and more
+- **Performance Monitoring** - Real-time FPS and inference time tracking
+
+---
 
 ## Supported Models
 
 ### Image Classification
-- **MobileNet V3 Small** - Efficient ImageNet classification
-- Performance: ~10-15ms inference time
-- 1000 ImageNet classes
+
+| Model | Performance | Classes |
+|-------|-------------|---------|
+| **MobileNet V3 Small** | ~10-15ms | 1000 ImageNet |
 
 ### Object Detection
-- **YOLO11 Nano** - Latest YOLO architecture
-- **YOLOv8 Nano** - Fast and accurate detection
-- **YOLOv5 Nano** - Lightweight object detection
-- Performance: ~20-50ms inference time
-- 80 COCO classes
+
+| Model | Performance | Classes |
+|-------|-------------|---------|
+| **YOLO11 Nano** | ~20-50ms | 80 COCO |
+| **YOLOv8 Nano** | ~20-50ms | 80 COCO |
+| **YOLOv5 Nano** | ~20-50ms | 80 COCO |
+
+---
 
 ## Quick Start
 
 ### 1. Install Dependencies
 
 ```bash
-# Install Flutter dependencies
 flutter pub get
 ```
 
-**Models are automatically downloaded from GitHub** on first use. No manual setup required.
-
-To export models manually (optional):
-```bash
-cd ../models/python
-python3 main.py
-```
+**Models are automatically downloaded from GitHub** on first use.
 
 ### 2. Run the App
 
 ```bash
-# macOS
-flutter run -d macos
-
-# iOS (device or simulator)
-flutter run -d <device-id>
-
-# Android
-flutter run -d <device-id>
-
-# Windows
-flutter run -d windows
-
-# Linux
-flutter run -d linux
-
-# Web
-flutter run -d chrome
+flutter run -d macos      # macOS
+flutter run -d <device>   # iOS/Android
+flutter run -d windows    # Windows
+flutter run -d linux      # Linux
+flutter run -d chrome     # Web
 ```
 
-### 3. Choose a Model
+### 3. Use the App
 
-1. Select a model from the dropdown (e.g., "YOLO11 Nano" or "MobileNet V3")
-2. Pick an image from gallery OR enable camera mode
+1. Select a model from the dropdown (e.g., "YOLO11 Nano")
+2. Pick an image OR enable camera mode
 3. View results with bounding boxes (YOLO) or class predictions (MobileNet)
+
+---
 
 ## Preprocessing Options
 
-The example app demonstrates **three preprocessing approaches**:
+The app demonstrates **three preprocessing approaches**:
 
-### 1. GPU Preprocessing (Recommended) ⭐
+| Strategy | Performance | Platforms | Dependencies | Best For |
+|----------|-------------|-----------|--------------|----------|
+| **GPU Shader** | Fast | All | None | Real-time, web |
+| **OpenCV** | Very fast | Native only | opencv_dart | High performance |
+| **CPU (image lib)** | Slower | All | image | Debugging |
 
-**Hardware-accelerated preprocessing using Flutter Fragment Shaders:**
+**To switch:** Settings → Preprocessing Provider
 
-- ⚡ **Performance comparable to OpenCV** (very close on macOS)
-- 📦 **Zero dependencies** - uses native Flutter APIs
-- 🌍 **All platforms** - mobile and desktop
-- 🎨 **Customizable** - write your own GLSL shaders
-- 🎯 **Great for real-time** - camera inference and high frame rates
+### GPU Preprocessing (Recommended)
 
-**📖 [Complete GPU Preprocessing Tutorial](GPU_PREPROCESSING.md)** - Learn how to implement GPU-accelerated preprocessing with step-by-step guide and shader examples.
+Hardware-accelerated using Flutter Fragment Shaders:
+- Zero dependencies
+- Works on all platforms including web
+- Customizable GLSL shaders
 
-**Reference implementations:**
-- **[lib/processors/shaders/](lib/processors/shaders/)** - GPU preprocessor implementations with README
-- **[shaders/](../shaders/)** - GLSL fragment shaders (yolo_preprocess.frag, mobilenet_preprocess.frag)
+**[Complete GPU Preprocessing Tutorial](GPU_PREPROCESSING.md)**
 
-### 2. OpenCV Preprocessing
+**Reference implementations:** [lib/processors/shaders/](lib/processors/shaders/)
 
-**High-performance C++ library:**
-
-- ⚡ **High performance** (very close to GPU on macOS)
-- 🌍 **Cross-platform** - works on mobile and desktop
-- 📦 Requires `opencv_dart` package
-- 🔧 Advanced image processing and computer vision capabilities
-
-### 3. CPU Preprocessing (image library)
-
-**Pure Dart implementation:**
-
-- ⏱️ **Slower than GPU/OpenCV**, suitable for non-realtime use
-- 🌍 **All platforms**
-- 📦 Uses `image` package
-- 🐛 **Best for debugging** - easier to inspect steps
-
-**To switch preprocessing methods:**
-1. Open Settings in the app
-2. Select "Preprocessing Provider"
-3. Choose: GPU Shader, OpenCV, or Image Library
+---
 
 ## Project Structure
 
 ```
 example/
 ├── lib/
-│   ├── main.dart                          # App entry point
-│   ├── models/                            # Model definitions
-│   │   ├── model_definition.dart          # Abstract base class
-│   │   ├── model_registry.dart            # Available models (loaded from index.json)
-│   │   ├── yolo_model_definition.dart     # YOLO implementation
-│   │   └── mobilenet_model_definition.dart # MobileNet implementation
-│   ├── processors/                        # Preprocessing strategies
-│   │   ├── shaders/                       # GPU shader preprocessing
-│   │   │   ├── README.md                  # Shader preprocessing guide
-│   │   │   ├── gpu_yolo_preprocessor.dart # GPU YOLO preprocessing
-│   │   │   └── gpu_mobilenet_preprocessor.dart # GPU MobileNet preprocessing
-│   │   ├── yolo_processor.dart            # CPU YOLO preprocessing
-│   │   └── opencv/                        # OpenCV implementations
-│   ├── renderers/                         # Result visualization
-│   │   └── screens/
-│   │       ├── yolo_renderer.dart         # Bounding box overlay
-│   │       └── classification_renderer.dart # Class predictions
+│   ├── main.dart                    # App entry point
+│   ├── models/                      # Model definitions
+│   │   ├── model_definition.dart    # Abstract base class
+│   │   ├── model_registry.dart      # Dynamic model loading
+│   │   ├── yolo_model_definition.dart
+│   │   └── mobilenet_model_definition.dart
+│   ├── processors/                  # Preprocessing strategies
+│   │   ├── shaders/                 # GPU shader preprocessing
+│   │   ├── opencv/                  # OpenCV implementations
+│   │   └── yolo_processor.dart      # CPU implementations
+│   ├── renderers/screens/           # Result visualization
+│   │   ├── yolo_renderer.dart       # Bounding box overlay
+│   │   └── classification_renderer.dart
 │   ├── services/
-│   │   ├── model_controller.dart          # Model state management
-│   │   └── model_index_service.dart       # Fetches model index from GitHub
+│   │   ├── model_controller.dart    # Model state management
+│   │   └── model_index_service.dart # Fetches models from GitHub
 │   └── screens/
-│       └── unified_model_playground.dart  # Main playground screen
-├── shaders/                               # GPU shaders (GLSL)
-│   ├── yolo_preprocess.frag              # YOLO letterbox resize
-│   └── mobilenet_preprocess.frag         # MobileNet center crop
-└── assets/
-    └── images/                           # Test images
-
-# Models are hosted in separate repository and downloaded on demand:
-# https://github.com/abdelaziz-mahdy/executorch_flutter_models
+│       └── unified_model_playground.dart
+├── shaders/                         # GLSL fragment shaders
+│   ├── yolo_preprocess.frag
+│   └── mobilenet_preprocess.frag
+└── assets/images/                   # Test images
 ```
+
+**Models are hosted separately:** [executorch_flutter_models](https://github.com/abdelaziz-mahdy/executorch_flutter_models)
+
+---
 
 ## Exporting Your Own Models
 
-Models are hosted in a separate repository and downloaded automatically. To export models manually:
+Models are downloaded automatically. To export manually:
 
 ### Export All Models
 
@@ -158,121 +144,90 @@ cd ../models/python
 python3 main.py
 ```
 
-This will:
-- ✅ Export MobileNet V3 Small (all backends)
-- ✅ Export YOLO11n, YOLOv8n, YOLOv5n (all backends)
-- ✅ Generate label files
-- ✅ Generate index.json for dynamic model discovery
-
 ### Export Specific Models
 
 ```bash
-cd ../models/python
-
-# Export MobileNet only
 python3 main.py export --mobilenet
-
-# Export specific YOLO model
 python3 main.py export --yolo yolo11n
-
-# Export with specific backends
 python3 main.py export --all --backends xnnpack coreml
 ```
 
-**📖 See [Model Export Tools](../models/python/README.md)** for detailed export instructions and backend selection guide.
+**[Model Export Tools Documentation](../models/python/README.md)**
+
+---
 
 ## Testing
 
-Run integration tests on all platforms:
+### Integration Tests
 
 ```bash
 cd example
 
-# Test all platforms
+# All platforms
 ./scripts/run_integration_tests.sh
 
-# Test specific platform
+# Specific platform
 ./scripts/run_integration_tests.sh macos
 ./scripts/run_integration_tests.sh ios
 ./scripts/run_integration_tests.sh android
 ```
 
-## Learn More
+---
 
-- **[GPU Preprocessing Tutorial](GPU_PREPROCESSING.md)** - Implement GPU-accelerated preprocessing with Fragment Shaders
-- **[Main Package README](../README.md)** - Core API documentation and usage
-- **[Example App Architecture](CLAUDE.md)** - Detailed architecture guide for developers
-- **[Model Export Tools](../models/python/README.md)** - Export PyTorch models to ExecuTorch format
-- **[Backend Selection Guide](../models/python/BACKENDS.md)** - Choose the right backend for your platform
+## Platform Requirements
 
-## Requirements
+| Platform | Min Version | Architectures |
+|----------|-------------|---------------|
+| **Android** | API 23 | arm64-v8a, armeabi-v7a, x86_64, x86 |
+| **iOS** | 13.0+ | arm64, arm64-simulator, x86_64-simulator |
+| **macOS** | 11.0+ | arm64, x86_64 |
+| **Windows** | 10 | x64 |
+| **Linux** | Ubuntu 20.04+ | x64 |
+| **Web** | Modern browsers | WebAssembly |
 
-### Android
-- Minimum SDK: API 23 (Android 6.0)
-- Architectures: arm64-v8a, armeabi-v7a, x86_64, x86
-
-### iOS
-- Minimum Version: iOS 13.0+
-- Architectures: arm64 (device), arm64-simulator, x86_64-simulator
-
-### macOS
-- Minimum Version: macOS 11.0+ (Big Sur)
-- Architectures: arm64 (Apple Silicon), x86_64 (Intel)
-
-### Windows
-- Minimum Version: Windows 10
-- Architecture: x64
-
-### Linux
-- Minimum Version: Ubuntu 20.04+ or equivalent
-- Architecture: x64
-
-### Web
-- Modern browsers with WebAssembly support
-- See [web/README.md](../web/README.md) for details
+---
 
 ## Troubleshooting
 
-### Models Not Loading
+<details>
+<summary><b>Models not loading</b></summary>
 
-**Issue**: "Failed to load model" error
-
-**Solution**:
 - Models are downloaded from GitHub on first use
-- Check your internet connection
+- Check internet connection
 - Clear app cache and restart
 
-To verify models manually:
+Verify manually:
 ```bash
-# Check model index
 curl https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main/index.json
 ```
+</details>
 
-### Camera Not Working
+<details>
+<summary><b>Camera not working</b></summary>
 
-**Issue**: Black screen or no camera feed
+Check camera permissions in device settings.
+</details>
 
-**Solution**: Check camera permissions in device settings
+<details>
+<summary><b>Low frame rates</b></summary>
 
-### Low Frame Rates
-
-**Issue**: FPS below 30
-
-**Solutions**:
 1. Switch to **GPU preprocessing** in settings
-2. Use smaller model (e.g., YOLO11n instead of YOLO11m)
+2. Use smaller model (e.g., YOLO11n)
 3. Reduce camera resolution
 4. Run in release mode: `flutter run --release`
+</details>
 
-### iOS Build Errors
+<details>
+<summary><b>iOS build errors</b></summary>
 
-**Issue**: Build fails with deployment target errors
+Ensure iOS deployment target is set to 13.0+ in Xcode.
+</details>
 
-**Solution**: Ensure iOS deployment target is set to 13.0+ in Xcode
+---
 
 ## Contributing
 
-Contributions are welcome! When adding new models:
+When adding new models:
 
 1. Create model definition in `lib/models/`
 2. Implement preprocessors in `lib/processors/`
@@ -280,12 +235,24 @@ Contributions are welcome! When adding new models:
 4. Register in `lib/models/model_registry.dart`
 5. Add export function in `../models/python/main.py`
 
-See **[Example App Architecture Guide](CLAUDE.md)** for detailed instructions.
-
-## License
-
-MIT License - see [LICENSE](../LICENSE) for details.
+**[Detailed Architecture Guide](CLAUDE.md)**
 
 ---
 
-Built with ❤️ to demonstrate the power of on-device ML with ExecuTorch and Flutter.
+## Learn More
+
+- **[GPU Preprocessing Tutorial](GPU_PREPROCESSING.md)**
+- **[Main Package README](../README.md)**
+- **[Architecture Guide](CLAUDE.md)**
+- **[Model Export Tools](../models/python/README.md)**
+- **[Backend Selection Guide](../models/python/BACKENDS.md)**
+
+---
+
+## License
+
+MIT License - see [LICENSE](../LICENSE).
+
+---
+
+Built with love to demonstrate on-device ML with ExecuTorch and Flutter.
