@@ -22,7 +22,9 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 
 The native library size varies depending on which backends are enabled.
 
-📊 **[Download Release Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-release.svg)** | **[Download Debug Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report-debug.svg)** | **[JSON Report](https://github.com/abdelaziz-mahdy/executorch_native/releases/latest/download/size-report.json)**
+<!-- NATIVE_VERSION_START -->
+📊 **[Download Release Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.1.0.4/size-report-release.svg)** | **[Download Debug Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.1.0.4/size-report-debug.svg)** | **[JSON Report](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.1.0.4/size-report.json)**
+<!-- NATIVE_VERSION_END -->
 
 *Size reports are auto-generated for each release. Download the SVG files to view detailed size breakdowns by platform and backend.*
 
@@ -35,7 +37,9 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  executorch_flutter: ^0.2.1
+  # PACKAGE_VERSION_START
+  executorch_flutter: ^0.3.0
+  # PACKAGE_VERSION_END
 ```
 
 ## Basic Usage

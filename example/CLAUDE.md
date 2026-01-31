@@ -1,7 +1,22 @@
 # ExecuTorch Flutter - Example App Architecture
 
-**Version**: 1.0
-**Last Updated**: 2025-10-11
+**Version**: 1.1
+
+## Quick Start
+
+```bash
+# Run the example app
+flutter run -d macos      # or ios, android, windows, linux, chrome
+
+# Run integration tests
+flutter test integration_test/models_integration_test.dart -d macos
+
+# Export models (first time setup)
+cd ../models/python && python3 main.py
+
+# Analyze code
+flutter analyze lib
+```
 
 This document describes the architecture of the example app and provides step-by-step guides for adding new model types.
 
@@ -806,6 +821,5 @@ For questions about the example app architecture:
 - Review existing model implementations (MobileNet, YOLO)
 - File issues at the package repository
 
-**Last Updated**: 2025-10-11
-**Example App Version**: 1.0
-**Package Version**: 0.0.2
+**Example App Version**: 1.1
+**Package Version**: 0.0.3

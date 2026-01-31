@@ -4,9 +4,13 @@
 
 ### Changed
 - **ExecuTorch 1.1.0**: Upgraded from ExecuTorch 1.0.1 to 1.1.0
-  - Updated native prebuilt binaries version to 1.1.0.1
+  - Updated native prebuilt binaries version to 1.1.0.4
   - Rebuilt WebAssembly binaries with ExecuTorch 1.1.0
   - Updated Dockerfile.wasm to use v1.1.0 tag
+- **CI/CD Improvements**: Unified release workflow for native binaries
+  - All platform builds now orchestrated by single release workflow
+  - Size comparison reports auto-generated after all builds complete
+  - README version links auto-updated when prebuilt version changes
 
 ### Added
 - **Version-aware model loading**: Models are now loaded from version-specific directories
@@ -33,10 +37,12 @@
   - Simplifies build system and ensures runtime/model version consistency
 
 ### Fixed
+- **CoreML compilation**: Fixed CoreML backend compilation issues on iOS/macOS
 - Fixed WASM build script triggering unnecessary native builds
   - `build_wasm.sh` now copies files directly instead of using `dart run`
 - Fixed model dropdown being empty when switching to versions without `platforms`
   field in index.json (backward compatibility with 1.0.1 models)
+- Fixed model download hash verification failing when hash is empty or null
 
 ## 0.2.2
 
