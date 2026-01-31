@@ -37,6 +37,10 @@
   - Simplifies build system and ensures runtime/model version consistency
 
 ### Fixed
+- **iOS Simulator detection**: Build now fails early with clear error when iOS Simulator
+  prebuilts are unavailable, instead of failing at runtime with cryptic library load errors
+  - Added proper platform detection to distinguish iOS device vs simulator builds
+  - Shows helpful error message with available options (use device or build from source)
 - **CoreML compilation**: Fixed CoreML backend compilation issues on iOS/macOS
 - Fixed WASM build script triggering unnecessary native builds
   - `build_wasm.sh` now copies files directly instead of using `dart run`
