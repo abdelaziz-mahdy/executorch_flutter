@@ -30,7 +30,7 @@ jobs:
 
           # Extract build suffix from run_build.dart
           # Pattern: const String _defaultPrebuiltVersion = '$executorchVersion.X';
-          BUILD_SUFFIX=$(grep "_defaultPrebuiltVersion" lib/src/build/run_build.dart | sed "s/.*\$executorchVersion\.\([0-9]*\)'.*/\1/")
+          BUILD_SUFFIX=$(grep "^const String _defaultPrebuiltVersion" lib/src/build/run_build.dart | sed "s/.*\$executorchVersion\.\([0-9]*\)'.*/\1/")
           echo "Build suffix: $BUILD_SUFFIX"
 
           NATIVE_VERSION="${EXECUTORCH_VERSION}.${BUILD_SUFFIX}"
