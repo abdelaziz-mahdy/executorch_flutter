@@ -48,6 +48,12 @@
   field in index.json (backward compatibility with 1.0.1 models)
 - Fixed model download hash verification failing when hash is empty or null
 
+### Known Issues
+- **Example app web build**: The example app fails to build for web due to an upstream issue
+  in `opencv_dart` (used for OpenCV-based preprocessing). A fix has been submitted
+  ([opencv_dart#418](https://github.com/rainyl/opencv_dart/pull/418)) and will be resolved
+  in a future release. The main `executorch_flutter` package web support is unaffected.
+
 ## 0.2.2
 
 ### Fixed
