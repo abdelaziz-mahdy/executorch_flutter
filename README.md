@@ -417,6 +417,10 @@ hooks:
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## Acknowledgments
+
+- **[opencv_dart](https://github.com/rainyl/opencv_dart)** - Referenced for understanding Flutter native assets build patterns and cross-platform FFI packaging
+
 ## License
 
 MIT License - see [LICENSE](LICENSE).
