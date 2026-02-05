@@ -238,9 +238,25 @@ The `native/` directory contains the C/C++ FFI library that bridges Dart to Exec
 
 **Important:** Always commit the updated submodule reference in the parent repo after pushing changes to the submodule. Otherwise, other developers cloning the repo will get an older version of the native code.
 
+### CI/CD and Releases
+
+**CRITICAL: All three repositories have CI/CD pipelines. NEVER create GitHub releases or tags manually - CI/CD handles all releases automatically.**
+
+| Repository | CI/CD Trigger | What It Does |
+|------------|---------------|--------------|
+| `executorch_flutter` | Push to main / tags | Builds, tests, publishes releases |
+| `executorch_native` | Tags (e.g., `v1.1.0.7`) | Builds pre-built binaries for all platforms, publishes as GitHub Release assets |
+| `executorch_flutter_models` | Push to main | Exports models with all backends, publishes model files |
+
+**Rules:**
+- **DO NOT** use `gh release create` or manually create tags/releases
+- **DO NOT** use `gh release delete` to "fix" releases
+- Just push code to main (or tag for native) and let CI/CD handle the rest
+- If a release needs to be re-done, push a fix commit and let CI/CD create a new one
+
 ### CI/CD Workflow Dependencies
 
-**CRITICAL: The `build.yml` workflow depends on pre-built native binaries being available on GitHub Releases.**
+**The `build.yml` workflow depends on pre-built native binaries being available on GitHub Releases.**
 
 When updating the native submodule version, the following order MUST be followed:
 
