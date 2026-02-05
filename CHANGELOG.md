@@ -17,7 +17,7 @@
 
 ### Changed
 - Updated native prebuilt binaries to v1.1.0.7
-- Migrated example app from `opencv_dart` to `dartcv4` ^2.2.1
+- Updated example app `dartcv4` to ^2.2.1
 
 ## 0.3.0
 
