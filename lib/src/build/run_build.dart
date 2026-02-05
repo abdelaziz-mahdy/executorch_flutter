@@ -60,7 +60,7 @@ const String _packageName = 'executorch_flutter';
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
 /// releases for the same ExecuTorch version.
-const String _defaultPrebuiltVersion = '$executorchVersion.4';
+const String _defaultPrebuiltVersion = '$executorchVersion.7';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -233,10 +233,24 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   // Step 5: Register code assets
   logger.info('[executorch_flutter] Step 5/5: Registering native assets\n');
 
+  final installDir = input.outputDirectory.resolve('install/');
+
   await output.findAndAddCodeAssets(
     input,
-    outDir: input.outputDirectory.resolve('install/'),
+    outDir: installDir,
     names: {_libraryName: '$_packageName.dart'},
+  );
+
+  // Bundle any additional shared libraries from the install directory.
+  // This handles runtime dependencies like MoltenVK (macOS Vulkan),
+  // Vulkan loader libraries, or other platform-specific dependencies
+  // that the FFI library loads via dlopen() at runtime.
+  await _registerAdditionalLibraries(
+    input,
+    output,
+    installDir,
+    targetOS,
+    logger,
   );
 
   _printBuildSuccess(logger);
@@ -488,6 +502,87 @@ void _logBackendConfiguration(Logger logger, Map<String, String?> defines) {
   if (disabledBackends.isNotEmpty) {
     logger.info(
       '[executorch_flutter]   Disabled: ${disabledBackends.join(", ")}\n',
+    );
+  }
+}
+
+/// Scan the install directory for additional shared libraries beyond the main
+/// FFI library and register them as code assets.
+///
+/// This ensures runtime dependencies are bundled in the app. Examples:
+/// - macOS: libMoltenVK.dylib (Vulkan-to-Metal translation for Vulkan backend)
+/// - Linux: Additional Vulkan loader or backend libraries
+/// - Windows: Additional DLL dependencies
+///
+/// The FFI library uses dlopen() at runtime to load these, so they must be
+/// placed alongside the main library. The rpath ($ORIGIN / @loader_path)
+/// set in CMakeLists.txt enables this discovery.
+Future<void> _registerAdditionalLibraries(
+  BuildInput input,
+  BuildOutputBuilder output,
+  Uri installDir,
+  OS targetOS,
+  Logger logger,
+) async {
+  final libDir = Directory.fromUri(installDir.resolve('lib/'));
+  if (!libDir.existsSync()) return;
+
+  // Determine shared library extensions for this platform
+  final extensions = switch (targetOS) {
+    OS.macOS || OS.iOS => ['.dylib'],
+    OS.windows => ['.dll'],
+    _ => ['.so'], // Linux, Android
+  };
+
+  // Scan for shared libraries that are NOT the main FFI library
+  final additionalLibs = <String, String>{};
+
+  for (final entity in libDir.listSync()) {
+    if (entity is! File) continue;
+    final name = entity.uri.pathSegments.last;
+
+    // Skip the main FFI library
+    if (name.contains(_libraryName)) continue;
+
+    // Check if this is a shared library
+    final isSharedLib = extensions.any(
+      (ext) => name.endsWith(ext) || name.contains('$ext.'),
+    );
+    if (!isSharedLib) continue;
+
+    // Extract library name from filename for the names map
+    // e.g., "libMoltenVK.dylib" -> "MoltenVK"
+    // e.g., "vulkan-1.dll" -> "vulkan-1"
+    var libName = name;
+    if (libName.startsWith('lib')) {
+      libName = libName.substring(3);
+    }
+    for (final ext in extensions) {
+      // Handle versioned .so files like libfoo.so.1.2.3
+      final extIdx = libName.indexOf(ext);
+      if (extIdx != -1) {
+        libName = libName.substring(0, extIdx);
+        break;
+      }
+    }
+
+    if (libName.isNotEmpty) {
+      additionalLibs[libName] = '${libName.toLowerCase()}.dart';
+    }
+  }
+
+  if (additionalLibs.isEmpty) return;
+
+  final assets = await output.findAndAddCodeAssets(
+    input,
+    outDir: installDir,
+    names: additionalLibs,
+  );
+
+  for (final asset in assets) {
+    logger.info(
+      '[executorch_flutter]   Bundled dependency: '
+      '${asset.file?.pathSegments.last}\n',
     );
   }
 }

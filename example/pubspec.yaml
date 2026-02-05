@@ -70,11 +70,17 @@ dependencies:
 hooks:
   user_defines:
     executorch_flutter:
-      # debug: true
+      debug: false
       backends:
         - xnnpack
         - coreml
         - mps
+        - vulkan
+    dartcv4:
+      include_modules:
+        - imgproc
+        - imgcodecs
+        - videoio
 
 dev_dependencies:
   integration_test:
