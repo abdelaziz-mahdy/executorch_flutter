@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.1
+
+### Fixed
+- **Vulkan backend crash on macOS/iOS**: Added try-catch blocks in FFI layer to
+  gracefully handle C++ backend initialization exceptions instead of crashing
+- **Vulkan Metal texture size limit**: Models re-exported with conservative
+  texture limits (2048x2048x2048) for Apple Metal compatibility
+- **Runtime dependency discovery**: Added sibling library rpath (`@loader_path`
+  on Apple, `$ORIGIN` on Linux/Android) so dlopen() finds co-located libraries
+
+### Added
+- **Runtime dependency bundling**: Build hook now scans for and bundles
+  additional shared libraries (e.g., MoltenVK for Vulkan on macOS) as code
+  assets automatically on all platforms
+
+### Changed
+- Updated native prebuilt binaries to v1.1.0.7
+- Migrated example app from `opencv_dart` to `dartcv4` ^2.2.1
+
 ## 0.3.0
 
 ### Changed
