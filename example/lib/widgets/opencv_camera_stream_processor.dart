@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'package:dartcv4/dartcv.dart' as cv;
 
 /// OpenCV-based camera stream processor for desktop platforms (macOS)
 /// Uses OpenCV VideoCapture for camera access

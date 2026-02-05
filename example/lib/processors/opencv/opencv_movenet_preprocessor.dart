@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'package:dartcv4/dartcv.dart' as cv;
 
 import '../movenet_input_processor.dart';
 

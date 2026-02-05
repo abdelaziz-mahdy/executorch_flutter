@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:executorch_flutter_example/processors/image_processor.dart';
 import 'package:flutter/material.dart';
-import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'package:dartcv4/dartcv.dart' as cv;
 
 /// OpenCV-accelerated ImageNet/MobileNet preprocessor
 /// Uses native OpenCV async operations for maximum efficiency
