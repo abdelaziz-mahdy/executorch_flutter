@@ -133,10 +133,10 @@ packages:
     dependency: "direct main"
     description:
       name: dartcv4
-      sha256: "81e5b3ed57ec18651deeab67f6a6fd2e36349ec8982e96ec5285950ff6d9853c"
+      sha256: "43dba49162662f3b6e3daf5a95d071429365e2f1ada67d412b851fc9be442e58"
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.1"
+    version: "2.2.1+1"
   device_info_plus:
     dependency: "direct main"
     description:
@@ -159,7 +159,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.3.1"
   fake_async:
     dependency: transitive
     description:
@@ -458,10 +458,10 @@ packages:
     dependency: transitive
     description:
       name: native_toolchain_cmake
-      sha256: "050be489182dd6fa5f33c6d84dfee75590becf5e902bf6228ba66d4d7f4196d2"
+      sha256: fe40e8483183ced98e851e08a9cd2a547fd412cccab98277aa23f2377e43d66f
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.3"
+    version: "0.2.4"
   objective_c:
     dependency: transitive
     description:

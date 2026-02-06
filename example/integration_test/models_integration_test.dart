@@ -1,5 +1,8 @@
 // ignore_for_file: avoid_print
 
+@Timeout(Duration(minutes: 30))
+library;
+
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';

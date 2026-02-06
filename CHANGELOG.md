@@ -17,7 +17,8 @@
 
 ### Changed
 - Updated native prebuilt binaries to v1.1.0.7
-- Updated example app `dartcv4` to ^2.2.1
+- Updated example app `dartcv4` to ^2.2.1+1 (fixes iOS OpenCL build failure)
+- Increased integration test timeout to 30 minutes for CI reliability
 
 ## 0.3.0
 
