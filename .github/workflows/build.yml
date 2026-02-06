@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   # Android Release Build
-  # Using macOS runner due to Flutter SPM compatibility issue on Ubuntu
   build-android:
     name: Build Android (Release)
     runs-on: macos-latest
