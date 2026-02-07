@@ -124,9 +124,9 @@ jobs:
         working-directory: example
 
       - name: Run integration tests
-        run: flutter test integration_test/models_integration_test.dart -d macos
+        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/models_integration_test.dart -d macos
         working-directory: example
-        timeout-minutes: 30
+        timeout-minutes: 45
 
       - name: Upload macOS Build
         uses: actions/upload-artifact@v4
@@ -162,9 +162,9 @@ jobs:
         working-directory: example
 
       - name: Run integration tests
-        run: flutter test integration_test/models_integration_test.dart -d windows
+        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/models_integration_test.dart -d windows
         working-directory: example
-        timeout-minutes: 30
+        timeout-minutes: 45
 
       - name: Upload Windows Build
         uses: actions/upload-artifact@v4
@@ -205,9 +205,9 @@ jobs:
         working-directory: example
 
       - name: Run integration tests
-        run: xvfb-run flutter test integration_test/models_integration_test.dart -d linux
+        run: xvfb-run flutter drive --driver=test_driver/integration_test.dart --target=integration_test/models_integration_test.dart -d linux
         working-directory: example
-        timeout-minutes: 30
+        timeout-minutes: 45
 
       - name: Upload Linux Build
         uses: actions/upload-artifact@v4
