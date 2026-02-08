@@ -13,6 +13,10 @@
 /// - **prebuilt** (default): Downloads pre-built binaries from GitHub Releases.
 ///   Fast builds, no Python required.
 ///
+/// - **local**: Uses locally compiled ExecuTorch libraries from a directory
+///   you specify. Useful for testing custom builds (e.g., with Vulkan fixes).
+///   The directory must contain `lib/` and `include/` subdirectories.
+///
 /// - **source**: Builds ExecuTorch from source using FetchContent.
 ///   Slower but supports custom backend configurations.
 ///   Requires Python 3.8+ with pyyaml package.
@@ -23,7 +27,11 @@
 ///   user_defines:
 ///     executorch_flutter:
 ///       debug: true
-///       build_mode: "prebuilt"  # or "source"
+///       build_mode: "prebuilt"  # or "local" or "source"
+///       # For local mode: path to directory with lib/ and include/
+///       local_lib_dir: "/path/to/compiled/executorch"
+///       # For source mode: path to local ExecuTorch checkout
+///       executorch_source: "/path/to/executorch"
 ///       backends:
 ///         - xnnpack
 ///         - coreml
@@ -36,10 +44,15 @@
 /// versions.
 ///
 /// ## Environment Variables
-/// - `EXECUTORCH_BUILD_MODE`: Override build mode ("prebuilt" or "source")
-/// - `EXECUTORCH_CACHE_DIR`: Custom cache directory for ExecuTorch sources
-/// - `EXECUTORCH_DISABLE_DOWNLOAD`: Set to "1" to skip pre-built download
-/// - `EXECUTORCH_INSTALL_DIR`: Path to local ExecuTorch installation
+/// - `EXECUTORCH_BUILD_MODE`: Override build mode
+///   ("prebuilt", "local", or "source")
+/// - `EXECUTORCH_CACHE_DIR`: Custom cache directory
+/// - `EXECUTORCH_INSTALL_DIR`: Path to local installation
+///   (used by local mode)
+/// - `EXECUTORCH_SOURCE_DIR`: Path to local ExecuTorch checkout
+///   (used by source mode, alternative to executorch_source)
+/// - `EXECUTORCH_DISABLE_DOWNLOAD`: Set to "1" to skip
+///   pre-built download
 library;
 
 import 'dart:io';
@@ -117,13 +130,109 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
       _defaultBuildMode;
 
   final isSourceBuild = buildMode == 'source';
+  final isLocalBuild = buildMode == 'local';
   logger.info('[executorch_flutter] Build mode: $buildMode\n');
+
+  // Resolve local library directory for local mode
+  String? localLibDir;
+  if (isLocalBuild) {
+    localLibDir = Platform.environment['EXECUTORCH_INSTALL_DIR'] ??
+        userDefines['local_lib_dir'] as String?;
+
+    // Auto-detect: look in native/local-builds/ for matching build
+    if (localLibDir == null || localLibDir.isEmpty) {
+      localLibDir = _autoDetectLocalBuild(
+        packagePath.path,
+        targetOS,
+        targetArch,
+        _getBackendDefines(input, targetOS),
+        debugMode,
+        logger,
+      );
+    }
+
+    if (localLibDir == null || localLibDir.isEmpty) {
+      throw Exception('''
+[executorch_flutter] ERROR: No local build found!
+
+When using build_mode: "local", you need compiled libraries.
+
+Option 1: Build with compile-local.sh:
+  cd ${packagePath.path}/native/scripts
+  ./compile-local.sh \\
+    --executorch-source /path/to/executorch \\
+    --platform ${_osToPlatformName(targetOS)} \\
+    --arch ${targetArch.name} \\
+    --backends xnnpack,vulkan
+
+Option 2: Specify path manually in pubspec.yaml:
+  hooks:
+    user_defines:
+      executorch_flutter:
+        build_mode: "local"
+        local_lib_dir: "/path/to/compiled/libs"
+
+Option 3: Set environment variable:
+  export EXECUTORCH_INSTALL_DIR="/path/to/compiled/libs"
+''');
+    }
+
+    // Verify the directory exists and has expected structure
+    final libSubdir = Directory('$localLibDir/lib');
+    if (!Directory(localLibDir).existsSync()) {
+      throw Exception('''
+[executorch_flutter] ERROR: Local library directory not found!
+
+  Path: $localLibDir
+
+Please verify the path exists and contains compiled libraries.
+''');
+    }
+    if (!libSubdir.existsSync()) {
+      throw Exception('''
+[executorch_flutter] ERROR: Missing lib/ subdirectory!
+
+  Path: $localLibDir
+  Expected: $localLibDir/lib/
+
+Run compile-local.sh to build, or check your path.
+''');
+    }
+
+    logger.info(
+      '[executorch_flutter] Local library dir: $localLibDir\n',
+    );
+  }
+
+  // Resolve ExecuTorch source directory for source mode
+  String? executorchSourceDir;
+  if (isSourceBuild) {
+    executorchSourceDir =
+        Platform.environment['EXECUTORCH_SOURCE_DIR'] ??
+        userDefines['executorch_source'] as String?;
+
+    if (executorchSourceDir != null && executorchSourceDir.isNotEmpty) {
+      final sourceDir = Directory(executorchSourceDir);
+      if (!sourceDir.existsSync()) {
+        throw Exception('''
+[executorch_flutter] ERROR: ExecuTorch source directory not found!
+
+  Path: $executorchSourceDir
+
+Please verify the path to your local ExecuTorch checkout.
+''');
+      }
+      logger.info(
+        '[executorch_flutter] ExecuTorch source: $executorchSourceDir\n',
+      );
+    }
+  }
 
   // Get prebuilt version (for prebuilt downloads)
   final prebuiltVersion =
       userDefines['prebuilt_version'] as String? ?? _defaultPrebuiltVersion;
   logger.info('[executorch_flutter] ExecuTorch version: v$executorchVersion\n');
-  if (!isSourceBuild) {
+  if (!isSourceBuild && !isLocalBuild) {
     logger.info('[executorch_flutter] Prebuilt version: v$prebuiltVersion\n');
   }
 
@@ -137,7 +246,7 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
     pythonExecutable = pythonInfo.executable;
   } else {
     logger.info(
-      '\n[executorch_flutter] Step 1/5: Skipping Python check (prebuilt mode)\n',
+      '\n[executorch_flutter] Step 1/5: Skipping Python check ($buildMode mode)\n',
     );
   }
 
@@ -174,6 +283,11 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   logger.info('[executorch_flutter]   CMake build type: $cmakeBuildType\n');
 
   // Create CMake builder - uses native/ directory (submodule)
+  //
+  // For local mode, we still use "prebuilt" as the CMake build mode
+  // but disable downloading and point to the local directory instead.
+  final cmakeBuildMode = isLocalBuild ? 'prebuilt' : buildMode;
+
   final builder = CMakeBuilder.create(
     logLevel: debugMode ? LogLevel.DEBUG : LogLevel.STATUS,
     appleArgs: const AppleBuilderArgs(enableArc: false),
@@ -184,17 +298,26 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
     defines: {
       // CMake build type (determines which prebuilt to download)
       'CMAKE_BUILD_TYPE': cmakeBuildType,
-      // Build mode
-      'EXECUTORCH_BUILD_MODE': buildMode,
+      // Build mode (local uses prebuilt path with download disabled)
+      'EXECUTORCH_BUILD_MODE': cmakeBuildMode,
       // ExecuTorch source version (for source builds)
       'EXECUTORCH_VERSION': executorchVersion,
       // Prebuilt release version (for prebuilt downloads)
       'EXECUTORCH_PREBUILT_VERSION': prebuiltVersion,
+      // Local mode: disable download and use local directory
+      if (isLocalBuild) 'EXECUTORCH_DISABLE_DOWNLOAD': 'ON',
+      if (isLocalBuild && localLibDir != null)
+        'EXECUTORCH_INSTALL_DIR': localLibDir,
       // Python executable (only for source builds)
       if (isSourceBuild && pythonExecutable != null)
         'PYTHON_EXECUTABLE': pythonExecutable,
-      // Cache directory
-      if (cacheDir != null && cacheDir.isNotEmpty)
+      // Cache directory / source directory
+      // EXECUTORCH_CACHE_DIR expects the parent of the executorch/ directory.
+      // If user provides a source dir, use its parent as cache dir.
+      if (isSourceBuild && executorchSourceDir != null)
+        'EXECUTORCH_CACHE_DIR':
+            Directory(executorchSourceDir).parent.path
+      else if (cacheDir != null && cacheDir.isNotEmpty)
         'EXECUTORCH_CACHE_DIR': cacheDir,
       // Platform-specific deployment targets
       if (targetOS == OS.macOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '11.0',
@@ -216,6 +339,15 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
         'first build...\n',
       )
       ..info('[executorch_flutter]   (Faster after first build with cache)\n');
+  } else if (isLocalBuild) {
+    logger
+      ..info(
+        '[executorch_flutter] Step 4/5: Using local pre-built '
+        'binaries\n',
+      )
+      ..info(
+        '[executorch_flutter]   Local directory: $localLibDir\n',
+      );
   } else {
     logger
       ..info(
@@ -595,4 +727,103 @@ void _printBuildSuccess(Logger logger) {
     ..info('[executorch_flutter]  Build completed successfully!\n')
     ..info('[executorch_flutter] ═══════════════════════════════════════\n')
     ..info('\n');
+}
+
+/// Convert OS enum to platform name used in local-builds directory.
+String _osToPlatformName(OS os) => switch (os) {
+      OS.android => 'android',
+      OS.iOS => 'ios',
+      OS.macOS => 'macos',
+      OS.linux => 'linux',
+      OS.windows => 'windows',
+      _ => os.name,
+    };
+
+/// Convert Architecture to the name used in local-builds directory.
+String _archToBuildName(OS os, Architecture? arch) {
+  if (arch == null) return 'unknown';
+  if (os == OS.android) {
+    // Android uses ABI names
+    return switch (arch) {
+      Architecture.arm64 => 'arm64-v8a',
+      Architecture.arm => 'armeabi-v7a',
+      Architecture.x64 => 'x86_64',
+      Architecture.ia32 => 'x86',
+      _ => arch.name,
+    };
+  }
+  return switch (arch) {
+    Architecture.arm64 => 'arm64',
+    Architecture.x64 => 'x64',
+    _ => arch.name,
+  };
+}
+
+/// Auto-detect a local build from native/local-builds/ directory.
+///
+/// Looks for a directory matching the current platform, architecture,
+/// and backend configuration. Returns the path if found, null otherwise.
+String? _autoDetectLocalBuild(
+  String packagePath,
+  OS targetOS,
+  Architecture? targetArch,
+  Map<String, String?> backendDefines,
+  bool debugMode,
+  Logger logger,
+) {
+  final localBuildsDir = Directory(
+    '$packagePath/native/local-builds',
+  );
+  if (!localBuildsDir.existsSync()) return null;
+
+  final platform = _osToPlatformName(targetOS);
+  final arch = _archToBuildName(targetOS, targetArch);
+  final buildType = debugMode ? 'debug' : 'release';
+
+  // Build variant string from enabled backends
+  final enabledBackends = <String>[];
+  for (final entry in backendDefines.entries) {
+    if (entry.value == 'ON') {
+      enabledBackends.add(
+        entry.key.replaceFirst('ET_BUILD_', '').toLowerCase(),
+      );
+    }
+  }
+  final variant = enabledBackends.join('-');
+
+  // Try exact match first: platform-arch-variant-buildtype
+  final exactMatch =
+      '$platform-$arch-$variant-$buildType';
+  final exactDir = Directory(
+    '${localBuildsDir.path}/$exactMatch',
+  );
+  if (exactDir.existsSync() &&
+      Directory('${exactDir.path}/lib').existsSync()) {
+    logger.info(
+      '[executorch_flutter]   Auto-detected: $exactMatch\n',
+    );
+    return exactDir.path;
+  }
+
+  // Try fuzzy match: platform-arch prefix
+  final prefix = '$platform-$arch-';
+  try {
+    for (final entity in localBuildsDir.listSync()) {
+      if (entity is! Directory) continue;
+      final name = entity.uri.pathSegments
+          .where((s) => s.isNotEmpty)
+          .last;
+      if (name.startsWith(prefix) &&
+          Directory('${entity.path}/lib').existsSync()) {
+        logger.info(
+          '[executorch_flutter]   Auto-detected: $name\n',
+        );
+        return entity.path;
+      }
+    }
+  } catch (_) {
+    // Directory listing failed
+  }
+
+  return null;
 }

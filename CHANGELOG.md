@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.2
+
+### Fixed
+- Vulkan UBO budget fix submitted upstream (pytorch/executorch#17294)
+- Investigated Vulkan output issues on PowerVR GPUs (pytorch/executorch#17299, #26)
+
+### Changed
+- Enabled Vulkan backend in example app alongside XNNPACK, CoreML, and MPS
+- Added `compile-local.sh` script to native submodule for local source builds
+- Updated README with current Vulkan status and build configuration docs
+
 ## 0.3.1
 
 ### Fixed
