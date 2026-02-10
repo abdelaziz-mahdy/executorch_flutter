@@ -110,6 +110,7 @@ flutter:
   # Test images only (models and labels are downloaded at runtime)
   assets:
     - assets/images/
+    - assets/debug_models/
 
   # GPU shaders for preprocessing
   shaders:
