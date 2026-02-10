@@ -70,8 +70,8 @@ hooks:
     executorch_flutter:
       debug: false
       # Uncomment below to build from local ExecuTorch source:
-      # build_mode: "source"
-      # executorch_source: "/path/to/executorch"
+      build_mode: "source"
+      executorch_source: "/Users/AbdelazizMahdy/flutter_projects/executorch/executorch"
       backends:
         - xnnpack
         - coreml
