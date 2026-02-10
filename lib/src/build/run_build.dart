@@ -362,6 +362,18 @@ Please verify the path to your local ExecuTorch checkout.
 
   await builder.run(input: input, output: output, logger: logger);
 
+  // Declare file dependencies so Flutter re-runs the build hook when native
+  // sources change. Without this, Flutter caches the hook output and skips
+  // re-invocation entirely -- even when C/C++ sources are modified. Once
+  // re-invoked, CMake handles incremental compilation automatically.
+  await _addBuildDependencies(
+    output,
+    packagePath,
+    isSourceBuild: isSourceBuild,
+    executorchSourceDir: executorchSourceDir,
+    logger: logger,
+  );
+
   // Step 5: Register code assets
   logger.info('[executorch_flutter] Step 5/5: Registering native assets\n');
 
@@ -717,6 +729,75 @@ Future<void> _registerAdditionalLibraries(
       '${asset.file?.pathSegments.last}\n',
     );
   }
+}
+
+/// Add file dependencies to the build output so Flutter knows when to
+/// re-run the build hook.
+///
+/// Flutter's hook system caches build outputs and only re-invokes the hook
+/// when declared dependencies have changed. Without declaring dependencies,
+/// changes to C/C++ source files are invisible to Flutter and require
+/// `flutter clean` to pick up.
+///
+/// For all build modes we track the FFI wrapper sources and CMake files.
+/// For source builds we additionally track key ExecuTorch source directories
+/// so that backend changes (e.g. Vulkan runtime fixes) trigger a rebuild.
+Future<void> _addBuildDependencies(
+  BuildOutputBuilder output,
+  Directory packagePath,
+  {
+  required bool isSourceBuild,
+  String? executorchSourceDir,
+  Logger? logger,
+}) async {
+  final nativeDir = packagePath.uri.resolve('native/');
+  final dependencies = <Uri>[
+    // FFI wrapper sources -- always tracked
+    nativeDir.resolve('src/executorch_ffi.cpp'),
+    nativeDir.resolve('src/executorch_ffi.h'),
+    // CMake build configuration
+    nativeDir.resolve('CMakeLists.txt'),
+    nativeDir.resolve('cmake/download_prebuilt.cmake'),
+    nativeDir.resolve('cmake/build_from_source.cmake'),
+  ];
+
+  // For source builds, track key ExecuTorch source files so that changes
+  // to backend code (Vulkan, XNNPACK, etc.) trigger a rebuild.
+  if (isSourceBuild && executorchSourceDir != null) {
+    final keySourceDirs = [
+      'backends/vulkan/runtime',
+      'backends/xnnpack',
+      'runtime/core',
+      'runtime/executor',
+      'extension/module',
+    ];
+
+    for (final relPath in keySourceDirs) {
+      final dir = Directory('$executorchSourceDir/$relPath');
+      if (!dir.existsSync()) continue;
+
+      await for (final entity in dir.list(recursive: true)) {
+        if (entity is! File) continue;
+        final path = entity.path;
+        if (path.endsWith('.cpp') ||
+            path.endsWith('.h') ||
+            path.endsWith('.cmake')) {
+          dependencies.add(entity.uri);
+        }
+      }
+    }
+
+    logger?.info(
+      '[executorch_flutter]   Tracking ${dependencies.length} source '
+      'file dependencies for incremental builds\n',
+    );
+  }
+
+  // Only add files that actually exist on disk.
+  final existing = dependencies.where(
+    (uri) => File.fromUri(uri).existsSync(),
+  );
+  output.dependencies.addAll(existing);
 }
 
 /// Print build success message.
