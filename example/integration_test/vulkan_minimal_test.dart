@@ -142,6 +142,31 @@ final _minimalModels = [
     expectedMean: 0.8403,
     inputValue: 1.0,
   ),
+  // FP32 MobileNet progressive slices (no force_fp16)
+  (
+    name: 'mobilenet_features_0_1_fp32',
+    asset: 'assets/debug_models/mobilenet_features_0_1_fp32_vulkan.pte',
+    inputShape: [1, 3, 224, 224],
+    desc: 'MobileNet features[0:1] FP32 Vulkan (Conv+BN+Hardswish)',
+    expectedMean: -999.0, // unknown, checking for NaN/zeros
+    inputValue: 1.0,
+  ),
+  (
+    name: 'mobilenet_features_0_4_fp32',
+    asset: 'assets/debug_models/mobilenet_features_0_4_fp32_vulkan.pte',
+    inputShape: [1, 3, 224, 224],
+    desc: 'MobileNet features[0:4] FP32 Vulkan (4 blocks)',
+    expectedMean: -999.0, // unknown, checking for NaN/zeros
+    inputValue: 1.0,
+  ),
+  (
+    name: 'mobilenet_full_fp32',
+    asset: 'assets/debug_models/mobilenet_full_fp32_vulkan.pte',
+    inputShape: [1, 3, 224, 224],
+    desc: 'Full MobileNet V3 Small FP32 Vulkan',
+    expectedMean: -999.0, // unknown, checking for NaN/zeros
+    inputValue: 1.0,
+  ),
 ];
 
 void main() {
