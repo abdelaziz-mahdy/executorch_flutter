@@ -1,0 +1,136 @@
+{
+  "tests": [
+    {
+      "name": "mobilenet_slice_1",
+      "description": "MobileNet V3 Small, features[0:1]",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "mean": 1.444679,
+        "min": -0.353625,
+        "max": 4.749952,
+        "first8": [
+          4.6018,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285
+        ]
+      },
+      "vulkan_asset": "v4_mobilenet_slice_1_fp32_vulkan.pte",
+      "xnnpack_asset": "v4_mobilenet_slice_1_fp32_xnnpack.pte"
+    },
+    {
+      "name": "mobilenet_slice_2",
+      "description": "MobileNet V3 Small, features[0:2]",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          56,
+          56
+        ],
+        "mean": 0.07497,
+        "min": -4.824621,
+        "max": 6.25899,
+        "first8": [
+          0.220514,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895
+        ]
+      },
+      "vulkan_asset": "v4_mobilenet_slice_2_fp32_vulkan.pte",
+      "xnnpack_asset": "v4_mobilenet_slice_2_fp32_xnnpack.pte"
+    },
+    {
+      "name": "mobilenet_slice_3",
+      "description": "MobileNet V3 Small, features[0:3]",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          24,
+          28,
+          28
+        ],
+        "mean": -0.072054,
+        "min": -5.702713,
+        "max": 3.585283,
+        "first8": [
+          -2.145159,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962
+        ]
+      },
+      "vulkan_asset": "v4_mobilenet_slice_3_fp32_vulkan.pte",
+      "xnnpack_asset": "v4_mobilenet_slice_3_fp32_xnnpack.pte"
+    },
+    {
+      "name": "mobilenet_slice_4",
+      "description": "MobileNet V3 Small, features[0:4]",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          24,
+          28,
+          28
+        ],
+        "mean": -0.127927,
+        "min": -3.809093,
+        "max": 5.372622,
+        "first8": [
+          -0.61403,
+          -0.935811,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506
+        ]
+      },
+      "vulkan_asset": "v4_mobilenet_slice_4_fp32_vulkan.pte",
+      "xnnpack_asset": "v4_mobilenet_slice_4_fp32_xnnpack.pte"
+    }
+  ]
+}

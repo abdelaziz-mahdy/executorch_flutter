@@ -1,0 +1,832 @@
+{
+  "tests": [
+    {
+      "name": "conv3x3_nobias",
+      "dtype": "FP32",
+      "description": "3x3 stride=2, w=0.1, NO bias",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 2.7,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          4,
+          4
+        ],
+        "mean": 2.26875,
+        "min": 1.2,
+        "max": 2.7,
+        "first8": [
+          1.2,
+          1.8,
+          1.8,
+          1.8,
+          1.8,
+          2.7,
+          2.7,
+          2.7
+        ]
+      },
+      "vulkan_asset": "v2_conv3x3_nobias_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_conv3x3_nobias_fp32_xnnpack.pte"
+    },
+    {
+      "name": "conv3x3_nobias",
+      "dtype": "FP16",
+      "description": "3x3 stride=2, w=0.1, NO bias",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 2.7,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          4,
+          4
+        ],
+        "mean": 2.26875,
+        "min": 1.2,
+        "max": 2.7,
+        "first8": [
+          1.2,
+          1.8,
+          1.8,
+          1.8,
+          1.8,
+          2.7,
+          2.7,
+          2.7
+        ]
+      },
+      "vulkan_asset": "v2_conv3x3_nobias_fp16_vulkan.pte"
+    },
+    {
+      "name": "conv3x3_bias",
+      "dtype": "FP32",
+      "description": "3x3 stride=2, w=0.1, bias=0.5",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 3.2,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          4,
+          4
+        ],
+        "mean": 2.76875,
+        "min": 1.7,
+        "max": 3.2,
+        "first8": [
+          1.7,
+          2.3,
+          2.3,
+          2.3,
+          2.3,
+          3.2,
+          3.2,
+          3.2
+        ]
+      },
+      "vulkan_asset": "v2_conv3x3_bias_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_conv3x3_bias_fp32_xnnpack.pte"
+    },
+    {
+      "name": "conv3x3_bias",
+      "dtype": "FP16",
+      "description": "3x3 stride=2, w=0.1, bias=0.5",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 3.2,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          4,
+          4
+        ],
+        "mean": 2.76875,
+        "min": 1.7,
+        "max": 3.2,
+        "first8": [
+          1.7,
+          2.3,
+          2.3,
+          2.3,
+          2.3,
+          3.2,
+          3.2,
+          3.2
+        ]
+      },
+      "vulkan_asset": "v2_conv3x3_bias_fp16_vulkan.pte"
+    },
+    {
+      "name": "conv3x3_bias32ch",
+      "dtype": "FP32",
+      "description": "3x3 stride=2, w=0.1, bias=0.5, 32 out channels",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 3.2,
+      "cpu_ref": {
+        "shape": [
+          1,
+          32,
+          4,
+          4
+        ],
+        "mean": 2.76875,
+        "min": 1.7,
+        "max": 3.199999,
+        "first8": [
+          1.7,
+          2.3,
+          2.3,
+          2.3,
+          2.3,
+          3.199999,
+          3.199999,
+          3.199999
+        ]
+      },
+      "vulkan_asset": "v2_conv3x3_bias32ch_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_conv3x3_bias32ch_fp32_xnnpack.pte"
+    },
+    {
+      "name": "conv3x3_bias32ch",
+      "dtype": "FP16",
+      "description": "3x3 stride=2, w=0.1, bias=0.5, 32 out channels",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 3.2,
+      "cpu_ref": {
+        "shape": [
+          1,
+          32,
+          4,
+          4
+        ],
+        "mean": 2.76875,
+        "min": 1.7,
+        "max": 3.199999,
+        "first8": [
+          1.7,
+          2.3,
+          2.3,
+          2.3,
+          2.3,
+          3.199999,
+          3.199999,
+          3.199999
+        ]
+      },
+      "vulkan_asset": "v2_conv3x3_bias32ch_fp16_vulkan.pte"
+    },
+    {
+      "name": "pw_nobias",
+      "dtype": "FP32",
+      "description": "1x1 pointwise, w=0.1, NO bias",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 0.3,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.3,
+        "min": 0.3,
+        "max": 0.3,
+        "first8": [
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3
+        ]
+      },
+      "vulkan_asset": "v2_pw_nobias_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_pw_nobias_fp32_xnnpack.pte"
+    },
+    {
+      "name": "pw_nobias",
+      "dtype": "FP16",
+      "description": "1x1 pointwise, w=0.1, NO bias",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 0.3,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.3,
+        "min": 0.3,
+        "max": 0.3,
+        "first8": [
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3
+        ]
+      },
+      "vulkan_asset": "v2_pw_nobias_fp16_vulkan.pte"
+    },
+    {
+      "name": "pw_bias",
+      "dtype": "FP32",
+      "description": "1x1 pointwise, w=0.1, bias=0.5",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 0.8,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.8,
+        "min": 0.8,
+        "max": 0.8,
+        "first8": [
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8
+        ]
+      },
+      "vulkan_asset": "v2_pw_bias_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_pw_bias_fp32_xnnpack.pte"
+    },
+    {
+      "name": "pw_bias",
+      "dtype": "FP16",
+      "description": "1x1 pointwise, w=0.1, bias=0.5",
+      "input_shape": [
+        1,
+        3,
+        8,
+        8
+      ],
+      "expected_interior": 0.8,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.8,
+        "min": 0.8,
+        "max": 0.8,
+        "first8": [
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8
+        ]
+      },
+      "vulkan_asset": "v2_pw_bias_fp16_vulkan.pte"
+    },
+    {
+      "name": "dw_nobias",
+      "dtype": "FP32",
+      "description": "Depthwise 3x3, w=0.1, NO bias",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.75625,
+        "min": 0.4,
+        "max": 0.9,
+        "first8": [
+          0.4,
+          0.6,
+          0.6,
+          0.6,
+          0.6,
+          0.6,
+          0.6,
+          0.4
+        ]
+      },
+      "vulkan_asset": "v2_dw_nobias_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_dw_nobias_fp32_xnnpack.pte"
+    },
+    {
+      "name": "dw_nobias",
+      "dtype": "FP16",
+      "description": "Depthwise 3x3, w=0.1, NO bias",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.75625,
+        "min": 0.4,
+        "max": 0.9,
+        "first8": [
+          0.4,
+          0.6,
+          0.6,
+          0.6,
+          0.6,
+          0.6,
+          0.6,
+          0.4
+        ]
+      },
+      "vulkan_asset": "v2_dw_nobias_fp16_vulkan.pte"
+    },
+    {
+      "name": "dw_bias",
+      "dtype": "FP32",
+      "description": "Depthwise 3x3, w=0.1, bias=0.5",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 1.25625,
+        "min": 0.9,
+        "max": 1.4,
+        "first8": [
+          0.9,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          0.9
+        ]
+      },
+      "vulkan_asset": "v2_dw_bias_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_dw_bias_fp32_xnnpack.pte"
+    },
+    {
+      "name": "dw_bias",
+      "dtype": "FP16",
+      "description": "Depthwise 3x3, w=0.1, bias=0.5",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 1.25625,
+        "min": 0.9,
+        "max": 1.4,
+        "first8": [
+          0.9,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          1.1,
+          0.9
+        ]
+      },
+      "vulkan_asset": "v2_dw_bias_fp16_vulkan.pte"
+    },
+    {
+      "name": "add_bias_only",
+      "dtype": "FP32",
+      "description": "Just add constant 0.5 (no conv)",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "expected_interior": 1.5,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 1.5,
+        "min": 1.5,
+        "max": 1.5,
+        "first8": [
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5
+        ]
+      },
+      "vulkan_asset": "v2_add_bias_only_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_add_bias_only_fp32_xnnpack.pte"
+    },
+    {
+      "name": "add_bias_only",
+      "dtype": "FP16",
+      "description": "Just add constant 0.5 (no conv)",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "expected_interior": 1.5,
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 1.5,
+        "min": 1.5,
+        "max": 1.5,
+        "first8": [
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5
+        ]
+      },
+      "vulkan_asset": "v2_add_bias_only_fp16_vulkan.pte"
+    },
+    {
+      "name": "mobilenet_slice_1",
+      "dtype": "FP32",
+      "description": "MobileNet V3 Small, first 1 blocks",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "mean": 1.444679,
+        "min": -0.353625,
+        "max": 4.749952,
+        "first8": [
+          4.6018,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285
+        ]
+      },
+      "vulkan_asset": "v2_mobilenet_slice_1_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_mobilenet_slice_1_fp32_xnnpack.pte"
+    },
+    {
+      "name": "mobilenet_slice_1",
+      "dtype": "FP16",
+      "description": "MobileNet V3 Small, first 1 blocks",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "mean": 1.444679,
+        "min": -0.353625,
+        "max": 4.749952,
+        "first8": [
+          4.6018,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285,
+          4.610285
+        ]
+      },
+      "vulkan_asset": "v2_mobilenet_slice_1_fp16_vulkan.pte"
+    },
+    {
+      "name": "mobilenet_slice_2",
+      "dtype": "FP32",
+      "description": "MobileNet V3 Small, first 2 blocks",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          56,
+          56
+        ],
+        "mean": 0.07497,
+        "min": -4.824621,
+        "max": 6.25899,
+        "first8": [
+          0.220514,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895
+        ]
+      },
+      "vulkan_asset": "v2_mobilenet_slice_2_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_mobilenet_slice_2_fp32_xnnpack.pte"
+    },
+    {
+      "name": "mobilenet_slice_2",
+      "dtype": "FP16",
+      "description": "MobileNet V3 Small, first 2 blocks",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          56,
+          56
+        ],
+        "mean": 0.07497,
+        "min": -4.824621,
+        "max": 6.25899,
+        "first8": [
+          0.220514,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895,
+          0.22895
+        ]
+      },
+      "vulkan_asset": "v2_mobilenet_slice_2_fp16_vulkan.pte"
+    },
+    {
+      "name": "mobilenet_slice_3",
+      "dtype": "FP32",
+      "description": "MobileNet V3 Small, first 3 blocks",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          24,
+          28,
+          28
+        ],
+        "mean": -0.072054,
+        "min": -5.702713,
+        "max": 3.585283,
+        "first8": [
+          -2.145159,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962
+        ]
+      },
+      "vulkan_asset": "v2_mobilenet_slice_3_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_mobilenet_slice_3_fp32_xnnpack.pte"
+    },
+    {
+      "name": "mobilenet_slice_3",
+      "dtype": "FP16",
+      "description": "MobileNet V3 Small, first 3 blocks",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          24,
+          28,
+          28
+        ],
+        "mean": -0.072054,
+        "min": -5.702713,
+        "max": 3.585283,
+        "first8": [
+          -2.145159,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962,
+          0.654962
+        ]
+      },
+      "vulkan_asset": "v2_mobilenet_slice_3_fp16_vulkan.pte"
+    },
+    {
+      "name": "mobilenet_slice_4",
+      "dtype": "FP32",
+      "description": "MobileNet V3 Small, first 4 blocks",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          24,
+          28,
+          28
+        ],
+        "mean": -0.127927,
+        "min": -3.809093,
+        "max": 5.372622,
+        "first8": [
+          -0.61403,
+          -0.935811,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506
+        ]
+      },
+      "vulkan_asset": "v2_mobilenet_slice_4_fp32_vulkan.pte",
+      "xnnpack_asset": "v2_mobilenet_slice_4_fp32_xnnpack.pte"
+    },
+    {
+      "name": "mobilenet_slice_4",
+      "dtype": "FP16",
+      "description": "MobileNet V3 Small, first 4 blocks",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "expected_interior": null,
+      "cpu_ref": {
+        "shape": [
+          1,
+          24,
+          28,
+          28
+        ],
+        "mean": -0.127927,
+        "min": -3.809093,
+        "max": 5.372622,
+        "first8": [
+          -0.61403,
+          -0.935811,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506,
+          -0.945506
+        ]
+      },
+      "vulkan_asset": "v2_mobilenet_slice_4_fp16_vulkan.pte"
+    }
+  ]
+}

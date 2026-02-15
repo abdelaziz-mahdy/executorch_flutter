@@ -1,0 +1,202 @@
+{
+  "tests": [
+    {
+      "name": "just_hardswish_small",
+      "description": "Pure Hardswish, small (8x8)",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.666667,
+        "min": 0.666667,
+        "max": 0.666667,
+        "first8": [
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667
+        ]
+      },
+      "vulkan_asset": "v5_just_hardswish_small_vulkan.pte",
+      "xnnpack_asset": "v5_just_hardswish_small_xnnpack.pte"
+    },
+    {
+      "name": "just_hardswish_large",
+      "description": "Pure Hardswish, large (112x112)",
+      "input_shape": [
+        1,
+        16,
+        112,
+        112
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "mean": 0.666667,
+        "min": 0.666667,
+        "max": 0.666667,
+        "first8": [
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667
+        ]
+      },
+      "vulkan_asset": "v5_just_hardswish_large_vulkan.pte",
+      "xnnpack_asset": "v5_just_hardswish_large_xnnpack.pte"
+    },
+    {
+      "name": "just_relu",
+      "description": "Pure ReLU, large (112x112)",
+      "input_shape": [
+        1,
+        16,
+        112,
+        112
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "first8": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "vulkan_asset": "v5_just_relu_vulkan.pte",
+      "xnnpack_asset": "v5_just_relu_xnnpack.pte"
+    },
+    {
+      "name": "just_clamp",
+      "description": "Pure clamp(0,6), large (112x112)",
+      "input_shape": [
+        1,
+        16,
+        112,
+        112
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "first8": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "vulkan_asset": "v5_just_clamp_vulkan.pte",
+      "xnnpack_asset": "v5_just_clamp_xnnpack.pte"
+    },
+    {
+      "name": "conv_then_hs",
+      "description": "Conv2d then Hardswish (separate)",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "mean": 3.179174,
+        "min": 1.331667,
+        "max": 3.199999,
+        "first8": [
+          1.331667,
+          2.031667,
+          2.031667,
+          2.031667,
+          2.031667,
+          2.031667,
+          2.031667,
+          2.031667
+        ]
+      },
+      "vulkan_asset": "v5_conv_then_hs_vulkan.pte",
+      "xnnpack_asset": "v5_conv_then_hs_xnnpack.pte"
+    },
+    {
+      "name": "conv_bn_hs_fixed",
+      "description": "Conv2d+BN+Hardswish (fixed weights)",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "mean": 2.544932,
+        "min": 0.839995,
+        "max": 2.56498,
+        "first8": [
+          0.839995,
+          1.43999,
+          1.43999,
+          1.43999,
+          1.43999,
+          1.43999,
+          1.43999,
+          1.43999
+        ]
+      },
+      "vulkan_asset": "v5_conv_bn_hs_fixed_vulkan.pte",
+      "xnnpack_asset": "v5_conv_bn_hs_fixed_xnnpack.pte"
+    }
+  ]
+}

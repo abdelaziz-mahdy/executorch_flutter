@@ -1,0 +1,400 @@
+{
+  "tests": [
+    {
+      "name": "add_f_div_f",
+      "description": "(x+3.0)/6.0 - both float",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.666667,
+        "min": 0.666667,
+        "max": 0.666667,
+        "first8": [
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667
+        ]
+      },
+      "vulkan_asset": "v7_add_f_div_f_vulkan.pte",
+      "xnnpack_asset": "v7_add_f_div_f_xnnpack.pte"
+    },
+    {
+      "name": "add_i_div_f",
+      "description": "(x+3)/6.0 - int add, float div",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.666667,
+        "min": 0.666667,
+        "max": 0.666667,
+        "first8": [
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667
+        ]
+      },
+      "vulkan_asset": "v7_add_i_div_f_vulkan.pte",
+      "xnnpack_asset": "v7_add_i_div_f_xnnpack.pte"
+    },
+    {
+      "name": "add_f_div_i",
+      "description": "(x+3.0)/6 - float add, int div",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 0.666667,
+        "min": 0.666667,
+        "max": 0.666667,
+        "first8": [
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667,
+          0.666667
+        ]
+      },
+      "vulkan_asset": "v7_add_f_div_i_vulkan.pte",
+      "xnnpack_asset": "v7_add_f_div_i_xnnpack.pte"
+    },
+    {
+      "name": "two_adds_int",
+      "description": "(x+3)+2 - two int adds",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 6.0,
+        "min": 6.0,
+        "max": 6.0,
+        "first8": [
+          6.0,
+          6.0,
+          6.0,
+          6.0,
+          6.0,
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "vulkan_asset": "v7_two_adds_int_vulkan.pte",
+      "xnnpack_asset": "v7_two_adds_int_xnnpack.pte"
+    },
+    {
+      "name": "two_adds_float",
+      "description": "(x+3.0)+2.0 - two float adds",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 6.0,
+        "min": 6.0,
+        "max": 6.0,
+        "first8": [
+          6.0,
+          6.0,
+          6.0,
+          6.0,
+          6.0,
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "vulkan_asset": "v7_two_adds_float_vulkan.pte",
+      "xnnpack_asset": "v7_two_adds_float_xnnpack.pte"
+    },
+    {
+      "name": "add_then_mul",
+      "description": "(x+1.0)*2.0 - add then mul",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 4.0,
+        "min": 4.0,
+        "max": 4.0,
+        "first8": [
+          4.0,
+          4.0,
+          4.0,
+          4.0,
+          4.0,
+          4.0,
+          4.0,
+          4.0
+        ]
+      },
+      "vulkan_asset": "v7_add_then_mul_vulkan.pte",
+      "xnnpack_asset": "v7_add_then_mul_xnnpack.pte"
+    },
+    {
+      "name": "mul_then_add",
+      "description": "x*2.0+1.0 - mul then add",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 3.0,
+        "min": 3.0,
+        "max": 3.0,
+        "first8": [
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0
+        ]
+      },
+      "vulkan_asset": "v7_mul_then_add_vulkan.pte",
+      "xnnpack_asset": "v7_mul_then_add_xnnpack.pte"
+    },
+    {
+      "name": "three_ops",
+      "description": "(x+1.0)*2.0-3.0 - three float ops",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "first8": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "vulkan_asset": "v7_three_ops_vulkan.pte",
+      "xnnpack_asset": "v7_three_ops_xnnpack.pte"
+    },
+    {
+      "name": "add_self",
+      "description": "x+x - no constants",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 2.0,
+        "min": 2.0,
+        "max": 2.0,
+        "first8": [
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "vulkan_asset": "v7_add_self_vulkan.pte",
+      "xnnpack_asset": "v7_add_self_xnnpack.pte"
+    },
+    {
+      "name": "mul_self",
+      "description": "x*x - no constants",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "first8": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "vulkan_asset": "v7_mul_self_vulkan.pte",
+      "xnnpack_asset": "v7_mul_self_xnnpack.pte"
+    },
+    {
+      "name": "add_self_div_f",
+      "description": "(x+x)/2.0 - self add then float div",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "first8": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "vulkan_asset": "v7_add_self_div_f_vulkan.pte",
+      "xnnpack_asset": "v7_add_self_div_f_xnnpack.pte"
+    },
+    {
+      "name": "add_self_div_i",
+      "description": "(x+x)/2 - self add then int div",
+      "input_shape": [
+        1,
+        4,
+        8,
+        8
+      ],
+      "cpu_ref": {
+        "shape": [
+          1,
+          4,
+          8,
+          8
+        ],
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "first8": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "vulkan_asset": "v7_add_self_div_i_vulkan.pte",
+      "xnnpack_asset": "v7_add_self_div_i_xnnpack.pte"
+    }
+  ]
+}

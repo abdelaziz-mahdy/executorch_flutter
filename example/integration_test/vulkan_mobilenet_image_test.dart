@@ -26,15 +26,15 @@ import 'package:integration_test/integration_test.dart';
 final _models = [
   (
     name: 'MobileNet XNNPACK (CPU ref)',
-    asset: 'assets/debug_models/mobilenet_full_xnnpack.pte',
+    asset: 'assets/debug_models/mobilenet_fixed_xnnpack.pte',
   ),
   (
     name: 'MobileNet FP32 Vulkan',
-    asset: 'assets/debug_models/mobilenet_full_fp32_vulkan.pte',
+    asset: 'assets/debug_models/mobilenet_fixed_vulkan.pte',
   ),
   (
     name: 'MobileNet FP16 Vulkan',
-    asset: 'assets/debug_models/mobilenet_debug_full_model_vulkan.pte',
+    asset: 'assets/debug_models/mobilenet_fixed_fp16_vulkan.pte',
   ),
 ];
 
@@ -85,7 +85,8 @@ void main() {
           try {
             loadedModel = await ExecuTorchModel.loadFromAsset(model.asset);
           } catch (e) {
-            print('  SKIP - Asset not found: ${model.asset}');
+            print('  FAILED to load: $e');
+            print('  Asset: ${model.asset}');
             return;
           }
           print('  Model loaded successfully');
