@@ -29,8 +29,8 @@ class ExecuTorchModelFfiImpl extends ExecuTorchModel {
   bool get isDisposed => _module.isDisposed;
 
   @override
-  Future<List<TensorData>> forward(List<TensorData> inputs) async =>
-      _module.forward(inputs);
+  Future<List<TensorData>> forward(List<TensorData> inputs) =>
+      _module.forwardAsync(inputs);
 
   @override
   Future<void> dispose() async {
@@ -42,7 +42,7 @@ class ExecuTorchModelFfiImpl extends ExecuTorchModel {
 Future<ExecuTorchModel> load(String filePath) async {
   // Ensure debug logging is enabled before model loading
   ensureNativeLoggingInitialized();
-  final module = NativeModule.loadFile(filePath);
+  final module = await NativeModule.loadFileAsync(filePath);
   final modelId = _generateModelId(filePath);
   return ExecuTorchModelFfiImpl._(module, modelId);
 }
@@ -51,7 +51,7 @@ Future<ExecuTorchModel> load(String filePath) async {
 Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) async {
   // Ensure debug logging is enabled before model loading
   ensureNativeLoggingInitialized();
-  final module = NativeModule.load(modelBytes);
+  final module = await NativeModule.loadAsync(modelBytes);
   final modelId = _generateModelId('bytes_${modelBytes.length}');
   return ExecuTorchModelFfiImpl._(module, modelId);
 }
@@ -62,7 +62,7 @@ Future<ExecuTorchModel> loadFromAsset(String assetPath) async {
   ensureNativeLoggingInitialized();
   final byteData = await rootBundle.load(assetPath);
   final bytes = byteData.buffer.asUint8List();
-  final module = NativeModule.load(bytes);
+  final module = await NativeModule.loadAsync(bytes);
   final modelId = _generateModelId(assetPath);
   return ExecuTorchModelFfiImpl._(module, modelId);
 }

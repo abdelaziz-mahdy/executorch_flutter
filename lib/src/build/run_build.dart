@@ -73,7 +73,7 @@ const String _packageName = 'executorch_flutter';
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
 /// releases for the same ExecuTorch version.
-const String _defaultPrebuiltVersion = '$executorchVersion.7';
+const String _defaultPrebuiltVersion = '$executorchVersion.8';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -207,8 +207,7 @@ Run compile-local.sh to build, or check your path.
   // Resolve ExecuTorch source directory for source mode
   String? executorchSourceDir;
   if (isSourceBuild) {
-    executorchSourceDir =
-        Platform.environment['EXECUTORCH_SOURCE_DIR'] ??
+    executorchSourceDir = Platform.environment['EXECUTORCH_SOURCE_DIR'] ??
         userDefines['executorch_source'] as String?;
 
     if (executorchSourceDir != null && executorchSourceDir.isNotEmpty) {
@@ -315,8 +314,7 @@ Please verify the path to your local ExecuTorch checkout.
       // EXECUTORCH_CACHE_DIR expects the parent of the executorch/ directory.
       // If user provides a source dir, use its parent as cache dir.
       if (isSourceBuild && executorchSourceDir != null)
-        'EXECUTORCH_CACHE_DIR':
-            Directory(executorchSourceDir).parent.path
+        'EXECUTORCH_CACHE_DIR': Directory(executorchSourceDir).parent.path
       else if (cacheDir != null && cacheDir.isNotEmpty)
         'EXECUTORCH_CACHE_DIR': cacheDir,
       // Platform-specific deployment targets
@@ -744,8 +742,7 @@ Future<void> _registerAdditionalLibraries(
 /// so that backend changes (e.g. Vulkan runtime fixes) trigger a rebuild.
 Future<void> _addBuildDependencies(
   BuildOutputBuilder output,
-  Directory packagePath,
-  {
+  Directory packagePath, {
   required bool isSourceBuild,
   String? executorchSourceDir,
   Logger? logger,
@@ -873,13 +870,11 @@ String? _autoDetectLocalBuild(
   final variant = enabledBackends.join('-');
 
   // Try exact match first: platform-arch-variant-buildtype
-  final exactMatch =
-      '$platform-$arch-$variant-$buildType';
+  final exactMatch = '$platform-$arch-$variant-$buildType';
   final exactDir = Directory(
     '${localBuildsDir.path}/$exactMatch',
   );
-  if (exactDir.existsSync() &&
-      Directory('${exactDir.path}/lib').existsSync()) {
+  if (exactDir.existsSync() && Directory('${exactDir.path}/lib').existsSync()) {
     logger.info(
       '[executorch_flutter]   Auto-detected: $exactMatch\n',
     );
@@ -891,9 +886,7 @@ String? _autoDetectLocalBuild(
   try {
     for (final entity in localBuildsDir.listSync()) {
       if (entity is! Directory) continue;
-      final name = entity.uri.pathSegments
-          .where((s) => s.isNotEmpty)
-          .last;
+      final name = entity.uri.pathSegments.where((s) => s.isNotEmpty).last;
       if (name.startsWith(prefix) &&
           Directory('${entity.path}/lib').existsSync()) {
         logger.info(

@@ -2,11 +2,13 @@
 
 ## 0.3.2
 
-### Fixed
-- Vulkan UBO budget fix submitted upstream (pytorch/executorch#17294)
-- Investigated Vulkan output issues on PowerVR GPUs (pytorch/executorch#17299, #26)
+### Added
+- **Non-blocking async FFI**: Model loading and inference now run on a background
+  thread via `std::thread` in C and `NativeCallable.listener` in Dart, keeping the
+  Flutter UI thread responsive during heavy operations
 
 ### Changed
+- Updated native prebuilt binaries to v1.1.0.8
 - Enabled Vulkan backend in example app alongside XNNPACK, CoreML, and MPS
 - Added `compile-local.sh` script to native submodule for local source builds
 - Updated README with current Vulkan status and build configuration docs

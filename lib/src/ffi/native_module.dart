@@ -4,6 +4,7 @@
 /// Native module wrapper for FFI layer.
 library;
 
+import 'dart:async';
 import 'dart:ffi' as ffi;
 import 'dart:typed_data';
 
@@ -15,6 +16,38 @@ import '../types.dart';
 import 'native_logging.dart';
 import 'native_status.dart';
 import 'native_tensor.dart';
+
+/// Native callback type for async functions that pass a void* result.
+typedef ETNativeCallback
+    = ffi.Pointer<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>;
+
+/// Run a native FFI function asynchronously using NativeCallable.listener.
+///
+/// The native function spawns a thread, does work, and calls the callback
+/// with a void* result pointer from that thread. NativeCallable.listener
+/// marshals the callback onto the Dart event loop automatically.
+///
+/// [func] receives a native callback pointer and should call the async
+/// C function (which returns immediately after spawning a thread).
+///
+/// [onComplete] receives the completer and the void* passed by C.
+Future<T> etRunAsync<T>(
+  void Function(ETNativeCallback callback) func,
+  void Function(Completer<T> completer, ffi.Pointer<ffi.Void> result)
+      onComplete,
+) {
+  final completer = Completer<T>();
+  late final ffi.NativeCallable<ffi.Void Function(ffi.Pointer<ffi.Void>)>
+      nativeCallable;
+  void onResponse(ffi.Pointer<ffi.Void> result) {
+    onComplete(completer, result);
+    nativeCallable.close();
+  }
+
+  nativeCallable = ffi.NativeCallable.listener(onResponse);
+  func(nativeCallable.nativeFunction);
+  return completer.future;
+}
 
 /// Wrapper around native ETModule pointer with automatic memory management.
 ///
@@ -96,6 +129,85 @@ class NativeModule implements ffi.Finalizable {
     } finally {
       calloc.free(pathPtr);
     }
+  }
+
+  /// Load a model from file path asynchronously.
+  ///
+  /// Uses NativeCallable.listener + C-side threading to avoid blocking
+  /// the UI thread during model loading.
+  static Future<NativeModule> loadFileAsync(String path) async {
+    logDebug('NativeModule.loadFileAsync() called with path: $path');
+
+    final pathPtr = path.toNativeUtf8().cast<ffi.Char>();
+    final outPtr = calloc<ffi.Pointer<ETModule>>();
+
+    final module = await etRunAsync<NativeModule>(
+      (callback) {
+        et_module_load_file_async(pathPtr, outPtr, callback);
+      },
+      (completer, statusVoidPtr) {
+        try {
+          final statusPtr = statusVoidPtr.cast<ETStatus>();
+          checkStatus(statusPtr);
+          final module = NativeModule._(outPtr.value);
+          logDebug(
+            'Module loaded successfully (async file)! '
+            'inputCount=${module.inputCount}, '
+            'outputCount=${module.outputCount}',
+          );
+          completer.complete(module);
+        } catch (e) {
+          completer.completeError(e);
+        } finally {
+          calloc
+            ..free(outPtr)
+            ..free(pathPtr);
+        }
+      },
+    );
+
+    return module;
+  }
+
+  /// Load a model from memory buffer asynchronously.
+  ///
+  /// Uses NativeCallable.listener + C-side threading to avoid blocking
+  /// the UI thread during model loading.
+  static Future<NativeModule> loadAsync(Uint8List data) async {
+    logDebug('NativeModule.loadAsync() called with ${data.length} bytes');
+
+    final dataPtr = calloc<ffi.Uint8>(data.length);
+    dataPtr.asTypedList(data.length).setAll(0, data);
+
+    final outPtr = calloc<ffi.Pointer<ETModule>>();
+
+    final module = await etRunAsync<NativeModule>(
+      (callback) {
+        // C side copies data internally, so dataPtr can be freed in callback
+        et_module_load_async(dataPtr, data.length, outPtr, callback);
+      },
+      (completer, statusVoidPtr) {
+        try {
+          final statusPtr = statusVoidPtr.cast<ETStatus>();
+          checkStatus(statusPtr);
+          final module = NativeModule._(outPtr.value);
+          logDebug(
+            'Module loaded successfully (async)! '
+            'inputCount=${module.inputCount}, '
+            'outputCount=${module.outputCount}',
+          );
+          completer.complete(module);
+        } catch (e) {
+          completer.completeError(e);
+        } finally {
+          calloc
+            ..free(outPtr)
+            ..free(dataPtr);
+        }
+      },
+    );
+
+    return module;
   }
 
   /// The native module pointer.
@@ -229,6 +341,79 @@ class NativeModule implements ffi.Finalizable {
         tensor.dispose();
       }
     }
+  }
+
+  /// Run forward pass asynchronously.
+  ///
+  /// Uses NativeCallable.listener + C-side threading to avoid blocking
+  /// the UI thread during inference.
+  Future<List<TensorData>> forwardAsync(List<TensorData> inputs) async {
+    _checkDisposed();
+
+    logDebug('forwardAsync() called with ${inputs.length} inputs');
+
+    final nativeInputs = <NativeTensor>[];
+    for (var i = 0; i < inputs.length; i++) {
+      try {
+        nativeInputs.add(NativeTensor.fromTensorData(inputs[i]));
+      } catch (e) {
+        for (final tensor in nativeInputs) {
+          tensor.dispose();
+        }
+        rethrow;
+      }
+    }
+
+    final inputPtrs = calloc<ffi.Pointer<ETTensor>>(nativeInputs.length);
+    for (var i = 0; i < nativeInputs.length; i++) {
+      inputPtrs[i] = nativeInputs[i].ptr;
+    }
+
+    final outputsPtr = calloc<ffi.Pointer<ffi.Pointer<ETTensor>>>();
+    final outputCountPtr = calloc<ffi.Int32>();
+
+    final results = await etRunAsync<List<TensorData>>(
+      (callback) {
+        et_module_forward_async(
+          _ptr,
+          inputPtrs,
+          nativeInputs.length,
+          outputsPtr,
+          outputCountPtr,
+          callback,
+        );
+      },
+      (completer, statusVoidPtr) {
+        try {
+          final statusPtr = statusVoidPtr.cast<ETStatus>();
+          checkStatus(statusPtr);
+
+          final outputCount = outputCountPtr.value;
+          final outputs = <TensorData>[];
+          final outputArray = outputsPtr.value;
+
+          for (var i = 0; i < outputCount; i++) {
+            outputs.add(_extractTensorData(outputArray[i]));
+          }
+
+          et_tensor_array_free(outputArray, outputCount);
+
+          completer.complete(outputs);
+        } catch (e) {
+          completer.completeError(e);
+        } finally {
+          calloc
+            ..free(inputPtrs)
+            ..free(outputsPtr)
+            ..free(outputCountPtr);
+          for (final tensor in nativeInputs) {
+            tensor.dispose();
+          }
+        }
+      },
+    );
+
+    return results;
   }
 
   /// Whether this module has been disposed.
