@@ -7,6 +7,8 @@ Thank you for your interest in contributing to ExecuTorch Flutter! This guide wi
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
 - [Project Structure](#project-structure)
+- [Build Modes](#build-modes)
+- [Local Build & Testing](#local-build--testing)
 - [Making Changes](#making-changes)
 - [Code Standards](#code-standards)
 - [Submitting Changes](#submitting-changes)
@@ -79,6 +81,296 @@ executorch_flutter/
 │   └── scripts/                # Platform build scripts
 └── example/                    # Example Flutter app
 ```
+
+## Build Modes
+
+The plugin supports three build modes for the native C/C++ library. Configure via `pubspec.yaml`:
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      build_mode: "prebuilt"   # or "local" or "source"
+```
+
+| Mode | Description | Speed | Use Case |
+|------|-------------|-------|----------|
+| **prebuilt** (default) | Downloads pre-built binaries from GitHub Releases | Fast (seconds) | Normal development, CI/CD |
+| **local** | Uses locally compiled libraries from a directory you specify | Fast (seconds) | Testing native code changes, custom backends |
+| **source** | Builds ExecuTorch from source via CMake | Slow (15-30 min) | Custom configurations, pointing at a local ExecuTorch checkout |
+
+## Local Build & Testing
+
+When contributing to the native C/C++ layer or testing upstream ExecuTorch changes
+(e.g., bug fixes, new backends), use **local mode** to compile and test without
+waiting for CI to build and publish new prebuilt binaries.
+
+### Overview
+
+The workflow is:
+
+1. **Compile** the native library from a local ExecuTorch source using `compile-local.sh`
+2. **Configure** the Flutter plugin to use `build_mode: "local"`
+3. **Run** the example app on your target device
+
+### Prerequisites
+
+- CMake 3.18+
+- Ninja (recommended): `brew install ninja` (macOS) or `apt install ninja-build` (Linux)
+- **For Android**: Android NDK (`ANDROID_NDK_HOME` environment variable)
+- **For Vulkan**: Vulkan SDK with `glslc` (`VULKAN_SDK` environment variable)
+
+### Step 1: Compile the Native Library
+
+Use the `compile-local.sh` script in `native/scripts/`:
+
+```bash
+cd native/scripts
+
+# Build for Android arm64 with XNNPACK + Vulkan
+./compile-local.sh \
+  --executorch-source /path/to/executorch \
+  --platform android \
+  --arch arm64-v8a \
+  --backends xnnpack,vulkan
+
+# Build for macOS (host platform, auto-detected)
+./compile-local.sh \
+  --executorch-source /path/to/executorch
+
+# Build for Android with custom NDK path
+./compile-local.sh \
+  --executorch-source /path/to/executorch \
+  --platform android \
+  --arch arm64-v8a \
+  --backends xnnpack \
+  --ndk ~/Android/Sdk/ndk/27.0.12077973
+```
+
+**Script options:**
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `--executorch-source` | Yes | - | Path to local ExecuTorch source directory |
+| `--platform` | No | Auto-detect host | `android`, `macos`, `linux`, `windows` |
+| `--arch` | No | Auto-detect | `arm64-v8a`, `armeabi-v7a`, `x86_64`, `arm64`, `x64` |
+| `--backends` | No | `xnnpack` | Comma-separated: `xnnpack`, `vulkan`, `coreml`, `mps` |
+| `--build-type` | No | `Release` | `Release` or `Debug` |
+| `--ndk` | Android only | `$ANDROID_NDK_HOME` | Path to Android NDK |
+
+The output goes to `native/local-builds/<platform>-<arch>-<backends>-<build_type>/`
+with `lib/` and `include/` subdirectories.
+
+### Step 2: Configure the Flutter Plugin
+
+**Option A: Auto-detection** (recommended when using `compile-local.sh`)
+
+The plugin automatically finds builds in `native/local-builds/` matching your
+target platform, architecture, and backends:
+
+```yaml
+# In your app's pubspec.yaml (e.g., example/pubspec.yaml)
+hooks:
+  user_defines:
+    executorch_flutter:
+      build_mode: "local"
+      backends:
+        - xnnpack
+        - vulkan
+```
+
+**Option B: Explicit path**
+
+Point directly at any directory containing `lib/` and `include/`:
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      build_mode: "local"
+      local_lib_dir: "/absolute/path/to/compiled/libs"
+      backends:
+        - xnnpack
+        - vulkan
+```
+
+**Option C: Environment variable**
+
+```bash
+export EXECUTORCH_INSTALL_DIR="/path/to/compiled/libs"
+# or
+export EXECUTORCH_BUILD_MODE="local"
+```
+
+### Step 3: Run the App
+
+```bash
+cd example
+flutter run -d <your_device>
+```
+
+The build hook will use your local libraries instead of downloading prebuilts.
+
+### Full Example: Testing an Upstream Fix
+
+Say you want to test a fix in the upstream ExecuTorch Vulkan backend on Android:
+
+```bash
+# 1. Clone or navigate to your ExecuTorch source
+cd ~/executorch
+git checkout fix/my-vulkan-fix
+
+# 2. Compile the native library for Android
+cd /path/to/executorch_flutter/native/scripts
+./compile-local.sh \
+  --executorch-source ~/executorch \
+  --platform android \
+  --arch arm64-v8a \
+  --backends xnnpack,vulkan
+
+# 3. Configure the example app to use local build
+# Edit example/pubspec.yaml and add:
+#   hooks:
+#     user_defines:
+#       executorch_flutter:
+#         build_mode: "local"
+#         backends:
+#           - xnnpack
+#           - vulkan
+
+# 4. Run on your Android device
+cd /path/to/executorch_flutter/example
+flutter run -d <android_device_id>
+```
+
+### Switching Back to Prebuilt Mode
+
+Remove or change the `build_mode` in your `pubspec.yaml`:
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      # build_mode: "local"    # comment out or remove
+      backends:
+        - xnnpack
+```
+
+Or explicitly set it back:
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      build_mode: "prebuilt"
+```
+
+### Directory Structure
+
+After running `compile-local.sh`, the output looks like:
+
+```
+native/
+├── local-builds/                              # gitignored
+│   ├── android-arm64-v8a-xnnpack-vulkan-release/
+│   │   ├── lib/
+│   │   │   └── libexecutorch_ffi.so
+│   │   └── include/
+│   │       └── executorch_ffi.h
+│   └── macos-arm64-xnnpack-release/
+│       ├── lib/
+│       │   └── libexecutorch_ffi.dylib
+│       └── include/
+│           └── executorch_ffi.h
+└── scripts/
+    └── compile-local.sh
+```
+
+## Source Build (from Local ExecuTorch Checkout)
+
+If you want Flutter's build system to compile ExecuTorch from source automatically
+(instead of using pre-compiled libraries), use **source mode** with `executorch_source`
+pointing at your local ExecuTorch checkout.
+
+This is useful when:
+- You're iterating on ExecuTorch C++ code and want `flutter run` to pick up changes
+- You need a custom backend configuration not available in prebuilts
+- You want the build integrated into Flutter's native assets pipeline
+
+### Prerequisites
+
+- Python 3.8+ with `pyyaml` package
+- CMake 3.18+, Ninja
+- A local ExecuTorch checkout with submodules:
+  ```bash
+  git clone --recursive https://github.com/pytorch/executorch.git
+  ```
+- **For Android**: Android NDK
+- **For Vulkan**: `glslc` (from Vulkan SDK or `brew install shaderc`)
+
+### Configuration
+
+Add to your app's `pubspec.yaml`:
+
+```yaml
+hooks:
+  user_defines:
+    executorch_flutter:
+      build_mode: "source"
+      executorch_source: "/path/to/executorch"
+      backends:
+        - xnnpack
+        - vulkan
+```
+
+Or use an environment variable:
+
+```bash
+export EXECUTORCH_SOURCE_DIR="/path/to/executorch"
+```
+
+### How It Works
+
+1. Flutter's native assets hook detects `build_mode: "source"`
+2. The CMake build system uses your local ExecuTorch as the source tree
+   (skips downloading from GitHub)
+3. ExecuTorch is compiled with the requested backends
+4. The resulting `libexecutorch_ffi` is linked into your app
+
+### Source vs Local Mode
+
+| | Source Mode | Local Mode |
+|---|------------|------------|
+| **Compilation** | Done by Flutter's build system | Done by you (via `compile-local.sh`) |
+| **When to use** | Iterating on ExecuTorch C++ code | Testing pre-compiled libraries |
+| **Speed** | Slow first build (15-30 min), fast rebuilds | Always fast (seconds) |
+| **Flexibility** | Full control over build options | Uses whatever was compiled |
+
+### Example: Testing an ExecuTorch Patch
+
+```bash
+# 1. Clone ExecuTorch and apply your patch
+git clone --recursive https://github.com/pytorch/executorch.git
+cd executorch
+git checkout fix/my-patch
+
+# 2. Configure the example app
+# Edit example/pubspec.yaml:
+#   hooks:
+#     user_defines:
+#       executorch_flutter:
+#         build_mode: "source"
+#         executorch_source: "/path/to/executorch"
+#         backends:
+#           - xnnpack
+
+# 3. Run - Flutter builds ExecuTorch from your local source
+cd /path/to/executorch_flutter/example
+flutter run -d <device>
+```
+
+**Note**: First build takes 15-30 minutes. Subsequent builds are incremental
+and much faster (minutes). The build cache is preserved between runs.
 
 ## Making Changes
 

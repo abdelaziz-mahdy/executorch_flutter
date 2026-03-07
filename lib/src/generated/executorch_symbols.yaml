@@ -4,6 +4,12 @@ files:
     used-config:
       ffi-native: true
     symbols:
+      ETCallback_0Function:
+        name: ETCallback_0Function
+        dart-name: DartETCallback_0Function
+      ETCallback_1Function:
+        name: ETCallback_1Function
+        dart-name: DartETCallback_1Function
       c:@EA@ETBackend:
         name: ETBackend
       c:@EA@ETDType:
@@ -18,14 +24,20 @@ files:
         name: et_executorch_version
       c:@F@et_module_forward:
         name: et_module_forward
+      c:@F@et_module_forward_async:
+        name: et_module_forward_async
       c:@F@et_module_free:
         name: et_module_free
       c:@F@et_module_input_count:
         name: et_module_input_count
       c:@F@et_module_load:
         name: et_module_load
+      c:@F@et_module_load_async:
+        name: et_module_load_async
       c:@F@et_module_load_file:
         name: et_module_load_file
+      c:@F@et_module_load_file_async:
+        name: et_module_load_file_async
       c:@F@et_module_output_count:
         name: et_module_output_count
       c:@F@et_set_debug_enabled:
@@ -60,3 +72,7 @@ files:
         name: ETTensor
       c:@UA@__mbstate_t:
         name: __mbstate_t
+      c:executorch_ffi.h@T@ETCallback_0:
+        name: ETCallback_0
+      c:executorch_ffi.h@T@ETCallback_1:
+        name: ETCallback_1

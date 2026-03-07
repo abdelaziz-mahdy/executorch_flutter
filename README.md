@@ -55,7 +55,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 <!-- PACKAGE_VERSION_START -->
 ```yaml
 dependencies:
-  executorch_flutter: ^0.3.1
+  executorch_flutter: ^0.3.2
 ```
 <!-- PACKAGE_VERSION_END -->
 
@@ -229,8 +229,13 @@ hooks:
   user_defines:
     executorch_flutter:
       debug: false              # Enable debug logging
-      build_mode: "prebuilt"    # "prebuilt" or "source"
-      prebuilt_version: "1.0.1.21"
+      build_mode: "prebuilt"    # "prebuilt", "local", or "source"
+      # prebuilt_version: "1.1.0.7"  # Optional: pin specific native version
+      # For source mode: build from local ExecuTorch checkout
+      # build_mode: "source"
+      # executorch_source: "/path/to/executorch"
+      # For local mode: point at pre-compiled libraries
+      # local_lib_dir: "/path/to/compiled/libs"
       backends:
         - xnnpack
         - coreml
@@ -242,8 +247,10 @@ hooks:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `debug` | `false` | Debug logging + debug binaries |
-| `build_mode` | `"prebuilt"` | `"prebuilt"` (fast) or `"source"` (custom) |
+| `build_mode` | `"prebuilt"` | `"prebuilt"` (fast), `"local"` (pre-compiled), or `"source"` (from source) |
 | `prebuilt_version` | Current | Prebuilt release version |
+| `executorch_source` | - | Path to local ExecuTorch checkout (source mode) |
+| `local_lib_dir` | - | Path to pre-compiled libraries (local mode) |
 | `backends` | Platform-specific | Backends to enable |
 
 ### Default Backends by Platform
@@ -259,10 +266,11 @@ hooks:
 
 | Variable | Description |
 |----------|-------------|
-| `EXECUTORCH_BUILD_MODE` | Override build mode |
-| `EXECUTORCH_CACHE_DIR` | Custom cache directory |
+| `EXECUTORCH_BUILD_MODE` | Override build mode (`prebuilt`, `local`, `source`) |
+| `EXECUTORCH_SOURCE_DIR` | Path to local ExecuTorch checkout (source mode) |
+| `EXECUTORCH_INSTALL_DIR` | Path to pre-compiled libraries (local mode) |
+| `EXECUTORCH_CACHE_DIR` | Custom cache directory for source builds |
 | `EXECUTORCH_DISABLE_DOWNLOAD` | Skip prebuilt download |
-| `EXECUTORCH_INSTALL_DIR` | Local ExecuTorch path |
 
 ---
 
@@ -388,9 +396,9 @@ python3 main.py
 
 | Platform | Status |
 |----------|--------|
-| Android | Works on most devices; some UBO size issues |
+| Android | Works on most devices; see [#26](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/26) for PowerVR GPU status |
 | Windows/Linux | Generally functional |
-| macOS/iOS | **Not functional** - MoltenVK crashes |
+| macOS/iOS | Works via MoltenVK (Vulkan-to-Metal translation) |
 
 ### Enable Vulkan
 
@@ -402,6 +410,20 @@ hooks:
         - xnnpack
         - vulkan
 ```
+
+### Vulkan Troubleshooting
+
+<details>
+<summary><b>"uniform data allocation exceeded" on Android</b></summary>
+
+This can occur when Vulkan tensor metadata exceeds the per-tensor uniform buffer limit. Fix submitted upstream: [pytorch/executorch#17294](https://github.com/pytorch/executorch/pull/17294).
+</details>
+
+<details>
+<summary><b>Vulkan on PowerVR GPUs</b></summary>
+
+Some PowerVR devices may produce incorrect Vulkan results due to texture dimension limits. Being tracked upstream: [pytorch/executorch#17299](https://github.com/pytorch/executorch/issues/17299). XNNPACK is recommended as a fallback.
+</details>
 
 ### Recommendations
 

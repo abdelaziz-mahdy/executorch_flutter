@@ -256,27 +256,35 @@ class ModelController extends ChangeNotifier {
   }
 
   /// Process camera frames
+  ///
+  /// Always updates the displayed frame immediately. Inference runs in the
+  /// background — if a previous inference is still running, the frame is
+  /// shown but inference is skipped. Results from the latest completed
+  /// inference are overlaid on the current frame.
   Future<void> _processFrameBytes(Uint8List imageBytes) async {
-    // Skip if disposed, already processing, or not in camera mode
-    if (_isDisposed || _isProcessingFrame || !_isCameraMode) {
-      return;
-    }
+    if (_isDisposed || !_isCameraMode) return;
+
+    // Always update the displayed frame immediately for smooth camera feed
+    final liveCameraInput = LiveCameraInput(imageBytes);
+    _currentInput = liveCameraInput;
+    _safeNotifyListeners();
+
+    // Skip starting inference if one is already running
+    if (_isProcessingFrame) return;
 
     _isProcessingFrame = true;
 
     try {
       final totalStopwatch = Stopwatch()..start();
-      final liveCameraInput = LiveCameraInput(imageBytes);
 
       // Preprocessing
       final preprocessStopwatch = Stopwatch()..start();
       final inputProcessor = definition.createInputProcessor(_settings);
       final tensors = await inputProcessor.process(liveCameraInput);
       preprocessStopwatch.stop();
-      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds
-          .toDouble();
+      final preprocessingTime =
+          preprocessStopwatch.elapsedMilliseconds.toDouble();
 
-      // Check again in case we were disposed during preprocessing
       if (_isDisposed) return;
 
       // Inference
@@ -285,7 +293,6 @@ class ModelController extends ChangeNotifier {
       inferenceStopwatch.stop();
       final inferenceTime = inferenceStopwatch.elapsedMilliseconds.toDouble();
 
-      // Check again in case we were disposed during inference
       if (_isDisposed) return;
 
       // Postprocessing
@@ -293,13 +300,12 @@ class ModelController extends ChangeNotifier {
       final outputProcessor = definition.createOutputProcessor(_settings);
       final result = await outputProcessor.process(outputs);
       postprocessStopwatch.stop();
-      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds
-          .toDouble();
+      final postprocessingTime =
+          postprocessStopwatch.elapsedMilliseconds.toDouble();
 
       totalStopwatch.stop();
       final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();
 
-      // Final check before updating state
       if (_isDisposed) return;
 
       // Update performance tracker
@@ -310,7 +316,6 @@ class ModelController extends ChangeNotifier {
         totalTime: totalTime,
       );
 
-      _currentInput = liveCameraInput;
       _currentResult = result;
       _preprocessingTime = preprocessingTime;
       _inferenceTime = inferenceTime;
@@ -319,7 +324,6 @@ class ModelController extends ChangeNotifier {
 
       _safeNotifyListeners();
     } catch (e) {
-      // Only log if not disposed (disposed model throws expected errors)
       if (!_isDisposed) {
         debugPrint('❌ Frame processing failed: $e');
       }

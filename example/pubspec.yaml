@@ -65,12 +65,13 @@ dependencies:
   universal_platform: ^1.1.0
 
 # Native assets build configuration
-# Note: Vulkan removed - crashes on macOS/iOS due to MoltenVK/Metal incompatibility
-# Vulkan only works on Android, Linux, and Windows
 hooks:
   user_defines:
     executorch_flutter:
       debug: false
+      # Uncomment below to build from local ExecuTorch source:
+      # build_mode: "source"
+      # executorch_source: "/path/to/executorch"
       backends:
         - xnnpack
         - coreml

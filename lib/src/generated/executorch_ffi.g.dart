@@ -192,6 +192,74 @@ external void et_module_free(
   ffi.Pointer<ETModule> module,
 );
 
+/// Load model from memory buffer (async, threaded).
+///
+/// Copies data internally, spawns a thread to load the model,
+/// and calls callback(ETStatus*) from the thread when done.
+/// Returns immediately without blocking.
+///
+/// @param data       Model data (.pte format, copied internally)
+/// @param data_size  Size of model data
+/// @param out        Output module handle (written before callback)
+/// @param callback   Called with ETStatus* when loading completes
+@ffi.Native<
+    ffi.Void Function(ffi.Pointer<ffi.Uint8>, ffi.Size,
+        ffi.Pointer<ffi.Pointer<ETModule>>, ETCallback_1)>()
+external void et_module_load_async(
+  ffi.Pointer<ffi.Uint8> data,
+  int data_size,
+  ffi.Pointer<ffi.Pointer<ETModule>> out,
+  ETCallback_1 callback,
+);
+
+/// Load model from file path (async, threaded).
+///
+/// Copies path internally, spawns a thread to load the model,
+/// and calls callback(ETStatus*) from the thread when done.
+/// Returns immediately without blocking.
+///
+/// @param path       Path to .pte model file (copied internally)
+/// @param out        Output module handle (written before callback)
+/// @param callback   Called with ETStatus* when loading completes
+@ffi.Native<
+    ffi.Void Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ETModule>>,
+        ETCallback_1)>()
+external void et_module_load_file_async(
+  ffi.Pointer<ffi.Char> path,
+  ffi.Pointer<ffi.Pointer<ETModule>> out,
+  ETCallback_1 callback,
+);
+
+/// Run forward pass (async, threaded).
+///
+/// Spawns a thread to run inference, calls callback(ETStatus*) when done.
+/// Returns immediately without blocking.
+///
+/// Caller must keep inputs alive until callback fires.
+///
+/// @param module       Module handle
+/// @param inputs       Array of input tensor handles
+/// @param input_count  Number of inputs
+/// @param outputs      Output array of tensor handles (written before callback)
+/// @param output_count Output number of outputs (written before callback)
+/// @param callback     Called with ETStatus* when inference completes
+@ffi.Native<
+    ffi.Void Function(
+        ffi.Pointer<ETModule>,
+        ffi.Pointer<ffi.Pointer<ETTensor>>,
+        ffi.Int32,
+        ffi.Pointer<ffi.Pointer<ffi.Pointer<ETTensor>>>,
+        ffi.Pointer<ffi.Int32>,
+        ETCallback_1)>()
+external void et_module_forward_async(
+  ffi.Pointer<ETModule> module,
+  ffi.Pointer<ffi.Pointer<ETTensor>> inputs,
+  int input_count,
+  ffi.Pointer<ffi.Pointer<ffi.Pointer<ETTensor>>> outputs,
+  ffi.Pointer<ffi.Int32> output_count,
+  ETCallback_1 callback,
+);
+
 /// Check if backend is available (compiled in).
 ///
 /// @param backend  Backend to check
@@ -276,6 +344,17 @@ final class __mbstate_t extends ffi.Union {
   @ffi.LongLong()
   external int _mbstateL;
 }
+
+typedef ETCallback_0Function = ffi.Void Function();
+typedef DartETCallback_0Function = void Function();
+
+/// Callback with no arguments. Called when async operation completes.
+typedef ETCallback_0 = ffi.Pointer<ffi.NativeFunction<ETCallback_0Function>>;
+typedef ETCallback_1Function = ffi.Void Function(ffi.Pointer<ffi.Void>);
+typedef DartETCallback_1Function = void Function(ffi.Pointer<ffi.Void>);
+
+/// Callback with one pointer argument. Called with result pointer.
+typedef ETCallback_1 = ffi.Pointer<ffi.NativeFunction<ETCallback_1Function>>;
 
 /// Error codes returned by FFI functions.
 enum ETErrorCode {

@@ -1,4 +1,8 @@
+import 'dart:io' show Platform;
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:universal_platform/universal_platform.dart';
 
@@ -166,6 +170,18 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
 
       if (downloadInfo.state == ModelDownloadState.error) {
         throw Exception(downloadInfo.errorMessage ?? 'Download failed');
+      }
+
+      // Log model hash for debugging cache issues
+      if (downloadInfo.bytes != null) {
+        final actualHash = CachedModelDataSource.computeHash(
+          downloadInfo.bytes!,
+        );
+        debugPrint(
+          '🔑 Model hash: $actualHash\n'
+          '   Expected:   ${model.hash}\n'
+          '   Match: ${actualHash == model.hash}',
+        );
       }
 
       setState(() {
@@ -375,7 +391,121 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     );
   }
 
-  void _showRuntimeInfoDialog() {
+  Future<Map<String, String>> _getDeviceInfo() async {
+    final info = <String, String>{};
+    if (UniversalPlatform.isWeb) {
+      info['Platform'] = 'Web';
+      return info;
+    }
+    final deviceInfo = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      final android = await deviceInfo.androidInfo;
+      info['Platform'] = 'Android';
+      info['Device'] = android.model;
+      info['Manufacturer'] = android.manufacturer;
+      info['Brand'] = android.brand;
+      info['Hardware'] = android.hardware;
+      info['Board'] = android.board;
+      info['Product'] = android.product;
+      info['Android Version'] = android.version.release;
+      info['SDK Int'] = '${android.version.sdkInt}';
+      info['Security Patch'] = android.version.securityPatch ?? 'N/A';
+      info['ABIs'] = android.supportedAbis.join(', ');
+      info['Physical RAM'] = '${android.physicalRamSize} MB';
+      info['Available RAM'] = '${android.availableRamSize} MB';
+      info['Low RAM Device'] = '${android.isLowRamDevice}';
+      info['Physical Device'] = '${android.isPhysicalDevice}';
+    } else if (Platform.isIOS) {
+      final ios = await deviceInfo.iosInfo;
+      info['Platform'] = 'iOS';
+      info['Device'] = ios.model;
+      info['Name'] = ios.name;
+      info['System Version'] = ios.systemVersion;
+      info['Machine'] = ios.utsname.machine;
+      info['Physical Device'] = '${ios.isPhysicalDevice}';
+    } else if (Platform.isMacOS) {
+      final macos = await deviceInfo.macOsInfo;
+      info['Platform'] = 'macOS';
+      info['Model'] = macos.model;
+      info['OS Version'] = macos.osRelease;
+      info['Kernel Version'] = macos.kernelVersion;
+      info['CPU Architecture'] = macos.arch;
+      info['Physical RAM'] = '${macos.memorySize ~/ (1024 * 1024)} MB';
+      info['CPU Cores'] = '${macos.activeCPUs}';
+    } else if (Platform.isLinux) {
+      final linux = await deviceInfo.linuxInfo;
+      info['Platform'] = 'Linux';
+      info['Name'] = linux.prettyName;
+      info['Version'] = linux.version ?? 'N/A';
+      info['Machine'] = linux.machineId ?? 'N/A';
+    } else if (Platform.isWindows) {
+      final windows = await deviceInfo.windowsInfo;
+      info['Platform'] = 'Windows';
+      info['Computer Name'] = windows.computerName;
+      info['Product Name'] = windows.productName;
+      info['Build Number'] = '${windows.buildNumber}';
+      info['Physical RAM'] =
+          '${windows.systemMemoryInMegabytes} MB';
+      info['CPU Cores'] = '${windows.numberOfCores}';
+    }
+    return info;
+  }
+
+  String _buildRuntimeInfoText(Map<String, String> deviceInfo) {
+    final buf = StringBuffer();
+    final availableBackends = BackendQuery.available;
+    final allBackends = Backend.values;
+    final ffiVersion = ExecuTorchVersion.version;
+    final etVersion = ExecuTorchVersion.executorchVersion;
+
+    buf.writeln('## ExecuTorch Runtime Info\n');
+
+    buf.writeln('### Version');
+    buf.writeln('- ExecuTorch: $etVersion');
+    buf.writeln('- FFI Library: $ffiVersion');
+    buf.writeln('- Plugin: $executorchVersion');
+    buf.writeln('- Selected Version: $_selectedVersion\n');
+
+    buf.writeln('### Backends');
+    for (final backend in allBackends) {
+      final available = availableBackends.contains(backend);
+      buf.writeln(
+        '- ${backend.displayName}: ${available ? "Available" : "Not compiled"}',
+      );
+    }
+    buf.writeln();
+
+    buf.writeln('### Device');
+    for (final entry in deviceInfo.entries) {
+      buf.writeln('- ${entry.key}: ${entry.value}');
+    }
+
+    return buf.toString();
+  }
+
+  void _showRuntimeInfoDialog() async {
+    // Show loading dialog while fetching device info
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Loading device info...'),
+          ],
+        ),
+      ),
+    );
+
+    final deviceInfo = await _getDeviceInfo();
+    final runtimeInfoText = _buildRuntimeInfoText(deviceInfo);
+    debugPrint(runtimeInfoText);
+
+    if (!mounted) return;
+    Navigator.of(context).pop(); // dismiss loading
+
     // Get available backends
     final availableBackends = BackendQuery.available;
     final allBackends = Backend.values;
@@ -384,6 +514,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
     final ffiVersion = ExecuTorchVersion.version;
     final etVersion = ExecuTorchVersion.executorchVersion;
 
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -447,35 +578,36 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               }),
               const Divider(height: 24),
 
-              // Platform section
+              // Device section
               Text(
-                'Platform',
+                'Device',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
               const SizedBox(height: 8),
-              _buildInfoRow(
-                'OS',
-                UniversalPlatform.isWeb
-                    ? 'Web'
-                    : UniversalPlatform.isAndroid
-                        ? 'Android'
-                        : UniversalPlatform.isIOS
-                            ? 'iOS'
-                            : UniversalPlatform.isMacOS
-                                ? 'macOS'
-                                : UniversalPlatform.isWindows
-                                    ? 'Windows'
-                                    : UniversalPlatform.isLinux
-                                        ? 'Linux'
-                                        : 'Unknown',
+              ...deviceInfo.entries.map(
+                (e) => _buildInfoRow(e.key, e.value),
               ),
+              const Divider(height: 24),
+
               _buildInfoRow('Selected Version', _selectedVersion),
             ],
           ),
         ),
         actions: [
+          TextButton(
+            onPressed: () {
+              final text = _buildRuntimeInfoText(deviceInfo);
+              Clipboard.setData(ClipboardData(text: text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Runtime info copied to clipboard'),
+                ),
+              );
+            },
+            child: const Text('Copy'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
