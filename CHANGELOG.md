@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.3
+
+### Added
+- **MPS backend on iOS**: Metal Performance Shaders now enabled for iOS (15.4+),
+  previously macOS-only. MPS is enabled by default on all Apple platforms.
+
+### Changed
+- Updated native prebuilt binaries to v1.1.0.9
+
 ## 0.3.2
 
 ### Added
