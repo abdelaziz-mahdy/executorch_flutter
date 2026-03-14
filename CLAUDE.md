@@ -71,7 +71,7 @@ dart pub publish --dry-run
 - **Minimum Version**: iOS 13.0
 - **Architectures**: arm64 (device), arm64-simulator, x86_64-simulator (all supported)
 - **Dependencies**: ExecuTorch pre-built native libraries via native assets
-- **Backend**: XNNPACK, CoreML, Vulkan (opt-in, via MoltenVK)
+- **Backend**: XNNPACK, CoreML, MPS (Metal Performance Shaders), Vulkan (opt-in, via MoltenVK)
 
 ### macOS
 - **Minimum Version**: macOS 11.0

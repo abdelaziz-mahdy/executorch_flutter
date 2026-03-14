@@ -73,7 +73,7 @@ const String _packageName = 'executorch_flutter';
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
 /// releases for the same ExecuTorch version.
-const String _defaultPrebuiltVersion = '$executorchVersion.8';
+const String _defaultPrebuiltVersion = '$executorchVersion.9';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -406,7 +406,7 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   // Platform support for each backend
   final isApplePlatform = targetOS == OS.iOS || targetOS == OS.macOS;
   final supportsCoreml = isApplePlatform;
-  final supportsMps = targetOS == OS.macOS;
+  final supportsMps = isApplePlatform;
   // Vulkan available on all native platforms (native assets don't run for web)
   // Note: On Apple platforms, Vulkan via MoltenVK may crash - use at own risk
   const supportsVulkan = true;
@@ -419,9 +419,9 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   final enableCoreml =
       supportsCoreml && (backends?.contains('coreml') ?? isApplePlatform);
 
-  // MPS only on macOS
+  // MPS on Apple platforms (macOS and iOS 15.4+)
   final enableMps =
-      supportsMps && (backends?.contains('mps') ?? (targetOS == OS.macOS));
+      supportsMps && (backends?.contains('mps') ?? isApplePlatform);
 
   // Vulkan opt-in and only on supported platforms
   final enableVulkan =
