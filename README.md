@@ -118,7 +118,7 @@ final model = await ExecuTorchModel.load('/path/to/model.pte');
 | Platform | Min Version | Architectures | Backends |
 |----------|-------------|---------------|----------|
 | **Android** | API 23 | arm64-v8a, armeabi-v7a, x86_64, x86 | XNNPACK, Vulkan* |
-| **iOS** | 13.0+ | arm64, x86_64+arm64 (sim) | XNNPACK, CoreML, Vulkan* |
+| **iOS** | 13.0+ | arm64, x86_64+arm64 (sim) | XNNPACK, CoreML, MPS, Vulkan* |
 | **macOS** | 11.0+ | arm64, x86_64 | XNNPACK, CoreML, MPS, Vulkan* |
 | **Windows** | 10+ | x64 | XNNPACK, Vulkan* |
 | **Linux** | Ubuntu 20.04+ | x64, arm64 | XNNPACK, Vulkan* |
@@ -203,7 +203,7 @@ print('Available: ${backends.map((b) => b.displayName).join(", ")}');
 |---------|--------------|-----------|
 | `Backend.xnnpack` | XNNPACK | All |
 | `Backend.coreml` | CoreML | iOS, macOS |
-| `Backend.mps` | Metal Performance Shaders | macOS |
+| `Backend.mps` | Metal Performance Shaders | iOS, macOS |
 | `Backend.vulkan` | Vulkan | Android, iOS, macOS, Windows, Linux |
 
 ### Exception Hierarchy
@@ -258,7 +258,7 @@ hooks:
 | Platform | Defaults |
 |----------|----------|
 | Android | xnnpack |
-| iOS | xnnpack, coreml |
+| iOS | xnnpack, coreml, mps |
 | macOS | xnnpack, coreml, mps |
 | Windows/Linux | xnnpack |
 
