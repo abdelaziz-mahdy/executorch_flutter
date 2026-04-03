@@ -22,7 +22,9 @@
 
 ### Deprecated
 - **MPS backend**: Deprecated upstream in ExecuTorch 1.2.0, will be removed in v1.4.0.
-  Use Metal backend instead for Apple GPU acceleration.
+  A new Metal backend is available upstream with improved features (4-bit quantized
+  inference, native causal SDPA, buffer pool). Adding Metal backend support to our
+  native builds is planned for a future release.
 
 ## 0.3.3
 
