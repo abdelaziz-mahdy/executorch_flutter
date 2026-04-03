@@ -29,16 +29,20 @@ import '../services/model_index_service.dart';
 /// They are downloaded from raw.githubusercontent.com on first use and cached locally.
 /// Models repo: https://github.com/abdelaziz-mahdy/executorch_flutter_models
 class ModelRegistry {
-  /// Base URL for model downloads from GitHub raw content
-  /// Models are hosted in a separate repository for faster cloning of main repo
-  static const String _baseUrl =
-      'https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main';
+  /// Base URL for GitHub Releases (model .pte files and labels)
+  static const String _releaseBaseUrl =
+      'https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download';
 
-  /// URL for ImageNet class labels (for MobileNet)
-  static const String _imagenetLabelsUrl = '$_baseUrl/mobilenet/labels.txt';
+  /// Fallback version for models when index.json is unavailable
+  static const String _fallbackVersion = '1.1.0';
 
-  /// URL for COCO class labels (for YOLO)
-  static const String _cocoLabelsUrl = '$_baseUrl/yolo/labels.txt';
+  /// URL for ImageNet class labels (for MobileNet) - stored as release asset
+  static const String _imagenetLabelsUrl =
+      '$_releaseBaseUrl/v$_fallbackVersion/mobilenet-labels.txt';
+
+  /// URL for COCO class labels (for YOLO) - stored as release asset
+  static const String _cocoLabelsUrl =
+      '$_releaseBaseUrl/v$_fallbackVersion/yolo-labels.txt';
 
   /// Loads all available models from the index.json
   ///
@@ -229,7 +233,7 @@ class ModelRegistry {
         name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (Web)',
         description: 'Web-optimized image classification - XNNPACK with WASM SIMD',
-        remoteUrl: '$_baseUrl/mobilenet/mobilenet_v3_small_xnnpack.pte',
+        remoteUrl: '$_releaseBaseUrl/v$_fallbackVersion/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
         fileSizeMB: 9.73,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -238,7 +242,7 @@ class ModelRegistry {
         name: 'yolo11n_xnnpack',
         displayName: 'YOLO11 Nano (Web)',
         description: 'Web-optimized object detection - XNNPACK with WASM SIMD',
-        remoteUrl: '$_baseUrl/yolo/yolo11n_xnnpack.pte',
+        remoteUrl: '$_releaseBaseUrl/v$_fallbackVersion/yolo11n_xnnpack.pte',
         inputSize: 640,
         fileSizeMB: 10.19,
         labelsRemoteUrl: _cocoLabelsUrl,
@@ -254,7 +258,7 @@ class ModelRegistry {
         name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (XNNPACK)',
         description: 'CPU-optimized image classification - works on all platforms',
-        remoteUrl: '$_baseUrl/mobilenet/mobilenet_v3_small_xnnpack.pte',
+        remoteUrl: '$_releaseBaseUrl/v$_fallbackVersion/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
         fileSizeMB: 9.73,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -264,7 +268,7 @@ class ModelRegistry {
         name: 'yolo11n_xnnpack',
         displayName: 'YOLO11 Nano (XNNPACK)',
         description: 'CPU-optimized object detection - works on all platforms',
-        remoteUrl: '$_baseUrl/yolo/yolo11n_xnnpack.pte',
+        remoteUrl: '$_releaseBaseUrl/v$_fallbackVersion/yolo11n_xnnpack.pte',
         inputSize: 640,
         fileSizeMB: 10.19,
         labelsRemoteUrl: _cocoLabelsUrl,

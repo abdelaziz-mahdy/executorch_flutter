@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+
+### Changed
+- **ExecuTorch 1.2.0**: Upgraded from ExecuTorch 1.1.0 to 1.2.0
+  - Aligned with PyTorch 2.11, TorchAudio 2.11, TorchVision 0.26
+  - Vulkan backend: int8 quantized inference, improved device compatibility
+  - Metal backend: 4-bit quantized inference, native causal SDPA
+  - MPS backend deprecated upstream (will be removed in v1.4.0)
+  - Updated native prebuilt binaries to v1.2.0.1
+- **Model storage migrated to GitHub Releases**: Model .pte files now
+  downloaded from GitHub Release assets instead of raw git content,
+  reducing models repo size from 2.5GB to ~1MB
+
 ## 0.3.3
 
 ### Added

@@ -244,9 +244,9 @@ The `native/` directory contains the C/C++ FFI library that bridges Dart to Exec
 
 | Repository | CI/CD Trigger | What It Does |
 |------------|---------------|--------------|
-| `executorch_flutter` | Push to main / tags | Builds, tests, publishes releases |
-| `executorch_native` | Tags (e.g., `v1.1.0.7`) | Builds pre-built binaries for all platforms, publishes as GitHub Release assets |
-| `executorch_flutter_models` | Push to main | Exports models with all backends, publishes model files |
+| `executorch_flutter` | Push to main / tags | `build.yml` builds all platforms; `release.yml` creates GitHub Release + publishes to pub.dev; `update-readme.yml` auto-updates README version links; `deploy-web.yml` deploys example to GitHub Pages |
+| `executorch_native` | Tags (e.g., `v1.2.0.1`) | `release.yaml` orchestrates 4 platform build workflows → unified GitHub Release with all binary artifacts + size reports |
+| `executorch_flutter_models` | Push to main (python/) or manual dispatch | `export-models.yml` exports models → generates index.json, labels, versions.json → commits to main |
 
 **Rules:**
 - **DO NOT** use `gh release create` or manually create tags/releases
@@ -275,6 +275,46 @@ When updating the native submodule version, the following order MUST be followed
 - Check the `executorch_native` GitHub Actions to see if builds are still in progress
 - Wait for all platform builds to complete before re-running the workflow
 - Do NOT merge PRs or push to main until binaries are available
+
+### ExecuTorch Version Upgrade Procedure (Cross-Repo)
+
+When a new upstream ExecuTorch version is released (e.g., 1.1.0 → 1.2.0), all three repos must be updated **in strict order**. Each step must complete before the next begins.
+
+```
+Step 1: executorch_native
+  ├── Update EXECUTORCH_VERSION in CMakeLists.txt
+  ├── Update default VERSION in all scripts/build-*.sh
+  ├── Reset EXECUTORCH_PREBUILT_VERSION to X.Y.Z.1
+  ├── Merge PR to main
+  ├── Tag: git tag vX.Y.Z.1 && git push origin vX.Y.Z.1
+  └── WAIT 30-60 min for all platform binaries to build
+      Verify at: github.com/abdelaziz-mahdy/executorch_native/releases/tag/vX.Y.Z.1
+
+Step 2: executorch_flutter_models
+  ├── Update HARDCODED version list in .github/workflows/export-models.yml (line ~59)
+  │   e.g., echo 'versions=["1.0.1", "1.1.0", "1.2.0"]' >> $GITHUB_OUTPUT
+  ├── Also update workflow_dispatch input options dropdown
+  ├── Merge PR to main (triggers export automatically since python/ changed)
+  │   OR trigger workflow manually via GitHub Actions UI
+  └── WAIT for CI to export models, generate index.json, update versions.json, and commit
+      NOTE: versions.json is auto-generated OUTPUT, not input — don't edit it manually
+
+Step 3: executorch_flutter
+  ├── Update lib/src/version.dart: executorchVersion = 'X.Y.Z'
+  ├── Update lib/src/build/run_build.dart: prebuilt suffix (e.g., .1)
+  ├── Bump version in pubspec.yaml
+  ├── Add CHANGELOG.md entry
+  ├── Update native submodule ref: cd native && git pull origin main && cd ..
+  ├── Update models submodule ref: cd models && git pull origin main && cd ..
+  ├── Merge PR to main (update-readme.yml auto-updates README links)
+  └── Tag for pub.dev release: git tag v0.X.0 && git push origin v0.X.0
+      (release.yml creates GitHub Release + publishes to pub.dev)
+```
+
+**Version Sources of Truth (this repo):**
+- `lib/src/version.dart` → `executorchVersion` (e.g., `'1.2.0'`)
+- `lib/src/build/run_build.dart` → `_defaultPrebuiltVersion` = `'$executorchVersion.1'` (e.g., `1.2.0.1`)
+- `pubspec.yaml` → `version:` (package version, e.g., `0.4.0`)
 
 ## Key APIs
 
