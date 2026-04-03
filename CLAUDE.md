@@ -302,6 +302,11 @@ Step 2: executorch_flutter_models
 Step 3: executorch_flutter
   ├── Update lib/src/version.dart: executorchVersion = 'X.Y.Z'
   ├── Update lib/src/build/run_build.dart: prebuilt suffix (e.g., .1)
+  ├── Update Dockerfile.wasm: EXECUTORCH_VERSION=vX.Y.Z
+  ├── Rebuild WebAssembly binaries:
+  │     docker build -f Dockerfile.wasm -t executorch-wasm .
+  │     docker run --rm -v $(pwd)/web/wasm:/output executorch-wasm
+  │     (copies executorch.js + executorch.wasm to web/wasm/)
   ├── Bump version in pubspec.yaml
   ├── Add CHANGELOG.md entry
   ├── Update native submodule ref: cd native && git pull origin main && cd ..
