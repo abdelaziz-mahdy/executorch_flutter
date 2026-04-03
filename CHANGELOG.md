@@ -4,14 +4,25 @@
 
 ### Changed
 - **ExecuTorch 1.2.0**: Upgraded from ExecuTorch 1.1.0 to 1.2.0
+  ([full release notes](https://github.com/pytorch/executorch/releases/tag/v1.2.0))
   - Aligned with PyTorch 2.11, TorchAudio 2.11, TorchVision 0.26
-  - Vulkan backend: int8 quantized inference, improved device compatibility
-  - Metal backend: 4-bit quantized inference, native causal SDPA
-  - MPS backend deprecated upstream (will be removed in v1.4.0)
+  - Vulkan backend: int8 quantized inference (q8ta_linear, q8ta_conv2d),
+    layout-flexible shaders, fp16 fallback, Vulkan 1.0 compatibility
+  - Metal backend: 4-bit quantized inference (MLX-derived GEMM kernels),
+    native causal SDPA with GQA, GPU buffer pool, dispatch pipelining,
+    mmap weight prefetching
+  - XNNPACK: Voxtral Realtime, Sortformer, Silero VAD, Parakeet support
+  - Cortex-M as first-class target with CMSIS-NN integration
+  - Smaller binaries: .eh_frame suppression, constexpr kernel constructors
+  - New model support: Voxtral Realtime, Qwen3.5, Parakeet, Sortformer, Silero VAD
   - Updated native prebuilt binaries to v1.2.0.1
 - **Model storage migrated to GitHub Releases**: Model .pte files now
   downloaded from GitHub Release assets instead of raw git content,
   reducing models repo size from 2.5GB to ~1MB
+
+### Deprecated
+- **MPS backend**: Deprecated upstream in ExecuTorch 1.2.0, will be removed in v1.4.0.
+  Use Metal backend instead for Apple GPU acceleration.
 
 ## 0.3.3
 
