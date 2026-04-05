@@ -232,9 +232,15 @@ void main() {
         }
       }
 
-      // For failed tests, we still want the test to pass so we can see all results
-      // The summary will show which models failed
-      expect(true, isTrue);
+      // Fail the test if any model failed (non-skipped)
+      final failedModels =
+          testResults.where((r) => !r.passed && !r.skipped).toList();
+      expect(
+        failedModels,
+        isEmpty,
+        reason:
+            '${failedModels.length} model(s) failed: ${failedModels.map((r) => '${r.modelName} (${r.failurePhase}: ${r.error})').join(', ')}',
+      );
     });
   });
 }
