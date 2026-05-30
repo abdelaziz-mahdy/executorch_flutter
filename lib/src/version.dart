@@ -4,4 +4,4 @@
 /// executorch_flutter_models repository.
 ///
 /// Format: Major.Minor.Patch (matches upstream ExecuTorch version)
-const String executorchVersion = '1.1.0';
+const String executorchVersion = '1.3.1';
