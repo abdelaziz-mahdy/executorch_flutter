@@ -129,7 +129,7 @@ jobs:
         timeout-minutes: 45
 
       - name: Run all models compatibility tests
-        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d macos
+        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d macos --dart-define=CI=true
         working-directory: example
         timeout-minutes: 60
 
@@ -172,7 +172,7 @@ jobs:
         timeout-minutes: 45
 
       - name: Run all models compatibility tests
-        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d windows
+        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d windows --dart-define=CI=true
         working-directory: example
         timeout-minutes: 60
 
@@ -220,7 +220,7 @@ jobs:
         timeout-minutes: 45
 
       - name: Run all models compatibility tests
-        run: xvfb-run flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d linux
+        run: xvfb-run flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d linux --dart-define=CI=true
         working-directory: example
         timeout-minutes: 60
 

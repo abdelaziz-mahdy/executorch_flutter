@@ -124,17 +124,14 @@ void main() {
           backend: modelEntry.backend,
         );
 
-        // Check if this model should run on current platform
-        final isSupported = modelEntry.platforms.isEmpty ||
-            modelEntry.platforms.contains(currentPlatform);
-
-        if (!isSupported) {
+        // Check whether this model can run in the current environment.
+        final skipReason = _skipReasonFor(modelEntry, currentPlatform);
+        if (skipReason != null) {
           result.skipped = true;
-          result.skipReason =
-              'Backend ${modelEntry.backend} not supported on $currentPlatform';
+          result.skipReason = skipReason;
           testResults.add(result);
           print('\n⏭️  SKIP: ${modelEntry.name}');
-          print('   Reason: ${result.skipReason}');
+          print('   Reason: $skipReason');
           continue;
         }
 
@@ -243,6 +240,49 @@ void main() {
       );
     });
   });
+}
+
+/// Whether the suite is running under CI.
+///
+/// Set via `--dart-define=CI=true` in the GitHub Actions workflow. Headless CI
+/// runners have no usable GPU / Neural Engine, so GPU/NPU backends (CoreML,
+/// MPS, Vulkan) cannot initialize there — only XNNPACK (CPU) is exercised.
+const bool _isCI = bool.fromEnvironment('CI', defaultValue: false);
+
+/// Platforms each backend can actually run on.
+const Map<String, Set<String>> _backendPlatforms = {
+  'xnnpack': {'android', 'ios', 'macos', 'linux', 'windows', 'web'},
+  'coreml': {'ios', 'macos'},
+  'mps': {'ios', 'macos'},
+  'vulkan': {'android', 'ios', 'macos', 'linux', 'windows'},
+};
+
+/// Returns a human-readable reason to skip [entry] on [platform], or `null` if
+/// the model should be tested.
+///
+/// The model index does not (yet) carry per-model `platforms`, so support is
+/// derived from the backend. We additionally skip combinations that are known
+/// to be unavailable or unstable in automated runs.
+String? _skipReasonFor(ModelIndexEntry entry, String platform) {
+  final supported = _backendPlatforms[entry.backend];
+  if (supported == null) {
+    return 'unknown backend "${entry.backend}"';
+  }
+  if (!supported.contains(platform)) {
+    return '${entry.backend} backend not supported on $platform';
+  }
+  // yolo-pose / yolo-face Vulkan variants crash the GPU driver during
+  // inference: their pose/keypoint output tensors exceed Vulkan limits
+  // (same class of issue as oversized YOLO anchor tensors).
+  if (entry.backend == 'vulkan' &&
+      (entry.category.contains('pose') || entry.category.contains('face'))) {
+    return 'vulkan ${entry.category} models crash the driver (known limitation)';
+  }
+  // Headless CI runners cannot initialize GPU/NPU backends.
+  if (_isCI && entry.backend != 'xnnpack') {
+    return '${entry.backend} backend skipped in headless CI (no GPU/NPU)';
+  }
+  return null;
 }
 
 /// Create a test input tensor

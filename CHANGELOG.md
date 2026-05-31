@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.4.0
+
+### Added
+- **Swift Package Manager support** for iOS and macOS (Flutter is phasing out
+  CocoaPods-only plugins). The native library is still provided via native
+  assets; CocoaPods remains supported.
+
+### Fixed
+- **Use-after-free when disposing during inference**: disposing a model while an
+  async `forward()` was still running (e.g. turning off a live camera
+  mid-inference) could free the model out from under the running kernel and
+  crash. `dispose()` now awaits in-flight forwards, and the native layer waits
+  for any running forward before freeing.
+
+### Changed
+- **ExecuTorch 1.3.1**: Upgraded from ExecuTorch 1.1.0 to 1.3.1 (skipping 1.2.0).
+  Full release notes: https://github.com/pytorch/executorch/releases/tag/v1.3.1
+  - Backend improvements across XNNPACK (weight-cache/workspace sharing, transposed
+    conv output padding), Vulkan (cooperative-matrix dispatch, safer memory handling),
+    and CoreML (profiler crash fix, shared-library install support).
+- Updated native prebuilt binaries to v1.3.1.2.
+
+### Deprecated
+- **MPS backend**: Deprecated upstream in ExecuTorch; removal is expected in a future
+  release. MPS remains enabled and functional on Apple platforms (iOS 15.4+, macOS) in
+  this version. A new upstream Metal backend is the planned replacement — migration is
+  tracked for a future release.
+
 ## 0.3.3
 
 ### Added

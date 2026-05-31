@@ -34,7 +34,9 @@ class ExecuTorchModelFfiImpl extends ExecuTorchModel {
 
   @override
   Future<void> dispose() async {
-    _module.dispose();
+    // Await any in-flight async forward passes before freeing the native
+    // module, so inference is never running when the model is destroyed.
+    await _module.disposeAsync();
   }
 }
 
