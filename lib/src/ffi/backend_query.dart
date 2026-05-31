@@ -103,6 +103,7 @@ abstract final class BackendQuery {
         Backend.xnnpack => ETBackend.ET_BACKEND_XNNPACK,
         Backend.coreml => ETBackend.ET_BACKEND_COREML,
         Backend.mps => ETBackend.ET_BACKEND_MPS,
+        Backend.metal => ETBackend.ET_BACKEND_METAL,
         Backend.vulkan => ETBackend.ET_BACKEND_VULKAN,
         Backend.qnn => ETBackend.ET_BACKEND_QNN,
       };
@@ -112,6 +113,7 @@ abstract final class BackendQuery {
         ETBackend.ET_BACKEND_XNNPACK => Backend.xnnpack,
         ETBackend.ET_BACKEND_COREML => Backend.coreml,
         ETBackend.ET_BACKEND_MPS => Backend.mps,
+        ETBackend.ET_BACKEND_METAL => Backend.metal,
         ETBackend.ET_BACKEND_VULKAN => Backend.vulkan,
         ETBackend.ET_BACKEND_QNN => Backend.qnn,
       };

@@ -456,7 +456,8 @@ enum ETBackend {
   ET_BACKEND_COREML(1),
   ET_BACKEND_MPS(2),
   ET_BACKEND_VULKAN(3),
-  ET_BACKEND_QNN(4);
+  ET_BACKEND_QNN(4),
+  ET_BACKEND_METAL(5);
 
   final int value;
   const ETBackend(this.value);
@@ -467,6 +468,7 @@ enum ETBackend {
         2 => ET_BACKEND_MPS,
         3 => ET_BACKEND_VULKAN,
         4 => ET_BACKEND_QNN,
+        5 => ET_BACKEND_METAL,
         _ => throw ArgumentError('Unknown value for ETBackend: $value'),
       };
 }

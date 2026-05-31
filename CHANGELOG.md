@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.1
+
+### Added
+- **Metal backend (macOS)**: Apple-GPU acceleration via ExecuTorch's new
+  AOTI-based Metal backend (`Backend.metal`), replacing the deprecated MPS
+  backend. macOS-desktop only; models are exported specifically for Metal.
+
+### Removed
+- **MPS backend**: dropped (deprecated upstream). On iOS, GPU acceleration is
+  via CoreML; on macOS, via the new Metal backend.
+
 ## 0.4.0
 
 ### Added
