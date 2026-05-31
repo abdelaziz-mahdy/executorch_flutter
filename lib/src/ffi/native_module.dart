@@ -216,6 +216,14 @@ class NativeModule implements ffi.Finalizable {
   /// Whether this module has been disposed.
   bool _disposed = false;
 
+  /// In-flight async forward operations.
+  ///
+  /// Awaited by [disposeAsync] so the native module is never freed while a
+  /// forward pass is still running on a worker thread - doing so frees the
+  /// model's weights mid-inference and crashes deep in the kernels (e.g.
+  /// convolution_out) with a use-after-free.
+  final List<Future<void>> _inFlight = [];
+
   /// Finalizer for automatic cleanup.
   static final _finalizer = ffi.NativeFinalizer(
     addresses.et_module_free.cast(),
@@ -349,7 +357,19 @@ class NativeModule implements ffi.Finalizable {
   /// the UI thread during inference.
   Future<List<TensorData>> forwardAsync(List<TensorData> inputs) async {
     _checkDisposed();
+    // Track this operation so disposeAsync() can wait for it to finish before
+    // freeing the native module (prevents a use-after-free crash).
+    final done = Completer<void>();
+    _inFlight.add(done.future);
+    try {
+      return await _forwardAsyncImpl(inputs);
+    } finally {
+      done.complete();
+      _inFlight.remove(done.future);
+    }
+  }
 
+  Future<List<TensorData>> _forwardAsyncImpl(List<TensorData> inputs) async {
     logDebug('forwardAsync() called with ${inputs.length} inputs');
 
     final nativeInputs = <NativeTensor>[];
@@ -428,6 +448,23 @@ class NativeModule implements ffi.Finalizable {
       et_module_free(_ptr);
       _disposed = true;
     }
+  }
+
+  /// Await any in-flight async operations, then dispose.
+  ///
+  /// Prefer this over [dispose] when async forward passes may still be running
+  /// (e.g. tearing down a live-camera pipeline): it waits for them to complete
+  /// so the native module is not freed mid-inference. Safe to call multiple
+  /// times.
+  Future<void> disposeAsync() async {
+    if (_disposed) return;
+    if (_inFlight.isNotEmpty) {
+      // Ignore the results/errors of pending forwards; we only need them done.
+      await Future.wait<void>(
+        _inFlight.toList(),
+      ).catchError((_) => const <void>[]);
+    }
+    dispose();
   }
 
   void _checkDisposed() {
