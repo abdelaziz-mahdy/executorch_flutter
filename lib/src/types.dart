@@ -23,8 +23,11 @@ enum Backend {
   /// Apple CoreML backend (iOS/macOS only).
   coreml,
 
-  /// Apple Metal Performance Shaders backend (macOS only).
+  /// Apple Metal Performance Shaders backend (deprecated; replaced by [metal]).
   mps,
+
+  /// Apple Metal GPU backend (macOS desktop only). Replaces the deprecated MPS.
+  metal,
 
   /// Vulkan GPU compute backend (Android/iOS/macOS/Windows/Linux).
   vulkan,
@@ -37,6 +40,7 @@ enum Backend {
         Backend.xnnpack => 'XNNPACK',
         Backend.coreml => 'CoreML',
         Backend.mps => 'Metal Performance Shaders',
+        Backend.metal => 'Metal',
         Backend.vulkan => 'Vulkan',
         Backend.qnn => 'Qualcomm QNN',
       };

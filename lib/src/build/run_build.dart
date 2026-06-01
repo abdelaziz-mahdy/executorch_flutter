@@ -73,7 +73,7 @@ const String _packageName = 'executorch_flutter';
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
 /// releases for the same ExecuTorch version.
-const String _defaultPrebuiltVersion = '$executorchVersion.2';
+const String _defaultPrebuiltVersion = '$executorchVersion.3';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -406,7 +406,8 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   // Platform support for each backend
   final isApplePlatform = targetOS == OS.iOS || targetOS == OS.macOS;
   final supportsCoreml = isApplePlatform;
-  final supportsMps = isApplePlatform;
+  // Metal (AOTI) backend is macOS-desktop only (replaces the deprecated MPS).
+  final supportsMetal = targetOS == OS.macOS;
   // Vulkan available on all native platforms (native assets don't run for web)
   // Note: On Apple platforms, Vulkan via MoltenVK may crash - use at own risk
   const supportsVulkan = true;
@@ -419,9 +420,12 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   final enableCoreml =
       supportsCoreml && (backends?.contains('coreml') ?? isApplePlatform);
 
-  // MPS on Apple platforms (macOS and iOS 15.4+)
-  final enableMps =
-      supportsMps && (backends?.contains('mps') ?? isApplePlatform);
+  // Metal on macOS only (replaces the deprecated MPS backend). A legacy 'mps'
+  // request is treated as 'metal' so existing configs keep working on macOS.
+  final wantsMetal = backends == null
+      ? null
+      : backends.contains('metal') || backends.contains('mps');
+  final enableMetal = supportsMetal && (wantsMetal ?? (targetOS == OS.macOS));
 
   // Vulkan opt-in and only on supported platforms
   final enableVulkan =
@@ -432,7 +436,7 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   return {
     'ET_BUILD_XNNPACK': enableXnnpack ? 'ON' : 'OFF',
     'ET_BUILD_COREML': enableCoreml ? 'ON' : 'OFF',
-    'ET_BUILD_MPS': enableMps ? 'ON' : 'OFF',
+    'ET_BUILD_METAL': enableMetal ? 'ON' : 'OFF',
     'ET_BUILD_VULKAN': enableVulkan ? 'ON' : 'OFF',
     'ET_BUILD_QNN': enableQnn ? 'ON' : 'OFF',
   };

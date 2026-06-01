@@ -75,7 +75,7 @@ hooks:
       backends:
         - xnnpack
         - coreml
-        - mps
+        - metal
         - vulkan
     dartcv4:
       include_modules:

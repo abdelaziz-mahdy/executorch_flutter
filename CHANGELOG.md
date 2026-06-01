@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.1
+
+### Added
+- **Metal backend (macOS)**: `Backend.metal` and the AOTI-based Metal backend
+  are now built into the macOS (arm64) prebuilts, replacing the deprecated MPS
+  backend.
+
+  > **Note — no bundled Metal models yet.** ExecuTorch 1.3.1's Metal backend is
+  > still experimental and currently lacks kernels for some ops our reference
+  > models use (`addmm`, `split_copy`), so MobileNet/YOLO do **not** yet export
+  > to Metal. The runtime + API are in place; Metal models will be added once
+  > upstream op coverage lands. You can still target Metal with your own models
+  > whose ops the backend supports. Tracking upstream:
+  > https://github.com/pytorch/executorch/issues/19907
+
+### Removed
+- **MPS backend**: dropped (deprecated upstream). On iOS, GPU acceleration is
+  via CoreML; on macOS, via the new Metal backend.
+
 ## 0.4.0
 
 ### Added
