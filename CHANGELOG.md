@@ -12,8 +12,8 @@
   > models use (`addmm`, `split_copy`), so MobileNet/YOLO do **not** yet export
   > to Metal. The runtime + API are in place; Metal models will be added once
   > upstream op coverage lands. You can still target Metal with your own models
-  > whose ops the backend supports. Tracking:
-  > https://github.com/pytorch/executorch (Metal AOTI fallback kernels).
+  > whose ops the backend supports. Tracking upstream:
+  > https://github.com/pytorch/executorch/issues/19907
 
 ### Removed
 - **MPS backend**: dropped (deprecated upstream). On iOS, GPU acceleration is
