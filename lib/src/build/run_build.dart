@@ -422,7 +422,7 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
 
   // Metal on macOS only (replaces the deprecated MPS backend). A legacy 'mps'
   // request is treated as 'metal' so existing configs keep working on macOS.
-  final bool? wantsMetal = backends == null
+  final wantsMetal = backends == null
       ? null
       : backends.contains('metal') || backends.contains('mps');
   final enableMetal = supportsMetal && (wantsMetal ?? (targetOS == OS.macOS));
