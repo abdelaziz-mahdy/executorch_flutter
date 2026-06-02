@@ -11,6 +11,7 @@ import '../models/model_registry.dart';
 import '../services/model_controller.dart';
 import '../services/model_download_service.dart';
 import '../ui/widgets/performance_monitor.dart';
+import 'llm_chat_screen.dart';
 
 /// Unified Model Playground - works with any model type through ModelDefinition
 class UnifiedModelPlayground extends StatefulWidget {
@@ -683,6 +684,16 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
         title: const Text('Model Playground'),
         elevation: 0,
         actions: [
+          // LLM chat (Gemma 4) - streaming text generation demo
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            tooltip: 'Gemma 4 Chat (LLM)',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const LlmChatScreen(),
+              ),
+            ),
+          ),
           // Info button - shows runtime info (backends, version)
           IconButton(
             icon: const Icon(Icons.info_outline),

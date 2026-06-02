@@ -133,6 +133,21 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   final isLocalBuild = buildMode == 'local';
   logger.info('[executorch_flutter] Build mode: $buildMode\n');
 
+  // LLM (text generation) runner — opt-in. Compiles executorch_llm_ffi and
+  // links extension_llm_runner + tokenizers (see native ET_BUILD_LLM).
+  // Enable via env EXECUTORCH_BUILD_LLM=ON or pubspec hook user_define
+  // `llm: true`.
+  // NOTE: prebuilt binaries do not yet bundle the LLM libs, so this currently
+  // requires a source/local build that provides them.
+  final llmDefine = userDefines['llm'];
+  final llmEnabled =
+      _isTruthy(Platform.environment['EXECUTORCH_BUILD_LLM']) ||
+          llmDefine == true ||
+          (llmDefine is String && _isTruthy(llmDefine));
+  if (llmEnabled) {
+    logger.info('[executorch_flutter] LLM runner: ENABLED (ET_BUILD_LLM=ON)\n');
+  }
+
   // Resolve local library directory for local mode
   String? localLibDir;
   if (isLocalBuild) {
@@ -325,6 +340,8 @@ Please verify the path to your local ExecuTorch checkout.
           input.outputDirectory.resolve('install/').toFilePath(),
       // Backend defines
       ...backendDefines,
+      // LLM (text generation) runner — opt-in
+      if (llmEnabled) 'ET_BUILD_LLM': 'ON',
     },
   );
 
@@ -396,6 +413,13 @@ Please verify the path to your local ExecuTorch checkout.
   );
 
   _printBuildSuccess(logger);
+}
+
+/// Whether a string flag is truthy: `1`, `true`, `on`, or `yes`.
+bool _isTruthy(String? value) {
+  if (value == null) return false;
+  final v = value.trim().toLowerCase();
+  return v == '1' || v == 'true' || v == 'on' || v == 'yes';
 }
 
 /// Get backend CMake defines from user_defines configuration.

@@ -43,6 +43,9 @@ dependencies:
   # Image picker for demo
   image_picker: ^1.0.7
 
+  # File picker for selecting local LLM model + tokenizer files (chat demo)
+  file_selector: ^1.0.3
+
   # Permission handling for camera access
   permission_handler: ^12.0.1
 
@@ -69,13 +72,19 @@ hooks:
   user_defines:
     executorch_flutter:
       debug: false
-      # Uncomment below to build from local ExecuTorch source:
-      # build_mode: "source"
-      # executorch_source: "/path/to/executorch"
+      # LOCAL LLM TESTING: build the native FFI from a clean ExecuTorch v1.3.1
+      # worktree (version-consistent submodules) with the LLM runner compiled in.
+      # Prebuilts do not yet bundle the runner, so a source build is required to
+      # test ExecuTorchLLM. First source build is slow (~30-60 min); incremental
+      # after. XNNPACK-only keeps the source build fast (Gemma 4 export is XNNPACK).
+      build_mode: "source"
+      executorch_source: "/Users/AbdelazizMahdy/flutter_projects/executorch-worktree-v1.3.1/executorch"
+      llm: true
       backends:
         - xnnpack
-        - coreml
-        - metal
+        # - metal   # dropped: upstream Metal shim has a size_t/uint64_t compile
+        #            error on Xcode 26.5 / macOS-arm64 (array_ref.h:166); not
+        #            needed for the LLM. Re-enable once upstream fixes it.
         - vulkan
     dartcv4:
       include_modules:
