@@ -126,6 +126,24 @@ external void et_llm_reset(
   ffi.Pointer<ETLLMRunner> runner,
 );
 
+/// Set the absolute path to the MLX Metal kernel library (mlx.metallib).
+///
+/// The MLX backend loads its precompiled Metal kernels (`mlx.metallib`) at the
+/// first GPU op by searching next to the loaded binary, a couple of Resources/
+/// subdirs, and finally a compile-time absolute path. None of those resolve when
+/// the library is bundled inside a sandboxed Flutter app (the .metallib is shipped
+/// as a Flutter data asset, not next to the dylib). Call this BEFORE creating a
+/// runner for an MLX model so the (patched) MLX loader can find the metallib via
+/// the ET_MLX_METALLIB_PATH environment variable. No-op / harmless for non-MLX
+/// models. Passing NULL or "" clears it.
+///
+/// Thread-safety: sets a process environment variable; call once at startup or
+/// before et_llm_runner_create, not concurrently with generation.
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
+external void et_llm_set_metallib_path(
+  ffi.Pointer<ffi.Char> path,
+);
+
 const addresses = _SymbolAddresses();
 
 class _SymbolAddresses {

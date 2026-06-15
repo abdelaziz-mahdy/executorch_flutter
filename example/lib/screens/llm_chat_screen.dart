@@ -31,6 +31,7 @@ class LlmChatScreen extends StatefulWidget {
 class _LlmChatScreenState extends State<LlmChatScreen> {
   final _modelPathCtrl = TextEditingController();
   final _tokenizerPathCtrl = TextEditingController();
+  final _metallibPathCtrl = TextEditingController();
   final _promptCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _messages = <_ChatMessage>[];
@@ -40,6 +41,13 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
   bool _generating = false;
   StreamSubscription<String>? _sub;
   String? _error;
+
+  // Generation settings (user-adjustable via the tune dialog). Temperature
+  // defaults to 0 (greedy / deterministic) — the most reliable output; raise it
+  // for more varied responses. Sampling is temperature-only (no top-p/top-k),
+  // matching the native runner's GenerationConfig.
+  double _temperature = 0;
+  int _maxNewTokens = 512;
 
   bool get _loaded => _llm != null;
 
@@ -57,9 +65,12 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     try {
       await _llm?.dispose();
       _llm = null;
+      final metallibPath = _metallibPathCtrl.text.trim();
       _llm = await ExecuTorchLLM.load(
         modelPath: modelPath,
         tokenizerPath: tokenizerPath,
+        // Required for MLX (Apple-GPU) models; harmless/ignored otherwise.
+        mlxMetallibPath: metallibPath.isEmpty ? null : metallibPath,
       );
     } catch (e) {
       _error = '$e';
@@ -109,11 +120,31 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     llm.reset();
     final done = Completer<void>();
     _sub = llm
-        .generate(prompt, config: const GenConfig(maxNewTokens: 512))
+        .generate(
+          prompt,
+          config: GenConfig(
+            maxNewTokens: _maxNewTokens,
+            temperature: _temperature,
+          ),
+        )
         .listen(
           (piece) {
-            setState(() => assistant.text += piece);
-            _scrollToBottom();
+            // Gemma ends a turn with <turn|> / <end_of_turn>. Some exports embed
+            // it in get_eos_ids so the runner stops itself (then we never see it);
+            // others (e.g. the XNNPACK export) only declare <eos> and keep
+            // emitting <turn|>. So handle the turn-end at the app level: strip the
+            // markers from display, and stop generation when one appears. This
+            // keeps the package model-agnostic — turn handling lives in the app.
+            final hadTurnEnd =
+                piece.contains('<turn|>') || piece.contains('<end_of_turn>');
+            final clean = piece
+                .replaceAll('<turn|>', '')
+                .replaceAll('<end_of_turn>', '');
+            if (clean.isNotEmpty) {
+              setState(() => assistant.text += clean);
+              _scrollToBottom();
+            }
+            if (hadTurnEnd) _stop();
           },
           onError: (Object e) {
             setState(() => _error = '$e');
@@ -143,6 +174,73 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     }
   }
 
+  /// Open the generation-settings dialog (temperature, max new tokens).
+  ///
+  /// These map straight onto the native runner's GenerationConfig. Sampling is
+  /// temperature-only — there is intentionally no top-p / top-k (the runner does
+  /// not support them). Changes apply to the next message.
+  Future<void> _openSettings() async {
+    var temperature = _temperature;
+    var maxNewTokens = _maxNewTokens;
+    final applied = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocal) => AlertDialog(
+          title: const Text('Generation settings'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Temperature: ${temperature.toStringAsFixed(2)}'
+                  '${temperature == 0 ? '  (greedy)' : ''}'),
+              Slider(
+                value: temperature,
+                max: 1.5,
+                divisions: 30,
+                label: temperature.toStringAsFixed(2),
+                onChanged: (v) => setLocal(() => temperature = v),
+              ),
+              const Text(
+                'Higher = more random. 0 is greedy (deterministic).',
+                style: TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              Text('Max new tokens: $maxNewTokens'),
+              Slider(
+                value: maxNewTokens.toDouble(),
+                min: 32,
+                max: 2048,
+                divisions: 63,
+                label: '$maxNewTokens',
+                onChanged: (v) => setLocal(() => maxNewTokens = v.round()),
+              ),
+              const Text(
+                'Upper bound on generated tokens per message.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (applied ?? false) {
+      setState(() {
+        _temperature = temperature;
+        _maxNewTokens = maxNewTokens;
+      });
+    }
+  }
+
   void _stop() => _llm?.stop();
 
   void _reset() {
@@ -168,6 +266,7 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     _llm?.dispose();
     _modelPathCtrl.dispose();
     _tokenizerPathCtrl.dispose();
+    _metallibPathCtrl.dispose();
     _promptCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -179,6 +278,11 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
       appBar: AppBar(
         title: const Text('Gemma 4 Chat'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Generation settings',
+            onPressed: _generating ? null : _openSettings,
+          ),
           if (_loaded)
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -230,6 +334,20 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
               tooltip: 'Browse for tokenizer',
               onPressed: () =>
                   _pickFile(_tokenizerPathCtrl, 'Tokenizer', ['json']),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _metallibPathCtrl,
+          decoration: InputDecoration(
+            labelText: 'MLX metallib path (mlx.metallib) — MLX models only',
+            hintText: '/path/to/mlx.metallib (leave empty for XNNPACK/CoreML)',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.folder_open),
+              tooltip: 'Browse for mlx.metallib',
+              onPressed: () =>
+                  _pickFile(_metallibPathCtrl, 'MLX metallib', ['metallib']),
             ),
           ),
         ),

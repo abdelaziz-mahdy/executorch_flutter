@@ -58,6 +58,22 @@ class NativeLLMRunner implements ffi.Finalizable {
     }
   }
 
+  /// Point the MLX backend at its Metal kernel library (`mlx.metallib`).
+  ///
+  /// Must be called BEFORE [NativeLLMRunner.create] for MLX models. No-op for
+  /// other backends.
+  /// See `et_llm_set_metallib_path` in the native header for why this is needed
+  /// (sandboxed Flutter apps bundle the metallib as a data asset, not next to
+  /// the dylib where MLX would otherwise look).
+  static void setMetallibPath(String path) {
+    final p = path.toNativeUtf8().cast<ffi.Char>();
+    try {
+      et_llm_set_metallib_path(p);
+    } finally {
+      malloc.free(p);
+    }
+  }
+
   final ffi.Pointer<ETLLMRunner> _ptr;
   bool _disposed = false;
 

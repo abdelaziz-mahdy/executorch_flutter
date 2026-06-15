@@ -37,11 +37,27 @@ class ExecuTorchLLM {
   /// [modelPath] is the `.pte` model. [tokenizerPath] is the tokenizer file
   /// (HF `tokenizer.json`, SentencePiece, or TikToken — auto-detected).
   /// [dataPath] is an optional `.ptd` weight blob produced by some exports.
+  ///
+  /// [mlxMetallibPath] is REQUIRED for **MLX** (Apple-GPU) models and ignored
+  /// by every other backend. The MLX backend loads its Metal kernels from a
+  /// `mlx.metallib` file at runtime, but a sandboxed app can't reach the copy
+  /// next to the native library, so the app must point at a readable copy here
+  /// (a file the user picked, or one bundled as a Flutter asset and copied to a
+  /// writable directory). Without it, MLX model load fails with `Error 0x23`
+  /// (`MLXBackend` could not load its metallib). See the README / example for
+  /// how to obtain and ship the metallib.
   static Future<ExecuTorchLLM> load({
     required String modelPath,
     required String tokenizerPath,
     String? dataPath,
+    String? mlxMetallibPath,
   }) async {
+    // Point the MLX Metal-kernel loader at the metallib BEFORE creating the
+    // runner (the device initializes on first GPU op). No-op for non-MLX.
+    if (mlxMetallibPath != null && mlxMetallibPath.isNotEmpty) {
+      NativeLLMRunner.setMetallibPath(mlxMetallibPath);
+    }
+
     final runner = NativeLLMRunner.create(
       modelPath: modelPath,
       tokenizerPath: tokenizerPath,
