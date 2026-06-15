@@ -1,7 +1,7 @@
 name: executorch_flutter
 description: >
-  ExecuTorch ML inference for Flutter using dart:ffi.
-  Supports Android, iOS, macOS, Linux, Windows, and Web.
+  ExecuTorch on-device ML inference for Flutter using dart:ffi — vision models
+  plus experimental streaming LLM (Gemma 4). Android, iOS, macOS, Linux, Windows, Web.
 version: 0.4.1
 homepage: https://github.com/abdelaziz-mahdy/executorch_flutter
 repository: https://github.com/abdelaziz-mahdy/executorch_flutter

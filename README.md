@@ -38,6 +38,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 - **Multiple Models**: Support for concurrent model instances
 - **Error Handling**: Structured exception handling with clear error messages
 - **Backend Support**: XNNPACK, CoreML, MPS, Vulkan backends
+- **On-device LLM (experimental)**: streaming text generation with Gemma 4 (XNNPACK CPU + MLX Apple-GPU) — see **[docs/LLM.md](docs/LLM.md)**
 - **Live Camera**: Real-time inference with camera stream support
 
 ### Library Size by Backend
