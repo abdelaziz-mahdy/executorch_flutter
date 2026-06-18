@@ -20,10 +20,15 @@ class ExecuTorchLLM {
       'ExecuTorchLLM (on-device LLM) is not supported on web.';
 
   /// Always throws [UnsupportedError] on web.
+  ///
+  /// Signature must mirror the native [ExecuTorchLLM.load] (including
+  /// [mlxMetallibPath], which is MLX/Apple-only) so shared UI code compiles for
+  /// web — there is no MLX on web, so the parameter is simply ignored.
   static Future<ExecuTorchLLM> load({
     required String modelPath,
     required String tokenizerPath,
     String? dataPath,
+    String? mlxMetallibPath,
   }) {
     throw UnsupportedError(_unsupported);
   }
