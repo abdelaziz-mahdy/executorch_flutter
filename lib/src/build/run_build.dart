@@ -73,7 +73,7 @@ const String _packageName = 'executorch_flutter';
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
 /// releases for the same ExecuTorch version.
-const String _defaultPrebuiltVersion = '$executorchVersion.3';
+const String _defaultPrebuiltVersion = '$executorchVersion.8';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -136,9 +136,9 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   // LLM (text generation) runner — opt-in. Compiles executorch_llm_ffi and
   // links extension_llm_runner + tokenizers (see native ET_BUILD_LLM).
   // Enable via env EXECUTORCH_BUILD_LLM=ON or pubspec hook user_define
-  // `llm: true`.
-  // NOTE: prebuilt binaries do not yet bundle the LLM libs, so this currently
-  // requires a source/local build that provides them.
+  // `llm: true`. The prebuilt binaries ship dedicated LLM variants
+  // (xnnpack-llm on every platform, xnnpack-mlx-llm on macOS arm64), so this
+  // works in prebuilt mode as well as source/local.
   final llmDefine = userDefines['llm'];
   final llmEnabled =
       _isTruthy(Platform.environment['EXECUTORCH_BUILD_LLM']) ||
@@ -473,9 +473,12 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   final supportsCoreml = isApplePlatform;
   // Metal (AOTI) backend is macOS-desktop only (replaces the deprecated MPS).
   final supportsMetal = targetOS == OS.macOS;
-  // MLX backend (Apple-Silicon GPU) is macOS-desktop only. The native CMake
-  // additionally gates it to arm64.
-  final supportsMlx = targetOS == OS.macOS;
+  // MLX backend (Apple-Silicon GPU) is macOS-desktop, arm64 ONLY. The native
+  // build only produces a macos-arm64-xnnpack-mlx-llm prebuilt; gating here on
+  // arm64 too keeps the prebuilt-variant selection from requesting a
+  // macos-x86_64-xnnpack-mlx-llm that doesn't exist (404 on Intel Macs).
+  final supportsMlx = targetOS == OS.macOS &&
+      input.config.code.targetArchitecture == Architecture.arm64;
   // Vulkan available on all native platforms (native assets don't run for web)
   // Note: On Apple platforms, Vulkan via MoltenVK may crash - use at own risk
   const supportsVulkan = true;

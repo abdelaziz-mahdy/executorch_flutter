@@ -72,29 +72,21 @@ hooks:
   user_defines:
     executorch_flutter:
       debug: true
-      # Default: prebuilt binaries (fast, no toolchain needed) — vision models
-      # (MobileNet, YOLO) work out of the box on every platform.
+      # On-device LLM (Gemma 4) from PREBUILT binaries — no toolchain or source
+      # build needed. `llm: true` selects the dedicated LLM prebuilt: xnnpack-llm
+      # on every platform, plus xnnpack-mlx-llm on macOS arm64 (Apple-Silicon GPU,
+      # macOS 14+). `mlx` is dropped automatically on non-arm64-macOS targets, so
+      # this one config builds everywhere. Vision models (MobileNet, YOLO) run on
+      # XNNPACK from the same library.
+      #
+      # MLX runtime note: the GPU path needs `mlx.metallib` (shipped inside the
+      # xnnpack-mlx-llm prebuilt's lib/) passed to
+      # ExecuTorchLLM.load(mlxMetallibPath:), plus a macOS 14 deployment target.
+      # See docs/LLM.md. To force CPU-only LLM, drop `mlx` from the list below.
+      llm: true
       backends:
         - xnnpack
-        - vulkan
-      #
-      # ─── Opt in to the on-device LLM (Gemma 4) — local source build ─────────
-      # The LLM runner + MLX backend are not in the prebuilt binaries yet, so to
-      # run the Gemma 4 chat you must build ExecuTorch from source. Uncomment the
-      # lines below (and adjust `backends`) to enable it. This is heavy: the first
-      # source build takes ~30-60 min, and MLX needs the Xcode Metal Toolchain
-      # (`xcodebuild -downloadComponent MetalToolchain`) + macOS 14. See the LLM
-      # docs for model export, the mlx.metallib, and full setup.
-      #
-      #   build_mode: "source"
-      #   llm: true
-      #   backends:
-      #     - xnnpack
-      #     - mlx        # Apple-Silicon GPU (macOS arm64, macOS 14+). Omit for CPU.
-      #   # Optional: reuse a local ExecuTorch v1.3.1 checkout for faster builds
-      #   # (else it is fetched automatically). Prefer the env var so no machine
-      #   # path is committed:  export EXECUTORCH_SOURCE_DIR=/abs/path/to/executorch
-      #   # executorch_source: "/abs/path/to/your/executorch"
+        - mlx
     dartcv4:
       include_modules:
         - imgproc
