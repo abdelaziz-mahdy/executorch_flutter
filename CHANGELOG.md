@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0-rc.2
+## 0.5.0-rc.3
 
 ### Added
 - **On-device LLM (experimental) — Gemma 4 E2B.** Streaming, multi-turn text

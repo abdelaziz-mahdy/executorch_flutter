@@ -2,6 +2,17 @@
 cmake_minimum_required(VERSION 3.14)
 project(executorch_flutter_example LANGUAGES CXX)
 
+# Newer MSVC (VS 2026 / MSVC 14.51+) turns the deprecated <experimental/coroutine>
+# + /await usage into a HARD ERROR (STL1011). Some Flutter plugins we depend on
+# (e.g. permission_handler_windows 0.2.1, the latest) still use it and have no
+# fixed release yet, so their Windows build fails. Define the documented silence
+# macro for the whole app + plugin tree (this directive is inherited by the
+# plugin subdirectories added below). Harmless once the plugins migrate to
+# <coroutine>; remove then.
+if(MSVC)
+  add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+endif()
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "executorch_flutter_example")
