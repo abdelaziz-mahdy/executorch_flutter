@@ -67,6 +67,12 @@ library;
 // Core API exports
 export 'src/executorch_errors.dart';
 export 'src/executorch_inference.dart';
+// On-device LLM (text generation) API — native only; web stub throws
+// UnsupportedError on every call.
+export 'src/executorch_llm.dart'
+    if (dart.library.js_interop) 'src/executorch_llm_web.dart'
+    if (dart.library.js) 'src/executorch_llm_web.dart'
+    show ExecuTorchLLM, GenConfig;
 export 'src/executorch_model.dart';
 // Backend query (conditional for web)
 export 'src/ffi/backend_query.dart'

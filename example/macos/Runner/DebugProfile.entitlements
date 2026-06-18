@@ -2,8 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Example-app only: the sandbox is disabled so the demo can load model /
+	     tokenizer / mlx.metallib files by absolute path and so the MLX backend
+	     can find its metallib via the build's METAL_PATH. REAL apps should keep
+	     the sandbox enabled and pass the metallib path to
+	     ExecuTorchLLM.load(mlxMetallibPath:) instead (see docs). -->
 	<key>com.apple.security.app-sandbox</key>
-	<true/>
+	<false/>
 	<key>com.apple.security.cs.allow-jit</key>
 	<true/>
 	<key>com.apple.security.network.server</key>

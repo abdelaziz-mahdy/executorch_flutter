@@ -13,8 +13,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 
-// Import model playground
-import 'screens/unified_model_playground.dart';
+// Import category landing screen
+import 'screens/home_screen.dart';
 
 // Import services
 import 'services/performance_service.dart';
@@ -87,7 +87,7 @@ class ExecuTorchPlaygroundApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const UnifiedModelPlayground(),
+      home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

@@ -73,7 +73,7 @@ const String _packageName = 'executorch_flutter';
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
 /// releases for the same ExecuTorch version.
-const String _defaultPrebuiltVersion = '$executorchVersion.3';
+const String _defaultPrebuiltVersion = '$executorchVersion.8';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -132,6 +132,21 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   final isSourceBuild = buildMode == 'source';
   final isLocalBuild = buildMode == 'local';
   logger.info('[executorch_flutter] Build mode: $buildMode\n');
+
+  // LLM (text generation) runner — opt-in. Compiles executorch_llm_ffi and
+  // links extension_llm_runner + tokenizers (see native ET_BUILD_LLM).
+  // Enable via env EXECUTORCH_BUILD_LLM=ON or pubspec hook user_define
+  // `llm: true`. The prebuilt binaries ship dedicated LLM variants
+  // (xnnpack-llm on every platform, xnnpack-mlx-llm on macOS arm64), so this
+  // works in prebuilt mode as well as source/local.
+  final llmDefine = userDefines['llm'];
+  final llmEnabled =
+      _isTruthy(Platform.environment['EXECUTORCH_BUILD_LLM']) ||
+          llmDefine == true ||
+          (llmDefine is String && _isTruthy(llmDefine));
+  if (llmEnabled) {
+    logger.info('[executorch_flutter] LLM runner: ENABLED (ET_BUILD_LLM=ON)\n');
+  }
 
   // Resolve local library directory for local mode
   String? localLibDir;
@@ -254,6 +269,31 @@ Please verify the path to your local ExecuTorch checkout.
   final backendDefines = _getBackendDefines(input, targetOS);
   _logBackendConfiguration(logger, backendDefines);
 
+  // MLX requires a macOS 14.0+ deployment target. Flutter currently HARDCODES
+  // the native-assets macOS target to 13 (flutter_tools
+  // .../native_assets/macos/native_assets.dart: `targetMacOSVersion = 13`), so
+  // no project setting the user changes can raise the value this hook receives.
+  // We therefore build the native library for macOS 14 (in
+  // build_from_source.cmake) — but the *app's* deployment target is the user's
+  // to set, and if it stays below 14 the app fails to launch against the
+  // macOS-14 dylib. We can't read the app's Xcode/Podfile target here, so we
+  // warn clearly rather than silently paper over a misconfiguration.
+  if (targetOS == OS.macOS && backendDefines['ET_BUILD_MLX'] == 'ON') {
+    final reported = input.config.code.macOS.targetVersion;
+    logger.info(
+      '[executorch_flutter] ───────────────────────────────────────\n'
+      '[executorch_flutter] MLX backend requires macOS 14.0+.\n'
+      '[executorch_flutter]   Flutter native-assets target is $reported '
+      '(hardcoded); building the native library for macOS 14.0.\n'
+      '[executorch_flutter]   ACTION REQUIRED: set your app deployment target '
+      'to 14.0 too, or the app will not launch:\n'
+      "[executorch_flutter]     - macos/Podfile:          platform :osx, '14.0'\n"
+      '[executorch_flutter]     - Runner.xcodeproj:       '
+      'MACOSX_DEPLOYMENT_TARGET = 14.0\n'
+      '[executorch_flutter] ───────────────────────────────────────\n',
+    );
+  }
+
   // Step 3: Configure CMake generator
   logger.info('[executorch_flutter] Step 3/5: Configuring build system\n');
 
@@ -317,14 +357,20 @@ Please verify the path to your local ExecuTorch checkout.
         'EXECUTORCH_CACHE_DIR': Directory(executorchSourceDir).parent.path
       else if (cacheDir != null && cacheDir.isNotEmpty)
         'EXECUTORCH_CACHE_DIR': cacheDir,
-      // Platform-specific deployment targets
-      if (targetOS == OS.macOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '11.0',
+      // Platform-specific deployment targets. MLX requires macOS 14.0+ (its
+      // CMake FATAL_ERRORs below that), so bump the macOS target when the mlx
+      // backend is enabled — the app's macOS deployment target must match.
+      if (targetOS == OS.macOS)
+        'CMAKE_OSX_DEPLOYMENT_TARGET':
+            backendDefines['ET_BUILD_MLX'] == 'ON' ? '14.0' : '11.0',
       if (targetOS == OS.iOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '13.0',
       // Install prefix
       'CMAKE_INSTALL_PREFIX':
           input.outputDirectory.resolve('install/').toFilePath(),
       // Backend defines
       ...backendDefines,
+      // LLM (text generation) runner — opt-in
+      if (llmEnabled) 'ET_BUILD_LLM': 'ON',
     },
   );
 
@@ -395,7 +441,26 @@ Please verify the path to your local ExecuTorch checkout.
     logger,
   );
 
+  // NOTE on MLX: the build also produces `mlx.metallib` (MLX's Metal kernels)
+  // at install/lib/mlx.metallib. It is NOT auto-bundled — Flutter native-assets
+  // DataAsset bundling is master-channel-only, so on stable it can't ship. The
+  // app supplies the metallib path to ExecuTorchLLM.load(mlxMetallibPath:),
+  // which forwards it to the native MLX loader. See README / example.
+  if (File.fromUri(installDir.resolve('lib/mlx.metallib')).existsSync()) {
+    logger.info(
+      '[executorch_flutter]   MLX metallib built at install/lib/mlx.metallib '
+      '(pass its path to ExecuTorchLLM.load(mlxMetallibPath:))\n',
+    );
+  }
+
   _printBuildSuccess(logger);
+}
+
+/// Whether a string flag is truthy: `1`, `true`, `on`, or `yes`.
+bool _isTruthy(String? value) {
+  if (value == null) return false;
+  final v = value.trim().toLowerCase();
+  return v == '1' || v == 'true' || v == 'on' || v == 'yes';
 }
 
 /// Get backend CMake defines from user_defines configuration.
@@ -408,6 +473,12 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   final supportsCoreml = isApplePlatform;
   // Metal (AOTI) backend is macOS-desktop only (replaces the deprecated MPS).
   final supportsMetal = targetOS == OS.macOS;
+  // MLX backend (Apple-Silicon GPU) is macOS-desktop, arm64 ONLY. The native
+  // build only produces a macos-arm64-xnnpack-mlx-llm prebuilt; gating here on
+  // arm64 too keeps the prebuilt-variant selection from requesting a
+  // macos-x86_64-xnnpack-mlx-llm that doesn't exist (404 on Intel Macs).
+  final supportsMlx = targetOS == OS.macOS &&
+      input.config.code.targetArchitecture == Architecture.arm64;
   // Vulkan available on all native platforms (native assets don't run for web)
   // Note: On Apple platforms, Vulkan via MoltenVK may crash - use at own risk
   const supportsVulkan = true;
@@ -427,6 +498,10 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
       : backends.contains('metal') || backends.contains('mps');
   final enableMetal = supportsMetal && (wantsMetal ?? (targetOS == OS.macOS));
 
+  // MLX opt-in (no implicit default — it pulls a large GPU runtime). Only on
+  // macOS; the native CMake further restricts to arm64.
+  final enableMlx = supportsMlx && (backends?.contains('mlx') ?? false);
+
   // Vulkan opt-in and only on supported platforms
   final enableVulkan =
       supportsVulkan && (backends?.contains('vulkan') ?? false);
@@ -437,6 +512,7 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
     'ET_BUILD_XNNPACK': enableXnnpack ? 'ON' : 'OFF',
     'ET_BUILD_COREML': enableCoreml ? 'ON' : 'OFF',
     'ET_BUILD_METAL': enableMetal ? 'ON' : 'OFF',
+    'ET_BUILD_MLX': enableMlx ? 'ON' : 'OFF',
     'ET_BUILD_VULKAN': enableVulkan ? 'ON' : 'OFF',
     'ET_BUILD_QNN': enableQnn ? 'ON' : 'OFF',
   };
@@ -753,14 +829,26 @@ Future<void> _addBuildDependencies(
 }) async {
   final nativeDir = packagePath.uri.resolve('native/');
   final dependencies = <Uri>[
-    // FFI wrapper sources -- always tracked
-    nativeDir.resolve('src/executorch_ffi.cpp'),
-    nativeDir.resolve('src/executorch_ffi.h'),
     // CMake build configuration
     nativeDir.resolve('CMakeLists.txt'),
     nativeDir.resolve('cmake/download_prebuilt.cmake'),
     nativeDir.resolve('cmake/build_from_source.cmake'),
   ];
+
+  // All FFI wrapper sources under native/src -- always tracked so edits to ANY
+  // of them (executorch_ffi.cpp/.h, executorch_llm_ffi.cpp/.h, ...) re-trigger
+  // the build hook. Previously only executorch_ffi.* were listed, so LLM FFI
+  // edits silently did not rebuild the dylib.
+  final srcDir = Directory.fromUri(nativeDir.resolve('src/'));
+  if (srcDir.existsSync()) {
+    for (final entity in srcDir.listSync(recursive: true)) {
+      if (entity is! File) continue;
+      final p = entity.path;
+      if (p.endsWith('.cpp') || p.endsWith('.h')) {
+        dependencies.add(entity.uri);
+      }
+    }
+  }
 
   // For source builds, track key ExecuTorch source files so that changes
   // to backend code (Vulkan, XNNPACK, etc.) trigger a rebuild.

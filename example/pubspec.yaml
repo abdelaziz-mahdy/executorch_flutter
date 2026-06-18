@@ -43,6 +43,9 @@ dependencies:
   # Image picker for demo
   image_picker: ^1.0.7
 
+  # File picker for selecting local LLM model + tokenizer files (chat demo)
+  file_selector: ^1.0.3
+
   # Permission handling for camera access
   permission_handler: ^12.0.1
 
@@ -68,15 +71,22 @@ dependencies:
 hooks:
   user_defines:
     executorch_flutter:
-      debug: false
-      # Uncomment below to build from local ExecuTorch source:
-      # build_mode: "source"
-      # executorch_source: "/path/to/executorch"
+      debug: true
+      # On-device LLM (Gemma 4) from PREBUILT binaries — no toolchain or source
+      # build needed. `llm: true` selects the dedicated LLM prebuilt: xnnpack-llm
+      # on every platform, plus xnnpack-mlx-llm on macOS arm64 (Apple-Silicon GPU,
+      # macOS 14+). `mlx` is dropped automatically on non-arm64-macOS targets, so
+      # this one config builds everywhere. Vision models (MobileNet, YOLO) run on
+      # XNNPACK from the same library.
+      #
+      # MLX runtime note: the GPU path needs `mlx.metallib` (shipped inside the
+      # xnnpack-mlx-llm prebuilt's lib/) passed to
+      # ExecuTorchLLM.load(mlxMetallibPath:), plus a macOS 14 deployment target.
+      # See docs/LLM.md. To force CPU-only LLM, drop `mlx` from the list below.
+      llm: true
       backends:
         - xnnpack
-        - coreml
-        - metal
-        - vulkan
+        - mlx
     dartcv4:
       include_modules:
         - imgproc

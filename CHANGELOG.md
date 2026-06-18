@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.0-rc.1
+
+### Added
+- **On-device LLM (experimental) — Gemma 4 E2B.** Streaming, multi-turn text
+  generation via ExecuTorch's `extension/llm/runner`, with a new `ExecuTorchLLM`
+  API (`load` / `generate` `Stream<String>` / `stop` / `reset` / `dispose`) and
+  `GenConfig` (temperature-only sampling). Backends: **XNNPACK** (CPU, all
+  platforms) and **MLX** (Apple-Silicon GPU, macOS 14+). The runner auto-detects
+  the model's prefill mode (sequential for static/decode-only exports, parallel
+  for dynamic). The example app gains a streaming Gemma 4 chat screen and a
+  category home screen.
+
+  > **Setup required — see [docs/LLM.md](docs/LLM.md).** You provide the model +
+  > tokenizer (export with `models/python/export_gemma4_*.py`); MLX additionally
+  > requires shipping `mlx.metallib` and passing it via
+  > `ExecuTorchLLM.load(mlxMetallibPath:)`, plus a macOS 14 deployment target.
+  > Distributed as the `xnnpack-llm` / `xnnpack-mlx-llm` prebuilt variants.
+
 ## 0.4.1
 
 ### Added
