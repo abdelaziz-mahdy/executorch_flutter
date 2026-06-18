@@ -14,6 +14,7 @@ A Flutter plugin for on-device ML inference using PyTorch ExecuTorch, supporting
 - [Quick Start](#quick-start)
 - [Platform Support](#platform-support)
 - [API Reference](#api-reference)
+- [On-device LLM (Gemma 4)](docs/LLM.md)
 - [Build Configuration](#build-configuration)
 - [Advanced Usage](#advanced-usage)
 - [Web Platform](#web-platform)
@@ -171,6 +172,60 @@ Future<List<TensorData>> forward(List<TensorData> inputs)
 Future<void> dispose()
 bool get isDisposed
 ```
+
+### ExecuTorchLLM (experimental)
+
+On-device generative text — **Google Gemma 4 E2B** — with token-by-token
+streaming, separate from the tensor API. Loaded from **file paths** (weights are
+1+ GB) and driven by a stateful decode loop + tokenizer + KV cache. Backends:
+**XNNPACK** (CPU, all platforms) and **MLX** (Apple-Silicon GPU, macOS arm64).
+
+```dart
+// Load (file paths; mlxMetallibPath is MLX-only)
+static Future<ExecuTorchLLM> load({
+  required String modelPath,
+  required String tokenizerPath,
+  String? dataPath,
+  String? mlxMetallibPath,
+})
+
+// Stream tokens as they decode
+Stream<String> generate(String prompt, {GenConfig config})
+
+// Control / lifecycle
+void stop();              // cooperative cancel mid-generation
+void reset();             // clear KV cache / start a new conversation
+Future<void> dispose();   // release native resources
+
+// GenConfig — temperature-only sampling (no top-p/top-k)
+const GenConfig({int maxNewTokens, int seqLen, double temperature, bool echo, bool ignoreEos});
+```
+
+```dart
+final llm = await ExecuTorchLLM.load(
+  modelPath: '/path/gemma-4-E2B-it_xnnpack.pte',
+  tokenizerPath: '/path/gemma-4-E2B-it_tokenizer.json',
+);
+// Gemma 4 needs its turn markers around the message:
+final prompt = '<bos><|turn>user\nExplain Flutter in one line.<turn|>\n<|turn>model\n';
+await for (final piece in llm.generate(prompt,
+    config: const GenConfig(maxNewTokens: 512, temperature: 0))) {
+  stdout.write(piece);
+}
+await llm.dispose();
+```
+
+Enable it in `pubspec.yaml` (`hooks.user_defines.executorch_flutter`):
+
+```yaml
+llm: true
+backends: [xnnpack, mlx]   # mlx is auto-dropped off macOS-arm64
+```
+
+> 📖 **Full guide: [docs/LLM.md](docs/LLM.md)** — model **export** (the Gemma 4
+> scripts), the chat template, the MLX `mlx.metallib` shipping step, stopping,
+> platform support, and troubleshooting. A complete streaming chat screen is in
+> [`example/lib/screens/llm_chat_screen.dart`](example/lib/screens/llm_chat_screen.dart).
 
 ### TensorData
 
@@ -359,6 +414,17 @@ To export manually:
 cd models/python
 python3 main.py
 ```
+
+**LLM (Gemma 4)** models are exported with dedicated scripts (they need a
+tokenizer + quantization recipe, not the tensor export path):
+
+```bash
+python models/python/export_gemma4_xnnpack.py   # CPU model (all platforms)
+python models/python/export_gemma4_mlx.py        # Apple-GPU model (macOS)
+```
+
+See **[docs/LLM.md](docs/LLM.md)** for the full export recipe, the required
+`tokenizer.json` / `mlx.metallib`, and how to load them with `ExecuTorchLLM`.
 
 ---
 

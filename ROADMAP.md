@@ -26,6 +26,15 @@ This document outlines planned features and improvements for the ExecuTorch Flut
 - [x] Multiple model support (YOLO, MobileNet)
 - [x] Backend selection (XNNPACK, CoreML, MPS)
 
+### On-device LLM (Experimental)
+
+- [x] Streaming text generation — Gemma 4 E2B via `ExecuTorchLLM`
+- [x] XNNPACK (CPU, all platforms) + MLX (Apple-Silicon GPU, macOS) backends
+- [x] Streaming multi-turn chat screen in the example app
+- [x] Export recipes + usage guide ([docs/LLM.md](docs/LLM.md))
+- [ ] Multimodal (image/audio) input — kept additive in the FFI/API for later
+- [ ] Wider backend/platform GPU coverage (CoreML, Vulkan)
+
 ## Planned Features
 
 ### Additional Processors
