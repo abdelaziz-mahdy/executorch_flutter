@@ -140,10 +140,9 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   // (xnnpack-llm on every platform, xnnpack-mlx-llm on macOS arm64), so this
   // works in prebuilt mode as well as source/local.
   final llmDefine = userDefines['llm'];
-  final llmEnabled =
-      _isTruthy(Platform.environment['EXECUTORCH_BUILD_LLM']) ||
-          llmDefine == true ||
-          (llmDefine is String && _isTruthy(llmDefine));
+  final llmEnabled = _isTruthy(Platform.environment['EXECUTORCH_BUILD_LLM']) ||
+      llmDefine == true ||
+      (llmDefine is String && _isTruthy(llmDefine));
   if (llmEnabled) {
     logger.info('[executorch_flutter] LLM runner: ENABLED (ET_BUILD_LLM=ON)\n');
   }
