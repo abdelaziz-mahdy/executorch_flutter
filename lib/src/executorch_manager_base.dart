@@ -199,16 +199,100 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
         return uint64List.buffer.asUint8List();
 
       case TensorType.float16:
-        throw const ExecuTorchValidationException(
-          'TensorType.float16 is not supported by createTensorData(). '
-          'Provide float32 values or construct TensorData with float16-encoded bytes directly.',
-        );
+        // Convert float32 → float16 via IEEE 754 bit processing
+        return _encodeFloat16(data);
 
       case TensorType.bfloat16:
-        throw const ExecuTorchValidationException(
-          'TensorType.bfloat16 is not supported by createTensorData(). '
-          'Provide float32 values or construct TensorData with bfloat16-encoded bytes directly.',
-        );
+        // Convert float32 → bfloat16 by truncating to upper 16 bits
+        return _encodeBfloat16(data);
     }
+  }
+
+  /// Encode a list of numeric values as bfloat16 bytes.
+  ///
+  /// bfloat16 is simply the upper 16 bits of an IEEE 754 float32:
+  /// - Sign bit: 1 bit
+  /// - Exponent: 8 bits (same bias as float32)
+  /// - Mantissa: 7 bits (truncated from float32's 23)
+  static Uint8List _encodeBfloat16(List<num> data) {
+    final float32List = Float32List.fromList(
+      data.map((e) => e.toDouble()).toList(),
+    );
+    final view = float32List.buffer.asUint32List();
+    final result = Uint8List(data.length * 2);
+    for (int i = 0; i < data.length; i++) {
+      // Shift right by 16 to keep upper 16 bits
+      final bf16 = view[i] >>> 16;
+      // Store in little-endian byte order
+      result[i * 2] = bf16 & 0xFF;
+      result[i * 2 + 1] = (bf16 >> 8) & 0xFF;
+    }
+    return result;
+  }
+
+  /// Encode a list of numeric values as float16 (IEEE 754 half precision) bytes.
+  ///
+  /// Converts float32 → float16 using bitwise operations:
+  /// - Sign bit: 1 bit
+  /// - Exponent: 5 bits (bias 15, vs float32 bias 127)
+  /// - Mantissa: 10 bits (truncated/rounded from float32's 23)
+  static Uint8List _encodeFloat16(List<num> data) {
+    final float32List = Float32List.fromList(
+      data.map((e) => e.toDouble()).toList(),
+    );
+    final view = float32List.buffer.asUint32List();
+    final result = Uint8List(data.length * 2);
+    for (int i = 0; i < data.length; i++) {
+      final f32 = view[i];
+      final f16 = _float32ToFloat16(f32);
+      // Store in little-endian byte order
+      result[i * 2] = f16 & 0xFF;
+      result[i * 2 + 1] = (f16 >> 8) & 0xFF;
+    }
+    return result;
+  }
+
+  /// Convert a single IEEE 754 float32 bit pattern to float16 bit pattern.
+  static int _float32ToFloat16(int f32) {
+    // Extract float32 components
+    final sign32 = (f32 >>> 31) & 0x1;
+    final exp32 = (f32 >>> 23) & 0xFF;
+    final mant32 = f32 & 0x7FFFFF;
+
+    final sign16 = sign32 << 15;
+
+    if (exp32 == 0) {
+      // Zero or denormal → zero in float16
+      return sign16;
+    }
+
+    if (exp32 == 0xFF) {
+      // Infinity or NaN → infinity (or NaN) in float16
+      return sign16 | 0x7C00 | (mant32 != 0 ? 0x0200 : 0);
+    }
+
+    // Convert exponent bias: float32 uses bias 127, float16 uses bias 15
+    final exp16 = exp32 - 127 + 15;
+
+    if (exp16 >= 31) {
+      // Overflow → infinity
+      return sign16 | 0x7C00;
+    }
+
+    if (exp16 <= 0) {
+      if (exp16 < -10) {
+        // Underflow → zero
+        return sign16;
+      }
+      // Denormal: shift mantissa to fit denormal representation
+      final mantShift = mant32 | 0x7FFFFF; // Add implicit leading 1
+      final shiftedMant = mantShift >> (14 - exp16);
+      return sign16 | shiftedMant & 0x3FF;
+    }
+
+    // Normal: truncate mantissa from 23 to 10 bits with rounding
+    final mant16 = mant32 >> 13;
+
+    return sign16 | (exp16 << 10) | mant16;
   }
 }
