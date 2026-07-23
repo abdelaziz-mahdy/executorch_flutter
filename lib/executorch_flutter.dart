@@ -91,6 +91,12 @@ export 'src/ffi/version.dart'
 export 'src/processors/processors.dart';
 // Core types - tensor data, model result, Backend enum
 export 'src/types.dart'
-    show Backend, ModelLoadResult, TensorData, TensorType;
+    show
+        Backend,
+        ExtendedTensorType,
+        ModelLoadResult,
+        TensorData,
+        TensorType,
+        TensorTypeExtension;
 // Plugin version constant (ExecuTorch version this plugin is built against)
 export 'src/version.dart' show executorchVersion;

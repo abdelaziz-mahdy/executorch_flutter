@@ -188,38 +188,26 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
 
       case TensorType.uint32:
         final uint32List = Uint32List.fromList(
-          data.map((e) => e.toInt()).toList(),
+          data.map((e) => e.toInt().clamp(0, 0xFFFFFFFF)).toList(),
         );
         return uint32List.buffer.asUint8List();
 
       case TensorType.uint64:
         final uint64List = Uint64List.fromList(
-          data.map((e) => e.toInt()).toList(),
+          data.map((e) => e.toInt().clamp(0, 0xFFFFFFFFFFFFFFFF)).toList(),
         );
         return uint64List.buffer.asUint8List();
 
       case TensorType.float16:
-        // Float16: store as raw 2-byte values from the input data
-        // Input data should already be float16-encoded as pairs of bytes
-        if (data.length % 2 != 0) {
-          throw ExecuTorchValidationException(
-            'float16 data must have even number of bytes, got ${data.length}',
-          );
-        }
-        return Uint8List.fromList(
-          data.map((e) => e.toInt() & 0xFF).toList(),
+        throw const ExecuTorchValidationException(
+          'TensorType.float16 is not supported by createTensorData(). '
+          'Provide float32 values or construct TensorData with float16-encoded bytes directly.',
         );
 
       case TensorType.bfloat16:
-        // BFloat16: store as raw 2-byte values from the input data
-        // Input data should already be bfloat16-encoded as pairs of bytes
-        if (data.length % 2 != 0) {
-          throw ExecuTorchValidationException(
-            'bfloat16 data must have even number of bytes, got ${data.length}',
-          );
-        }
-        return Uint8List.fromList(
-          data.map((e) => e.toInt() & 0xFF).toList(),
+        throw const ExecuTorchValidationException(
+          'TensorType.bfloat16 is not supported by createTensorData(). '
+          'Provide float32 values or construct TensorData with bfloat16-encoded bytes directly.',
         );
     }
   }
