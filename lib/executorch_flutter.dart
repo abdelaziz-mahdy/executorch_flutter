@@ -83,25 +83,14 @@ export 'src/ffi/native_logging.dart'
     if (dart.library.js_interop) 'src/ffi/native_logging_web.dart'
     if (dart.library.js) 'src/ffi/native_logging_web.dart'
     show setNativeDebugLogging;
-// FFI-specific tensor type extensions (conditional for web)
-export 'src/ffi/tensor_type_extensions.dart'
-    if (dart.library.js_interop) 'src/ffi/tensor_type_extensions_web.dart'
-    if (dart.library.js) 'src/ffi/tensor_type_extensions_web.dart'
-    show TensorTypeFFI;
 // Version query (conditional for web)
 export 'src/ffi/version.dart'
     if (dart.library.js_interop) 'src/ffi/version_web.dart'
     if (dart.library.js) 'src/ffi/version_web.dart' show ExecuTorchVersion;
 // Preprocessing and postprocessing utilities
 export 'src/processors/processors.dart';
-// Core types - tensor data, model result, Backend enum, ExtendedTensorType
+// Core types - tensor data, model result, Backend enum
 export 'src/types.dart'
-    show
-        Backend,
-        ExtendedTensorType,
-        ModelLoadResult,
-        TensorData,
-        TensorType,
-        TensorTypeExtension;
+    show Backend, ModelLoadResult, TensorData, TensorType;
 // Plugin version constant (ExecuTorch version this plugin is built against)
 export 'src/version.dart' show executorchVersion;

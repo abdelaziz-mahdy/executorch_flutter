@@ -193,33 +193,40 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
     });
   }
 
-  /// Convert TensorType enum to string for JavaScript
-  String _tensorTypeToString(TensorType type) {
-    switch (type) {
-      case TensorType.float32:
-        return 'float32';
-      case TensorType.int32:
-        return 'int32';
-      case TensorType.int8:
-        return 'int8';
-      case TensorType.uint8:
-        return 'uint8';
-    }
-  }
+  /// Convert TensorType enum to string for JavaScript.
+  String _tensorTypeToString(TensorType type) => switch (type) {
+        TensorType.float32 => 'float32',
+        TensorType.float64 => 'float64',
+        TensorType.int64 => 'int64',
+        TensorType.int32 => 'int32',
+        TensorType.int16 => 'int16',
+        TensorType.int8 => 'int8',
+        TensorType.uint8 => 'uint8',
+        TensorType.bool_ => 'bool',
+        TensorType.uint16 => 'uint16',
+        TensorType.uint32 => 'uint32',
+        TensorType.uint64 => 'uint64',
+        TensorType.float16 => 'float16',
+        TensorType.bfloat16 => 'bfloat16',
+      };
 
-  /// Convert string from JavaScript to TensorType enum
-  TensorType _stringToTensorType(String type) {
-    switch (type) {
-      case 'float32':
-        return TensorType.float32;
-      case 'int32':
-        return TensorType.int32;
-      case 'int8':
-        return TensorType.int8;
-      case 'uint8':
-        return TensorType.uint8;
-      default:
-        throw ExecuTorchValidationException('Unknown tensor type: $type');
-    }
-  }
+  /// Convert string from JavaScript to TensorType enum.
+  ///
+  /// Throws [ExecuTorchValidationException] if the type string is unrecognized.
+  TensorType _stringToTensorType(String type) => switch (type) {
+        'float32' => TensorType.float32,
+        'float64' => TensorType.float64,
+        'int64' => TensorType.int64,
+        'int32' => TensorType.int32,
+        'int16' => TensorType.int16,
+        'int8' => TensorType.int8,
+        'uint8' => TensorType.uint8,
+        'bool' => TensorType.bool_,
+        'uint16' => TensorType.uint16,
+        'uint32' => TensorType.uint32,
+        'uint64' => TensorType.uint64,
+        'float16' => TensorType.float16,
+        'bfloat16' => TensorType.bfloat16,
+        _ => throw ExecuTorchValidationException('Unknown tensor type: $type'),
+      };
 }

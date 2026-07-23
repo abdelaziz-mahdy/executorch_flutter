@@ -141,11 +141,29 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
         );
         return float32List.buffer.asUint8List();
 
+      case TensorType.float64:
+        final float64List = Float64List.fromList(
+          data.map((e) => e.toDouble()).toList(),
+        );
+        return float64List.buffer.asUint8List();
+
+      case TensorType.int64:
+        final int64List = Int64List.fromList(
+          data.map((e) => e.toInt()).toList(),
+        );
+        return int64List.buffer.asUint8List();
+
       case TensorType.int32:
         final int32List = Int32List.fromList(
           data.map((e) => e.toInt()).toList(),
         );
         return int32List.buffer.asUint8List();
+
+      case TensorType.int16:
+        final int16List = Int16List.fromList(
+          data.map((e) => e.toInt()).toList(),
+        );
+        return int16List.buffer.asUint8List();
 
       case TensorType.int8:
         return Uint8List.fromList(
@@ -155,6 +173,53 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
       case TensorType.uint8:
         return Uint8List.fromList(
           data.map((e) => e.toInt().clamp(0, 255)).toList(),
+        );
+
+      case TensorType.bool_:
+        return Uint8List.fromList(
+          data.map((e) => (e != 0 ? 1 : 0)).toList(),
+        );
+
+      case TensorType.uint16:
+        final uint16List = Uint16List.fromList(
+          data.map((e) => e.toInt().clamp(0, 65535)).toList(),
+        );
+        return uint16List.buffer.asUint8List();
+
+      case TensorType.uint32:
+        final uint32List = Uint32List.fromList(
+          data.map((e) => e.toInt()).toList(),
+        );
+        return uint32List.buffer.asUint8List();
+
+      case TensorType.uint64:
+        final uint64List = Uint64List.fromList(
+          data.map((e) => e.toInt()).toList(),
+        );
+        return uint64List.buffer.asUint8List();
+
+      case TensorType.float16:
+        // Float16: store as raw 2-byte values from the input data
+        // Input data should already be float16-encoded as pairs of bytes
+        if (data.length % 2 != 0) {
+          throw ExecuTorchValidationException(
+            'float16 data must have even number of bytes, got ${data.length}',
+          );
+        }
+        return Uint8List.fromList(
+          data.map((e) => e.toInt() & 0xFF).toList(),
+        );
+
+      case TensorType.bfloat16:
+        // BFloat16: store as raw 2-byte values from the input data
+        // Input data should already be bfloat16-encoded as pairs of bytes
+        if (data.length % 2 != 0) {
+          throw ExecuTorchValidationException(
+            'bfloat16 data must have even number of bytes, got ${data.length}',
+          );
+        }
+        return Uint8List.fromList(
+          data.map((e) => e.toInt() & 0xFF).toList(),
         );
     }
   }
