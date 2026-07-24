@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.5.0-rc.4
+## 0.5.0
+
+First stable release of the 0.5.x line (supersedes 0.5.0-rc.1 … rc.4).
 
 ### Added
 - **All 13 tensor dtypes supported end-to-end** — thanks @kuldeepdhaka
@@ -9,19 +11,6 @@
   `float16`, `bfloat16`, wired through the native layer (prebuilts v1.3.1.9).
   `float16`/`bfloat16` round to nearest even (numpy/PyTorch behavior), and
   unknown dtypes now error instead of silently becoming `float32`.
-
-### Fixed
-- `int8` tensor encoding applied a +128 bias instead of two's complement,
-  corrupting negative values.
-
-### Breaking
-- `TensorType` values reordered to match native `ETDType` — don't rely on
-  `.index`/`.values` order. `ExtendedTensorType` merged into `TensorType`
-  (deprecated typedef kept; its helper methods removed).
-
-## 0.5.0-rc.3
-
-### Added
 - **On-device LLM (experimental) — Gemma 4 E2B.** Streaming, multi-turn text
   generation via ExecuTorch's `extension/llm/runner`, with a new `ExecuTorchLLM`
   API (`load` / `generate` `Stream<String>` / `stop` / `reset` / `dispose`) and
@@ -36,6 +25,15 @@
   > requires shipping `mlx.metallib` and passing it via
   > `ExecuTorchLLM.load(mlxMetallibPath:)`, plus a macOS 14 deployment target.
   > Distributed as the `xnnpack-llm` / `xnnpack-mlx-llm` prebuilt variants.
+
+### Fixed
+- `int8` tensor encoding applied a +128 bias instead of two's complement,
+  corrupting negative values.
+
+### Breaking
+- `TensorType` values reordered to match native `ETDType` — don't rely on
+  `.index`/`.values` order. `ExtendedTensorType` merged into `TensorType`
+  (deprecated typedef kept; its helper methods removed).
 
 ## 0.4.1
 
