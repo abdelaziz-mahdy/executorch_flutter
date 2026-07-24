@@ -385,6 +385,8 @@ trap list lives in `native/CLAUDE.md` → "Local Compilation". Highlights:
   reconfigure: old build dir hit the wrapper self-exec bug (fixed in
   `native/cmake/build_from_source.cmake`). Re-run cmake with
   `-DPYTHON_EXECUTABLE=/path/to/python3` once, or delete the build dir.
+- **`MLX backend requires the Xcode Metal Toolchain`**: one-time install:
+  `xcodebuild -downloadComponent MetalToolchain` (~700 MB), then rebuild.
 - **`dlopen ... Library not loaded: /opt/homebrew/opt/libomp/lib/libomp.dylib`**
   (macOS, Metal/AOTI builds): the sandboxed app can't load torch's libomp from a
   system path. See `native/CLAUDE.md` for the bundling fix; xnnpack-only builds
