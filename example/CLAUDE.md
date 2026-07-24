@@ -700,7 +700,7 @@ def export_custom_model():
     # 4. Configure export
     config = ExportConfig(
         model_name='custom_model',
-        backends=['xnnpack', 'coreml', 'mps', 'vulkan'],  # Choose backends
+        backends=['xnnpack', 'coreml', 'metal', 'vulkan'],  # Choose backends
         output_dir='../custom',  # Output directory
         quantize=False,
         input_shapes=[[1, 3, 224, 224]],
@@ -822,4 +822,3 @@ For questions about the example app architecture:
 - File issues at the package repository
 
 **Example App Version**: 1.1
-**Package Version**: 0.0.3

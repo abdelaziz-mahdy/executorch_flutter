@@ -11,6 +11,7 @@ import 'dart:async';
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// A single chat turn.
 class _ChatMessage {
@@ -165,9 +166,7 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     List<String> extensions,
   ) async {
     final file = await openFile(
-      acceptedTypeGroups: [
-        XTypeGroup(label: label, extensions: extensions),
-      ],
+      acceptedTypeGroups: [XTypeGroup(label: label, extensions: extensions)],
     );
     if (file != null) {
       setState(() => controller.text = file.path);
@@ -191,8 +190,10 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Temperature: ${temperature.toStringAsFixed(2)}'
-                  '${temperature == 0 ? '  (greedy)' : ''}'),
+              Text(
+                'Temperature: ${temperature.toStringAsFixed(2)}'
+                '${temperature == 0 ? '  (greedy)' : ''}',
+              ),
               Slider(
                 value: temperature,
                 max: 1.5,
@@ -310,6 +311,8 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
       title: Text(_loaded ? 'Model loaded' : 'Load a model'),
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       children: [
+        const _SetupHelp(),
+        const SizedBox(height: 12),
         TextField(
           controller: _modelPathCtrl,
           decoration: InputDecoration(
@@ -402,7 +405,9 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
   Widget _bubble(BuildContext context, _ChatMessage m) {
     final scheme = Theme.of(context).colorScheme;
     final align = m.fromUser ? Alignment.centerRight : Alignment.centerLeft;
-    final color = m.fromUser ? scheme.primaryContainer : scheme.surfaceContainerHighest;
+    final color = m.fromUser
+        ? scheme.primaryContainer
+        : scheme.surfaceContainerHighest;
     final text = m.text.isEmpty && !m.fromUser ? '…' : m.text;
     return Align(
       alignment: align,
@@ -456,6 +461,114 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
                   ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Explains where the (unbundled) LLM files come from.
+///
+/// Weights are >1 GB and carry their own license terms, so the package ships
+/// neither the model nor the tokenizer. This panel points at the upstream
+/// sources instead. Links are copyable rather than tappable to avoid pulling
+/// url_launcher into the example just for this.
+class _SetupHelp extends StatelessWidget {
+  const _SetupHelp();
+
+  static const _docsUrl =
+      'https://github.com/abdelaziz-mahdy/executorch_flutter/blob/main/docs/LLM.md';
+  static const _exportUrl =
+      'https://github.com/abdelaziz-mahdy/executorch_flutter_models/tree/main/python';
+  static const _tokenizerUrl = 'https://huggingface.co/google/gemma-4-E2B-it';
+  static const _metallibUrl =
+      'https://github.com/abdelaziz-mahdy/executorch_native/releases';
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 18, color: scheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                "Don't have the files?",
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Gemma 4 weights are over 1 GB and carry their own license, so they '
+            'are not bundled. Export them once with the scripts below, then '
+            'point this screen at the resulting files.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const _LinkRow(label: 'Setup guide', url: _docsUrl),
+          const _LinkRow(label: 'Export scripts', url: _exportUrl),
+          const _LinkRow(label: 'Tokenizer (HF)', url: _tokenizerUrl),
+          const _LinkRow(label: 'mlx.metallib (MLX only)', url: _metallibUrl),
+        ],
+      ),
+    );
+  }
+}
+
+/// A labelled URL with a copy button.
+class _LinkRow extends StatelessWidget {
+  const _LinkRow({required this.label, required this.url});
+
+  final String label;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ),
+          Expanded(
+            child: SelectableText(
+              url,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.primary),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy, size: 16),
+            tooltip: 'Copy link',
+            visualDensity: VisualDensity.compact,
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: url));
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Copied $label link')));
+              }
+            },
+          ),
+        ],
       ),
     );
   }

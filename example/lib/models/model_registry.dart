@@ -21,7 +21,7 @@ import '../services/model_index_service.dart';
 /// Backend Information:
 /// - XNNPACK: CPU-optimized, works on ALL platforms (Android, iOS, macOS, Web)
 /// - CoreML: Apple Neural Engine optimization (iOS, macOS)
-/// - MPS: Metal Performance Shaders for GPU acceleration (iOS, macOS)
+/// - Metal: Apple GPU backend (macOS; replaces the removed MPS backend)
 /// - Vulkan: Cross-platform GPU (Android, iOS, macOS, Windows, Linux)
 ///
 /// Model Hosting:
@@ -117,7 +117,9 @@ class ModelRegistry {
     return switch (backend.toLowerCase()) {
       'xnnpack' => Backend.xnnpack,
       'coreml' => Backend.coreml,
-      'mps' => Backend.mps,
+      'metal' => Backend.metal,
+      // Legacy index entries still say "mps"; Metal replaced it upstream.
+      'mps' => Backend.metal,
       'vulkan' => Backend.vulkan,
       'qnn' => Backend.qnn,
       _ => null,
