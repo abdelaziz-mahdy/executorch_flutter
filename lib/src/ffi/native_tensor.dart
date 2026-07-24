@@ -37,8 +37,8 @@ class NativeTensor implements ffi.Finalizable {
       shapePtr[i] = tensorData.shape[i] ?? 0;
     }
 
-    // Convert data type
-    final dtype = _tensorTypeToETDType(tensorData.dataType);
+    // Convert data type using shared conversion from TensorType
+    final dtype = ETDType.fromValue(tensorData.dataType.executorchValue);
 
     // Allocate native data
     final dataSize = tensorData.data.length;
@@ -103,7 +103,7 @@ class NativeTensor implements ffi.Finalizable {
 
     return TensorData(
       shape: shape,
-      dataType: _etDTypeToTensorType(dtype),
+      dataType: TensorType.fromExecuTorchValue(dtype.value),
       data: data,
     );
   }
@@ -135,24 +135,4 @@ class NativeTensor implements ffi.Finalizable {
       throw const ExecuTorchMemoryException('Tensor has been disposed');
     }
   }
-
-  /// Convert TensorType to ETDType.
-  static ETDType _tensorTypeToETDType(TensorType type) => switch (type) {
-        TensorType.float32 => ETDType.ET_DTYPE_FLOAT32,
-        TensorType.int8 => ETDType.ET_DTYPE_INT8,
-        TensorType.int32 => ETDType.ET_DTYPE_INT32,
-        TensorType.uint8 => ETDType.ET_DTYPE_UINT8,
-      };
-
-  /// Convert ETDType to TensorType.
-  static TensorType _etDTypeToTensorType(ETDType dtype) => switch (dtype) {
-        ETDType.ET_DTYPE_FLOAT32 => TensorType.float32,
-        ETDType.ET_DTYPE_FLOAT64 => TensorType.float32, // Fallback
-        ETDType.ET_DTYPE_INT64 => TensorType.int32, // Fallback
-        ETDType.ET_DTYPE_INT32 => TensorType.int32,
-        ETDType.ET_DTYPE_INT16 => TensorType.int32, // Fallback
-        ETDType.ET_DTYPE_INT8 => TensorType.int8,
-        ETDType.ET_DTYPE_UINT8 => TensorType.uint8,
-        ETDType.ET_DTYPE_BOOL => TensorType.uint8, // Fallback
-      };
 }

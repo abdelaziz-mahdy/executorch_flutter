@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.0-rc.4
+
+### Added
+- **All 13 tensor dtypes supported end-to-end** — thanks @kuldeepdhaka
+  ([#38](https://github.com/abdelaziz-mahdy/executorch_flutter/pull/38)):
+  adds `float64`, `int64`, `int16`, `bool_`, `uint16`, `uint32`, `uint64`,
+  `float16`, `bfloat16`, wired through the native layer (prebuilts v1.3.1.9).
+  `float16`/`bfloat16` round to nearest even (numpy/PyTorch behavior), and
+  unknown dtypes now error instead of silently becoming `float32`.
+
+### Fixed
+- `int8` tensor encoding applied a +128 bias instead of two's complement,
+  corrupting negative values.
+
+### Breaking
+- `TensorType` values reordered to match native `ETDType` — don't rely on
+  `.index`/`.values` order. `ExtendedTensorType` merged into `TensorType`
+  (deprecated typedef kept; its helper methods removed).
+
 ## 0.5.0-rc.3
 
 ### Added

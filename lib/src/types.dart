@@ -49,104 +49,73 @@ enum Backend {
 /// Tensor data type enumeration.
 ///
 /// Represents the data type of tensor elements.
+/// All 13 types are supported by the native FFI layer and map 1:1 to
+/// ExecuTorch's ETDType enum in executorch_ffi.h.
 enum TensorType {
-  /// 32-bit floating point.
-  float32,
+  /// 32-bit floating point (IEEE 754).
+  float32('Float32', 0, 4),
 
-  /// 8-bit signed integer.
-  int8,
+  /// 64-bit floating point (IEEE 754).
+  float64('Float64', 1, 8),
 
-  /// 32-bit signed integer.
-  int32,
+  /// 64-bit signed integer (two's complement).
+  int64('Int64', 2, 8),
+
+  /// 32-bit signed integer (two's complement).
+  int32('Int32', 3, 4),
+
+  /// 16-bit signed integer (two's complement).
+  int16('Int16', 4, 2),
+
+  /// 8-bit signed integer (two's complement).
+  int8('Int8', 5, 1),
 
   /// 8-bit unsigned integer.
-  uint8,
-}
+  uint8('UInt8', 6, 1),
 
-/// Extended tensor types supported by the FFI layer.
-///
-/// This enum provides all tensor types supported by ExecuTorch,
-/// extending beyond the basic types in [TensorType].
-enum ExtendedTensorType {
-  /// 32-bit floating point (corresponds to TensorType.float32)
-  float32,
+  /// Boolean (1 byte per element: 0 = false, 1 = true).
+  bool_('Bool', 7, 1),
 
-  /// 64-bit floating point (new in FFI)
-  float64,
+  /// 16-bit unsigned integer.
+  uint16('UInt16', 8, 2),
 
-  /// 64-bit signed integer (new in FFI)
-  int64,
+  /// 32-bit unsigned integer.
+  uint32('UInt32', 9, 4),
 
-  /// 32-bit signed integer (corresponds to TensorType.int32)
-  int32,
+  /// 64-bit unsigned integer.
+  uint64('UInt64', 10, 8),
 
-  /// 16-bit signed integer (new in FFI)
-  int16,
+  /// 16-bit floating point (IEEE 754 half precision).
+  float16('Float16', 11, 2),
 
-  /// 8-bit signed integer (corresponds to TensorType.int8)
-  int8,
+  /// 16-bit brain floating point (Intel BF16).
+  bfloat16('BFloat16', 12, 2);
 
-  /// 8-bit unsigned integer (corresponds to TensorType.uint8)
-  uint8,
+  const TensorType(this.displayName, this.executorchValue, this.sizeInBytes);
 
-  /// Boolean (new in FFI)
-  bool_;
+  /// Human-readable display name.
+  final String displayName;
 
-  /// Human-readable display name for this type.
-  String get displayName => switch (this) {
-        ExtendedTensorType.float32 => 'Float32',
-        ExtendedTensorType.float64 => 'Float64',
-        ExtendedTensorType.int64 => 'Int64',
-        ExtendedTensorType.int32 => 'Int32',
-        ExtendedTensorType.int16 => 'Int16',
-        ExtendedTensorType.int8 => 'Int8',
-        ExtendedTensorType.uint8 => 'UInt8',
-        ExtendedTensorType.bool_ => 'Bool',
-      };
+  /// ExecuTorch native dtype enum value (ET_DTYPE_*).
+  final int executorchValue;
 
-  /// Size of this data type in bytes.
-  int get sizeInBytes => switch (this) {
-        ExtendedTensorType.float32 => 4,
-        ExtendedTensorType.float64 => 8,
-        ExtendedTensorType.int64 => 8,
-        ExtendedTensorType.int32 => 4,
-        ExtendedTensorType.int16 => 2,
-        ExtendedTensorType.int8 => 1,
-        ExtendedTensorType.uint8 => 1,
-        ExtendedTensorType.bool_ => 1,
-      };
+  /// Size of one element in bytes.
+  final int sizeInBytes;
 
-  /// Convert to TensorType (with fallback for unsupported types).
-  ///
-  /// Types not directly supported by TensorType will use the closest available:
-  /// - float64 → float32
-  /// - int64 → int32
-  /// - int16 → int32
-  /// - bool → uint8
-  TensorType toTensorType() => switch (this) {
-        ExtendedTensorType.float32 => TensorType.float32,
-        ExtendedTensorType.float64 => TensorType.float32,
-        ExtendedTensorType.int64 => TensorType.int32,
-        ExtendedTensorType.int32 => TensorType.int32,
-        ExtendedTensorType.int16 => TensorType.int32,
-        ExtendedTensorType.int8 => TensorType.int8,
-        ExtendedTensorType.uint8 => TensorType.uint8,
-        ExtendedTensorType.bool_ => TensorType.uint8,
-      };
+  /// Inverse map: executorchValue → TensorType (built once at load time).
+  static final Map<int, TensorType> _fromValue = {
+    for (final t in TensorType.values) t.executorchValue: t,
+  };
 
-  /// Create from TensorType.
-  static ExtendedTensorType fromTensorType(TensorType type) => switch (type) {
-        TensorType.float32 => ExtendedTensorType.float32,
-        TensorType.int32 => ExtendedTensorType.int32,
-        TensorType.int8 => ExtendedTensorType.int8,
-        TensorType.uint8 => ExtendedTensorType.uint8,
-      };
-}
-
-/// Extension on TensorType for extended type conversions.
-extension TensorTypeExtension on TensorType {
-  /// Convert to ExtendedTensorType.
-  ExtendedTensorType toExtended() => ExtendedTensorType.fromTensorType(this);
+  /// Create a [TensorType] from an ExecuTorch native integer value.
+  static TensorType fromExecuTorchValue(int value) =>
+      _fromValue[value] ??
+      (throw ArgumentError.value(
+        value,
+        'value',
+        'Unsupported ExecuTorch tensor type: $value. '
+            'Supported values: ${_fromValue.keys.toList()}.',
+      ));
 }
 
 /// Tensor data for input/output.
@@ -236,6 +205,40 @@ final class TensorData {
     return 'TensorData(shape: [$shapeStr], dataType: $dataType, '
         'data: ${data.length} bytes${name != null ? ', name: $name' : ''})';
   }
+}
+
+/// Deprecated alias for [TensorType].
+///
+/// Previously a separate enum with only 8 types. Now simply re-exports
+/// [TensorType] which covers all 13 ExecuTorch dtypes.
+///
+/// **Deprecated**: Use [TensorType] directly.
+@Deprecated('Use TensorType instead')
+typedef ExtendedTensorType = TensorType;
+
+/// Deprecated extension providing backward compatibility for
+/// [ExtendedTensorType].
+///
+/// **Deprecated**: Use [TensorType.displayName] and
+/// [TensorType.executorchValue] directly.
+@Deprecated(
+  'Use TensorType.displayName and TensorType.executorchValue instead',
+)
+extension TensorTypeExtension on TensorType {
+  /// Returns a human-readable name for this tensor type.
+  @Deprecated('Use TensorType.displayName instead')
+  String get name => displayName;
+
+  /// Returns the size in bytes of a single element.
+  @Deprecated('Use TensorType.sizeInBytes instead')
+  int get bytes => sizeInBytes;
+
+  /// Converts this tensor type to its [TensorType] equivalent.
+  ///
+  /// Returns this value unchanged, since [ExtendedTensorType] is now an
+  /// alias for [TensorType].
+  @Deprecated('This is now a no-op; ExtendedTensorType is TensorType')
+  TensorType get baseType => this;
 }
 
 /// Model loading result.

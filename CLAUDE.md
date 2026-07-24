@@ -504,6 +504,29 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 - Single-loop tensor conversion (RGBA → NCHW) for cache locality
 - Always dispose `ui.Image` objects after use
 
+## Native Local Development (build modes)
+
+**Full guide: `CONTRIBUTING.md` (Build Modes / Local Build & Testing / Source Build sections). Read it before touching native code.** Key facts:
+
+- The plugin has three build modes, set in the **consuming app's** `pubspec.yaml`
+  (`hooks: user_defines: executorch_flutter: build_mode:`):
+  - **prebuilt** (default): downloads an already-compiled `libexecutorch_ffi` from
+    GitHub Releases. **Local edits to `native/src/*.cpp` have NO effect in this mode.**
+  - **source**: the app's build phase compiles ExecuTorch + FFI from a local checkout —
+    set `executorch_source: "/path/to/executorch"`. This is the RECOMMENDED way to test
+    native changes: no manual cmake, `flutter run`/`flutter test` does everything.
+    First build 15-30+ min, incremental after (ccache helps).
+  - **local**: consumes `native/local-builds/<variant>/` produced by
+    `native/scripts/compile-local.sh` (or `local_lib_dir:`).
+- **Do NOT hand-drive cmake/ninja in stale `native/build-local-*` dirs** — that path
+  caused a cascade of traps (python wrapper self-exec on reconfigure, dead-venv torch
+  paths, libomp install-name/sandbox failures, stale hooks cache needing
+  `flutter clean`). All documented in `native/CLAUDE.md` → "Local Compilation".
+- Backend set must match your test models: xnnpack-delegated `.pte` files fail to
+  load on a build without XNNPACK.
+- New native dtypes / API changes require a native release (tag `vX.Y.Z.W` in the
+  `native` repo) before prebuilt mode picks them up; test via source mode meanwhile.
+
 ## Development Workflows
 
 ### Adding New Features
@@ -529,6 +552,21 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 - **C/C++**: Follow `clang-format` conventions (used in native/ submodule)
 - **Lint**: All lint rules enabled, `dart fix --apply` used for auto-fixes
 
+### Changelog Guidelines
+
+- **Summarized, not exhaustive**: one bullet per user-visible theme; fold
+  related fixes into a single bullet. No file paths or internal function names —
+  describe effects, not diffs.
+- **Credit external contributors** in the entry itself: "thanks @username
+  ([#NN](link-to-pr))" on the bullet their work enabled. Always link the PR.
+- Use `### Added` / `### Fixed` / `### Breaking` sections (only the ones that
+  apply). Breaking entries say what breaks AND what to do about it.
+- **`### Fixed` is only for bugs that existed in a released version.** Bugs
+  introduced and fixed within the same unreleased change are not "fixes" to the
+  user — fold any relevant behavior notes into the feature's `### Added` bullet.
+- Version entries match `pubspec.yaml` `version:`; check the version wasn't
+  already released before bumping.
+
 ### Commit Guidelines
 
 - **ALWAYS ask before committing** unless the user explicitly says to commit. Present the changes and proposed commit message for approval first.
@@ -542,20 +580,28 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 
 ### Pre-Push Checklist
 
-**ALWAYS run these checks before pushing:**
+**ALWAYS run these checks before EVERY push (CI runs exactly these and fails
+on any diff or issue):**
 
 ```bash
-# 1. Run analyzer (must pass with 0 issues)
+# 1. Analyzer — must report 0 issues (CI: flutter analyze lib)
 flutter analyze lib
 
-# 2. Run formatter
-dart format lib
+# 2. Formatter — CI runs `dart format --set-exit-if-changed lib`, so verify
+#    there is nothing left to format:
+dart format --set-exit-if-changed lib
 
-# 3. Run tests if available
+# 3. Tests
 flutter test
 ```
 
-If analyzer reports issues, fix them before pushing. Do NOT push code with lint errors.
+Then check `git status` — **if the formatter touched ANY file, stage and commit
+it in the same push.** (A formatted-but-uncommitted file is the classic way the
+CI format check fails while local looks clean.)
+
+Fork PRs: CI runs need maintainer approval — after pushing to a contributor's
+branch, check `gh run list` for `action_required` and approve via
+`gh api -X POST repos/<owner>/<repo>/actions/runs/<id>/approve`.
 
 ### Publishing Workflow
 

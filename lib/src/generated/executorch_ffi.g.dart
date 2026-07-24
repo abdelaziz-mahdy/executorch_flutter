@@ -428,7 +428,12 @@ enum ETDType {
   ET_DTYPE_INT16(4),
   ET_DTYPE_INT8(5),
   ET_DTYPE_UINT8(6),
-  ET_DTYPE_BOOL(7);
+  ET_DTYPE_BOOL(7),
+  ET_DTYPE_UINT16(8),
+  ET_DTYPE_UINT32(9),
+  ET_DTYPE_UINT64(10),
+  ET_DTYPE_FLOAT16(11),
+  ET_DTYPE_BFLOAT16(12);
 
   final int value;
   const ETDType(this.value);
@@ -442,6 +447,11 @@ enum ETDType {
         5 => ET_DTYPE_INT8,
         6 => ET_DTYPE_UINT8,
         7 => ET_DTYPE_BOOL,
+        8 => ET_DTYPE_UINT16,
+        9 => ET_DTYPE_UINT32,
+        10 => ET_DTYPE_UINT64,
+        11 => ET_DTYPE_FLOAT16,
+        12 => ET_DTYPE_BFLOAT16,
         _ => throw ArgumentError('Unknown value for ETDType: $value'),
       };
 }

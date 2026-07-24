@@ -372,6 +372,30 @@ flutter run -d <device>
 **Note**: First build takes 15-30 minutes. Subsequent builds are incremental
 and much faster (minutes). The build cache is preserved between runs.
 
+### Troubleshooting Local/Source Builds
+
+Prefer source mode driven by `pubspec.yaml` over manually running cmake/ninja in
+old build directories — stale caches cause most of the failures below. The full
+trap list lives in `native/CLAUDE.md` → "Local Compilation". Highlights:
+
+- **`install TARGETS given target "xnnpack-operator-delete" which does not exist`**:
+  the XNNPACK submodule in your ExecuTorch checkout has drifted. Fix:
+  `git submodule update backends/xnnpack/third-party/XNNPACK` in the checkout.
+- **`python_wrapper.sh: Argument list too long` / `Undefined error: 0`** on
+  reconfigure: old build dir hit the wrapper self-exec bug (fixed in
+  `native/cmake/build_from_source.cmake`). Re-run cmake with
+  `-DPYTHON_EXECUTABLE=/path/to/python3` once, or delete the build dir.
+- **`MLX backend requires the Xcode Metal Toolchain`**: one-time install:
+  `xcodebuild -downloadComponent MetalToolchain` (~700 MB), then rebuild.
+- **`dlopen ... Library not loaded: /opt/homebrew/opt/libomp/lib/libomp.dylib`**
+  (macOS, Metal/AOTI builds): the sandboxed app can't load torch's libomp from a
+  system path. See `native/CLAUDE.md` for the bundling fix; xnnpack-only builds
+  are unaffected.
+- **App keeps loading old native code** after swapping libraries: hooks cache —
+  run `flutter clean` in the app.
+- **Model fails to load in a custom build**: check the build actually enables the
+  backend the `.pte` was exported for (e.g. XNNPACK).
+
 ## Making Changes
 
 ### Before You Start
