@@ -154,4 +154,104 @@ void main() {
       }
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Integer encoding: verify convertNumericDataToBytes produces the exact
+  // little-endian two's-complement byte layout the native layer expects.
+  // -----------------------------------------------------------------------
+
+  group('convertNumericDataToBytes integer encoding', () {
+    test('int8 uses two\'s complement (no bias)', () {
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        [-128, -1, 0, 1, 127],
+        TensorType.int8,
+      );
+      expect(bytes, [0x80, 0xFF, 0x00, 0x01, 0x7F]);
+      // Round-trip back through a signed view.
+      expect(bytes.buffer.asInt8List(), [-128, -1, 0, 1, 127]);
+    });
+
+    test('int16 round-trips values including negatives', () {
+      final values = [-32768, -1, 0, 1, 32767];
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        values,
+        TensorType.int16,
+      );
+      expect(bytes, hasLength(values.length * 2));
+      expect(bytes.buffer.asInt16List(), values);
+    });
+
+    test('int32 round-trips values including negatives', () {
+      final values = [-2147483648, -1, 0, 1, 2147483647];
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        values,
+        TensorType.int32,
+      );
+      expect(bytes, hasLength(values.length * 4));
+      expect(bytes.buffer.asInt32List(), values);
+    });
+
+    test('int64 round-trips values including extremes', () {
+      final values = [-9223372036854775808, -1, 0, 1, 9223372036854775807];
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        values,
+        TensorType.int64,
+      );
+      expect(bytes, hasLength(values.length * 8));
+      expect(bytes.buffer.asInt64List(), values);
+    });
+
+    test('uint8 clamps and round-trips', () {
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        [-5, 0, 1, 255, 300],
+        TensorType.uint8,
+      );
+      expect(bytes, [0, 0, 1, 255, 255]);
+    });
+
+    test('uint16 clamps and round-trips', () {
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        [-5, 0, 1, 65535, 70000],
+        TensorType.uint16,
+      );
+      expect(bytes, hasLength(10));
+      expect(bytes.buffer.asUint16List(), [0, 0, 1, 65535, 65535]);
+    });
+
+    test('uint32 clamps and round-trips', () {
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        [-5, 0, 1, 0xFFFFFFFF, 0x100000000],
+        TensorType.uint32,
+      );
+      expect(bytes, hasLength(20));
+      expect(
+        bytes.buffer.asUint32List(),
+        [0, 0, 1, 0xFFFFFFFF, 0xFFFFFFFF],
+      );
+    });
+
+    test('uint64 encodes without crashing and clamps negatives to zero', () {
+      // Dart ints are 64-bit signed, so the representable uint64 range here
+      // is capped at 2^63-1. This test guards the historical clamp crash
+      // (clamp(0, 0xFFFFFFFFFFFFFFFF) threw because the literal is -1).
+      final values = [-5, 0, 1, 9223372036854775807];
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        values,
+        TensorType.uint64,
+      );
+      expect(bytes, hasLength(values.length * 8));
+      expect(
+        bytes.buffer.asUint64List(),
+        [0, 0, 1, 9223372036854775807],
+      );
+    });
+
+    test('bool encodes non-zero as 1 and zero as 0', () {
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+        [0, 1, -3, 2.5],
+        TensorType.bool_,
+      );
+      expect(bytes, [0, 1, 1, 1]);
+    });
+  });
 }

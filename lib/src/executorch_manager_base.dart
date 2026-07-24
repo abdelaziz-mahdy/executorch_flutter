@@ -166,9 +166,10 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
         return int16List.buffer.asUint8List();
 
       case TensorType.int8:
-        return Uint8List.fromList(
-          data.map((e) => e.toInt().clamp(-128, 127) + 128).toList(),
+        final int8List = Int8List.fromList(
+          data.map((e) => e.toInt().clamp(-128, 127)).toList(),
         );
+        return int8List.buffer.asUint8List();
 
       case TensorType.uint8:
         return Uint8List.fromList(
@@ -193,8 +194,10 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
         return uint32List.buffer.asUint8List();
 
       case TensorType.uint64:
+        // Dart int is 64-bit signed, so values above 2^63-1 are not
+        // representable; clamp negatives to 0 and cap at 2^63-1.
         final uint64List = Uint64List.fromList(
-          data.map((e) => e.toInt().clamp(0, 0xFFFFFFFFFFFFFFFF)).toList(),
+          data.map((e) => e.toInt().clamp(0, 0x7FFFFFFFFFFFFFFF)).toList(),
         );
         return uint64List.buffer.asUint8List();
 
@@ -210,10 +213,10 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
 
   /// Encode a list of numeric values as bfloat16 bytes.
   ///
-  /// bfloat16 is simply the upper 16 bits of an IEEE 754 float32:
+  /// bfloat16 is the upper 16 bits of an IEEE 754 float32:
   /// - Sign bit: 1 bit
   /// - Exponent: 8 bits (same bias as float32)
-  /// - Mantissa: 7 bits (truncated from float32's 23)
+  /// - Mantissa: 7 bits (rounded to nearest even from float32's 23)
   static Uint8List _encodeBfloat16(List<num> data) {
     final float32List = Float32List.fromList(
       data.map((e) => e.toDouble()).toList(),
@@ -221,8 +224,16 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
     final view = float32List.buffer.asUint32List();
     final result = Uint8List(data.length * 2);
     for (int i = 0; i < data.length; i++) {
-      // Shift right by 16 to keep upper 16 bits
-      final bf16 = view[i] >>> 16;
+      final f32 = view[i];
+      final int bf16;
+      if ((f32 & 0x7FFFFFFF) > 0x7F800000) {
+        // NaN: truncate but force a quiet NaN so the payload never
+        // rounds to infinity.
+        bf16 = (f32 >>> 16) | 0x40;
+      } else {
+        // Round to nearest even: add 0x7FFF plus the LSB of the result.
+        bf16 = (f32 + 0x7FFF + ((f32 >>> 16) & 1)) >>> 16;
+      }
       // Store in little-endian byte order
       result[i * 2] = bf16 & 0xFF;
       result[i * 2 + 1] = (bf16 >> 8) & 0xFF;
@@ -253,6 +264,8 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
   }
 
   /// Convert a single IEEE 754 float32 bit pattern to float16 bit pattern.
+  ///
+  /// Uses round-to-nearest-even, matching numpy and PyTorch conversions.
   static int _float32ToFloat16(int f32) {
     // Extract float32 components
     final sign32 = (f32 >>> 31) & 0x1;
@@ -262,12 +275,12 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
     final sign16 = sign32 << 15;
 
     if (exp32 == 0) {
-      // Zero or denormal → zero in float16
+      // Zero or float32 denormal (< 2^-126) → zero in float16
       return sign16;
     }
 
     if (exp32 == 0xFF) {
-      // Infinity or NaN → infinity (or NaN) in float16
+      // Infinity or NaN → infinity (or quiet NaN) in float16
       return sign16 | 0x7C00 | (mant32 != 0 ? 0x0200 : 0);
     }
 
@@ -284,15 +297,28 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
         // Underflow → zero
         return sign16;
       }
-      // Denormal: shift mantissa to fit denormal representation
-      final mantShift = mant32 | 0x7FFFFF; // Add implicit leading 1
-      final shiftedMant = mantShift >> (14 - exp16);
-      return sign16 | shiftedMant & 0x3FF;
+      // Denormal: restore the implicit leading 1, then shift the 24-bit
+      // significand into the 10-bit denormal mantissa with round-to-nearest-even.
+      final significand = mant32 | 0x800000;
+      final shift = 14 - exp16;
+      var mant16 = significand >> shift;
+      final remainder = significand & ((1 << shift) - 1);
+      final half = 1 << (shift - 1);
+      if (remainder > half || (remainder == half && (mant16 & 1) == 1)) {
+        mant16++;
+      }
+      // A mantissa carry into bit 10 correctly becomes the smallest normal.
+      return sign16 | mant16;
     }
 
-    // Normal: truncate mantissa from 23 to 10 bits with rounding
-    final mant16 = mant32 >> 13;
-
-    return sign16 | (exp16 << 10) | mant16;
+    // Normal: reduce mantissa from 23 to 10 bits with round-to-nearest-even.
+    // The increment may carry from mantissa into exponent (and up to
+    // infinity); IEEE bit layout makes that carry arithmetic correct.
+    var bits = sign16 | (exp16 << 10) | (mant32 >> 13);
+    final remainder = mant32 & 0x1FFF;
+    if (remainder > 0x1000 || (remainder == 0x1000 && ((mant32 >> 13) & 1) == 1)) {
+      bits++;
+    }
+    return bits;
   }
 }

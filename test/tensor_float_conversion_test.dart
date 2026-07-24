@@ -296,6 +296,53 @@ void main() {
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x7C);
     });
+
+    test('encodes denormal values matching numpy float16', () {
+      // Values below 2^-14 (min normal) but above 2^-24 (min denormal)
+      // exercise the binary16 denormal branch. Reference bit patterns from
+      // python3 -c "import numpy as np; print(np.float16(v).view(np.uint16))"
+      final Map<double, int> denormals = {
+        6e-5: 0x03EF,
+        3e-5: 0x01F7,
+        1e-5: 0x00A8,
+        -6e-5: 0x83EF,
+      };
+      for (final entry in denormals.entries) {
+        final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+          [entry.key],
+          TensorType.float16,
+        );
+        final actual = bytes[0] | (bytes[1] << 8);
+        expect(actual, entry.value,
+            reason: 'float16 denormal mismatch for ${entry.key}: '
+                'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
+                'got 0x${actual.toRadixString(16).padLeft(4, '0')}');
+      }
+    });
+
+    test('rounds normal values to nearest even like numpy float16', () {
+      // numpy: np.float16(3.14) == 0x4248 (rounded up from truncated 0x4247)
+      final Map<double, int> rounded = {
+        3.14: 0x4248,
+        // 1.0009765625 = 1 + 2^-10: representable exactly, no rounding.
+        1.0009765625: 0x3C01,
+        // 1.00048828125 = 1 + 2^-11: tie → round to even (LSB 0 stays).
+        1.00048828125: 0x3C00,
+        // 1.00146484375 = 1 + 3*2^-11: tie → round to even (LSB 1 → up).
+        1.00146484375: 0x3C02,
+      };
+      for (final entry in rounded.entries) {
+        final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
+          [entry.key],
+          TensorType.float16,
+        );
+        final actual = bytes[0] | (bytes[1] << 8);
+        expect(actual, entry.value,
+            reason: 'float16 rounding mismatch for ${entry.key}: '
+                'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
+                'got 0x${actual.toRadixString(16).padLeft(4, '0')}');
+      }
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -304,26 +351,37 @@ void main() {
   // -----------------------------------------------------------------------
 
   group('convertNumericDataToBytes round-trip consistency', () {
-    test('bfloat16 bytes match direct float32 upper-bit truncation', () {
-      // Verify against the bfloat16 definition: upper 16 bits of IEEE 754
-      // binary32 representation. Source: Wikipedia "Bfloat16 floating-point
-      // format" (https://en.wikipedia.org/wiki/Bfloat16_floating-point_format)
-      final testValues = [1.0, 0.5, -2.0, 3.14, 0.0, -0.0];
-      for (final v in testValues) {
+    test('bfloat16 bytes match numpy/PyTorch round-to-nearest-even', () {
+      // bfloat16 keeps the upper 16 bits of IEEE 754 binary32, rounded to
+      // nearest even (not truncated) — matching numpy (ml_dtypes) and
+      // PyTorch conversions.
+      // Reference: python3 -c "import numpy as np, ml_dtypes;
+      //   print(np.float32(v).view(np.uint32) ...)" / torch.tensor(v).bfloat16()
+      final Map<double, int> referenceValues = {
+        // Exact values (lower 16 float32 bits are zero): same as truncation.
+        1.0: 0x3F80,
+        0.5: 0x3F00,
+        -2.0: 0xC000,
+        // (0.0 vs -0.0 collide as map keys; -0.0 is covered by the
+        // dedicated encoding test above.)
+        0.0: 0x0000,
+        // 3.14 float32 = 0x4048F5C3; lower bits 0xF5C3 > 0x8000 → round up.
+        3.14: 0x4049,
+        // 1.00390625 float32 = 0x3F808000; tie → round to even (LSB 0 stays).
+        1.00390625: 0x3F80,
+        // 1.01171875 float32 = 0x3F818000; tie → round to even (LSB 1 → up).
+        1.01171875: 0x3F82,
+      };
+      for (final entry in referenceValues.entries) {
         final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-          [v],
+          [entry.key],
           TensorType.bfloat16,
         );
-        // Manually compute expected: take float32 bits, shift right 16
-        final f32Bytes = Float32List.fromList([v.toDouble()]);
-        final f32Bits = f32Bytes.buffer.asUint32List()[0];
-        final expectedBf16 = f32Bits >>> 16;
-        final expectedLow = expectedBf16 & 0xFF;
-        final expectedHigh = (expectedBf16 >> 8) & 0xFF;
-        expect(bytes[0], expectedLow,
-            reason: 'bfloat16 low byte mismatch for $v');
-        expect(bytes[1], expectedHigh,
-            reason: 'bfloat16 high byte mismatch for $v');
+        final actual = bytes[0] | (bytes[1] << 8);
+        expect(actual, entry.value,
+            reason: 'bfloat16 encoding mismatch for ${entry.key}: '
+                'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
+                'got 0x${actual.toRadixString(16).padLeft(4, '0')}');
       }
     });
 
