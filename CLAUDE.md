@@ -504,6 +504,29 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 - Single-loop tensor conversion (RGBA → NCHW) for cache locality
 - Always dispose `ui.Image` objects after use
 
+## Native Local Development (build modes)
+
+**Full guide: `CONTRIBUTING.md` (Build Modes / Local Build & Testing / Source Build sections). Read it before touching native code.** Key facts:
+
+- The plugin has three build modes, set in the **consuming app's** `pubspec.yaml`
+  (`hooks: user_defines: executorch_flutter: build_mode:`):
+  - **prebuilt** (default): downloads an already-compiled `libexecutorch_ffi` from
+    GitHub Releases. **Local edits to `native/src/*.cpp` have NO effect in this mode.**
+  - **source**: the app's build phase compiles ExecuTorch + FFI from a local checkout —
+    set `executorch_source: "/path/to/executorch"`. This is the RECOMMENDED way to test
+    native changes: no manual cmake, `flutter run`/`flutter test` does everything.
+    First build 15-30+ min, incremental after (ccache helps).
+  - **local**: consumes `native/local-builds/<variant>/` produced by
+    `native/scripts/compile-local.sh` (or `local_lib_dir:`).
+- **Do NOT hand-drive cmake/ninja in stale `native/build-local-*` dirs** — that path
+  caused a cascade of traps (python wrapper self-exec on reconfigure, dead-venv torch
+  paths, libomp install-name/sandbox failures, stale hooks cache needing
+  `flutter clean`). All documented in `native/CLAUDE.md` → "Local Compilation".
+- Backend set must match your test models: xnnpack-delegated `.pte` files fail to
+  load on a build without XNNPACK.
+- New native dtypes / API changes require a native release (tag `vX.Y.Z.W` in the
+  `native` repo) before prebuilt mode picks them up; test via source mode meanwhile.
+
 ## Development Workflows
 
 ### Adding New Features
