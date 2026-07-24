@@ -561,6 +561,9 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
   ([#NN](link-to-pr))" on the bullet their work enabled. Always link the PR.
 - Use `### Added` / `### Fixed` / `### Breaking` sections (only the ones that
   apply). Breaking entries say what breaks AND what to do about it.
+- **`### Fixed` is only for bugs that existed in a released version.** Bugs
+  introduced and fixed within the same unreleased change are not "fixes" to the
+  user — fold any relevant behavior notes into the feature's `### Added` bullet.
 - Version entries match `pubspec.yaml` `version:`; check the version wasn't
   already released before bumping.
 
