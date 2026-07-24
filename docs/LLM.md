@@ -40,9 +40,17 @@ screen (multi-turn, stop, reset, settings, MLX metallib field).
 
 ## 1. Get the model
 
-LLM weights are large and license/distribution differs from the vision models, so
-they are **not bundled** with the package. Export them yourself (recommended) or
-download a pre-exported set if one is published for your platform.
+LLM weights are large (1+ GB) and carry their own license terms, so — unlike the
+vision models — **nothing is pre-hosted**: there is no download URL to point at.
+You export the model yourself, once, with the scripts below.
+
+Sources you'll need:
+
+- **Base model + `tokenizer.json`**: [`google/gemma-4-E2B-it`](https://huggingface.co/google/gemma-4-E2B-it) on Hugging Face (accept the Gemma terms)
+- **Export scripts**: [`executorch_flutter_models/python`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/tree/main/python)
+- **`mlx.metallib`** (MLX only): [`executorch_native` releases](https://github.com/abdelaziz-mahdy/executorch_native/releases)
+
+The example app's LLM screen lists these same links next to the file pickers.
 
 You need **three** files (for MLX) or **two** (for XNNPACK):
 

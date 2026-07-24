@@ -1,5 +1,9 @@
 # ExecuTorch Flutter
 
+[![pub package](https://img.shields.io/pub/v/executorch_flutter.svg)](https://pub.dev/packages/executorch_flutter)
+[![build](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/build.yml/badge.svg)](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/build.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A Flutter plugin for on-device ML inference using PyTorch ExecuTorch, supporting Android, iOS, macOS, Windows, Linux, and Web.
 
 **[pub.dev](https://pub.dev/packages/executorch_flutter)** | **[Live Demo](https://abdelaziz-mahdy.github.io/executorch_flutter/)** | **[Example App](example/)**
@@ -38,7 +42,8 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 - **Async Operations**: Non-blocking model loading and inference
 - **Multiple Models**: Support for concurrent model instances
 - **Error Handling**: Structured exception handling with clear error messages
-- **Backend Support**: XNNPACK, CoreML, MPS, Vulkan backends
+- **Backend Support**: XNNPACK (all platforms), CoreML (Apple), Metal + MLX (macOS), Vulkan (opt-in)
+- **13 Tensor Dtypes**: float32/64, float16, bfloat16, int8/16/32/64, uint8/16/32/64, bool
 - **On-device LLM (experimental)**: streaming text generation with Gemma 4 (XNNPACK CPU + MLX Apple-GPU) — see **[docs/LLM.md](docs/LLM.md)**
 - **Live Camera**: Real-time inference with camera stream support
 
@@ -57,7 +62,7 @@ ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch
 <!-- PACKAGE_VERSION_START -->
 ```yaml
 dependencies:
-  executorch_flutter: ^0.5.0-rc.4
+  executorch_flutter: ^0.5.0
 ```
 <!-- PACKAGE_VERSION_END -->
 
@@ -120,13 +125,13 @@ final model = await ExecuTorchModel.load('/path/to/model.pte');
 | Platform | Min Version | Architectures | Backends |
 |----------|-------------|---------------|----------|
 | **Android** | API 23 | arm64-v8a, armeabi-v7a, x86_64, x86 | XNNPACK, Vulkan* |
-| **iOS** | 13.0+ | arm64, x86_64+arm64 (sim) | XNNPACK, CoreML, MPS, Vulkan* |
-| **macOS** | 11.0+ | arm64, x86_64 | XNNPACK, CoreML, MPS, Vulkan* |
+| **iOS** | 13.0+ | arm64, x86_64+arm64 (sim) | XNNPACK, CoreML, Vulkan* |
+| **macOS** | 11.0+ | arm64, x86_64 | XNNPACK, CoreML, Metal, MLX*, Vulkan* |
 | **Windows** | 10+ | x64 | XNNPACK, Vulkan* |
 | **Linux** | Ubuntu 20.04+ | x64, arm64 | XNNPACK, Vulkan* |
 | **Web** | Modern browsers | WebAssembly | XNNPACK (Wasm SIMD) |
 
-*\*Vulkan is opt-in and experimental. See [Vulkan Backend](#experimental-vulkan-backend).*
+*\*Opt-in. Vulkan is experimental — see [Vulkan Backend](#experimental-vulkan-backend). MLX is the Apple-Silicon GPU runtime used by the LLM path (macOS 14+, arm64) — see [docs/LLM.md](docs/LLM.md).*
 
 ### Platform Configuration
 
@@ -232,9 +237,31 @@ backends: [xnnpack, mlx]   # mlx is auto-dropped off macOS-arm64
 ```dart
 final tensor = TensorData(
   shape: [1, 3, 224, 224],       // Dimensions
-  dataType: TensorType.float32,  // float32, int32, int8, uint8
-  data: Uint8List(...),          // Raw bytes
+  dataType: TensorType.float32,  // See dtype table below
+  data: Uint8List(...),          // Raw bytes, little-endian
   name: 'input_0',               // Optional
+);
+```
+
+**Supported dtypes** — all 13 map 1:1 to ExecuTorch's native types:
+
+| Dtype | Bytes | Dtype | Bytes | Dtype | Bytes |
+|-------|-------|-------|-------|-------|-------|
+| `float32` | 4 | `int8` | 1 | `uint32` | 4 |
+| `float64` | 8 | `int16` | 2 | `uint64` | 8 |
+| `float16` | 2 | `int32` | 4 | `bool_` | 1 |
+| `bfloat16` | 2 | `int64` | 8 | | |
+| `uint8` | 1 | `uint16` | 2 | | |
+
+Building `data` by hand is error-prone, so use `ExecutorchManager` to encode
+numeric lists — it handles float16/bfloat16 conversion (round-to-nearest-even)
+and endianness:
+
+```dart
+final tensor = ExecutorchManager.instance.createTensorData(
+  shape: [1, 4],
+  dataType: TensorType.float16,
+  data: [1.0, 2.5, -3.25, 0.5],
 );
 ```
 
@@ -259,8 +286,10 @@ print('Available: ${backends.map((b) => b.displayName).join(", ")}');
 |---------|--------------|-----------|
 | `Backend.xnnpack` | XNNPACK | All |
 | `Backend.coreml` | CoreML | iOS, macOS |
-| `Backend.mps` | Metal Performance Shaders | iOS, macOS |
+| `Backend.metal` | Metal | macOS |
 | `Backend.vulkan` | Vulkan | Android, iOS, macOS, Windows, Linux |
+| `Backend.qnn` | Qualcomm QNN | Android |
+| `Backend.mps` | *(deprecated — use `metal`)* | macOS |
 
 ### Exception Hierarchy
 
@@ -286,7 +315,7 @@ hooks:
     executorch_flutter:
       debug: false              # Enable debug logging
       build_mode: "prebuilt"    # "prebuilt", "local", or "source"
-      # prebuilt_version: "1.1.0.7"  # Optional: pin specific native version
+      # prebuilt_version: "1.3.1.9"  # Optional: pin specific native version
       # For source mode: build from local ExecuTorch checkout
       # build_mode: "source"
       # executorch_source: "/path/to/executorch"
@@ -295,7 +324,7 @@ hooks:
       backends:
         - xnnpack
         - coreml
-        - mps
+        - metal
 ```
 
 ### Options
@@ -314,9 +343,13 @@ hooks:
 | Platform | Defaults |
 |----------|----------|
 | Android | xnnpack |
-| iOS | xnnpack, coreml, mps |
-| macOS | xnnpack, coreml, mps |
+| iOS | xnnpack, coreml |
+| macOS | xnnpack, coreml, metal |
 | Windows/Linux | xnnpack |
+
+Listing `backends:` replaces the defaults entirely — include every backend you
+want. `vulkan`, `mlx`, and `qnn` are never on by default. A legacy `mps` entry
+is accepted and treated as `metal` on macOS.
 
 ### Environment Variables
 
@@ -442,8 +475,20 @@ See **[docs/LLM.md](docs/LLM.md)** for the full export recipe, the required
 <summary><b>Inference returns error</b></summary>
 
 - Check `model.inputShapes` / `model.outputShapes`
-- Verify tensor data types match expectations
 - Ensure shapes match exactly (including batch dimension)
+- Verify the dtype matches what the model was exported with — a `data size
+  mismatch` error means `data.length` != `elementCount * dataType.sizeInBytes`
+- Prefer `ExecutorchManager.instance.createTensorData(...)` over packing bytes
+  by hand, especially for `float16`/`bfloat16`
+</details>
+
+<details>
+<summary><b>Edits to native C++ code have no effect</b></summary>
+
+The default `prebuilt` build mode downloads an already-compiled library, so
+local changes under `native/` are ignored. Use `build_mode: "source"` with
+`executorch_source:` pointing at a local ExecuTorch checkout. See
+[CONTRIBUTING.md](CONTRIBUTING.md#source-build-from-local-executorch-checkout).
 </details>
 
 <details>
@@ -495,7 +540,7 @@ Some PowerVR devices may produce incorrect Vulkan results due to texture dimensi
 ### Recommendations
 
 - **Production**: Use XNNPACK (stable everywhere)
-- **Apple platforms**: Use CoreML or MPS instead of Vulkan
+- **Apple platforms**: Use CoreML (iOS/macOS) or Metal (macOS) instead of Vulkan
 - **Testing**: Report issues with device info and logs
 
 **[Report Vulkan Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues)**

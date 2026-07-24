@@ -27,18 +27,18 @@ dart pub publish --dry-run
 **executorch_flutter** is a Flutter plugin package that provides on-device machine learning inference using PyTorch ExecuTorch. It enables Flutter developers to run optimized ML models on mobile and desktop platforms with a simple, type-safe Dart API.
 
 **Package Name**: `executorch_flutter`
-**Version**: 0.0.3
+**Version**: see `pubspec.yaml` (`version:`) — the source of truth
 **License**: MIT
 **Platforms**: Android, iOS, macOS, Windows, Linux, Web
 **Flutter Version**: 3.38+ (requires native assets hooks)
 
 ## Current Development Status
 
-- **Phase**: Package implementation complete, API simplified and finalized
-- **API**: Minimal surface with only `load()` and `forward()` - asset bundle loading supported
-- **Code Quality**: 0 lint errors in `lib/`, all dart fixes applied
+- **Status**: published on pub.dev; releases are cut by tagging `v<version>` (CI publishes)
+- **API**: vision inference via `ExecuTorchModel` (`load`/`forward`/`dispose`) plus experimental
+  streaming LLM via `ExecuTorchLLM` (see `docs/LLM.md`)
+- **Code Quality**: `flutter analyze lib` and `dart format --set-exit-if-changed lib` must be clean
 - **Build Status**: ✅ Android, ✅ iOS, ✅ macOS, ✅ Windows, ✅ Linux, ✅ Web
-- **Next Step**: Publish to pub.dev
 
 ## Core Architecture
 
@@ -71,13 +71,13 @@ dart pub publish --dry-run
 - **Minimum Version**: iOS 13.0
 - **Architectures**: arm64 (device), arm64-simulator, x86_64-simulator (all supported)
 - **Dependencies**: ExecuTorch pre-built native libraries via native assets
-- **Backend**: XNNPACK, CoreML, MPS (Metal Performance Shaders), Vulkan (opt-in, via MoltenVK)
+- **Backend**: XNNPACK, CoreML, Vulkan (opt-in, via MoltenVK)
 
 ### macOS
 - **Minimum Version**: macOS 11.0
 - **Architectures**: arm64 (Apple Silicon), x86_64 (Intel) - both supported
 - **Dependencies**: ExecuTorch pre-built native libraries via native assets
-- **Backend**: XNNPACK, CoreML, MPS (Metal Performance Shaders), Vulkan (opt-in, via MoltenVK)
+- **Backend**: XNNPACK, CoreML, Metal, MLX (opt-in, LLM GPU path), Vulkan (opt-in, via MoltenVK)
 
 ### Windows
 - **Minimum Version**: Windows 10
@@ -675,21 +675,7 @@ branch, check `gh run list` for `action_required` and approve via
 
 ## Version History
 
-### 0.0.3 (Current)
-- Full cross-platform support: Android, iOS, macOS, Windows, Linux, Web
-- dart:ffi with native assets for native platforms
-- WebAssembly for web platform
-- User-controlled memory management
-- Example app with YOLO and MobileNet demos
-- Reference processors for common model types
-- Asset bundle loading support
-
-**API Design**:
-- Minimal API surface: Just `load()` and `forward()`
-- No singleton manager, no lifecycle manager
-- Models loaded from `Uint8List` bytes (enables asset bundle loading)
-- Direct tensor return (no wrapper objects)
-- User explicitly manages model lifecycle with `dispose()`
+See `CHANGELOG.md` — it is the source of truth and is updated every release.
 
 ## Known Limitations
 
@@ -745,7 +731,6 @@ Key features:
 
 ---
 
-**Package Version**: 0.0.3
 **Flutter Version**: 3.38+
 **API**: Simplified to `load()` + `forward()` + `dispose()` only
 **Architecture**: dart:ffi with native assets hooks
