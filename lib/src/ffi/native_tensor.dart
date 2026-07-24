@@ -135,5 +135,4 @@ class NativeTensor implements ffi.Finalizable {
       throw const ExecuTorchMemoryException('Tensor has been disposed');
     }
   }
-
 }
