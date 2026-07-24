@@ -552,6 +552,18 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 - **C/C++**: Follow `clang-format` conventions (used in native/ submodule)
 - **Lint**: All lint rules enabled, `dart fix --apply` used for auto-fixes
 
+### Changelog Guidelines
+
+- **Summarized, not exhaustive**: one bullet per user-visible theme; fold
+  related fixes into a single bullet. No file paths or internal function names —
+  describe effects, not diffs.
+- **Credit external contributors** in the entry itself: "thanks @username
+  ([#NN](link-to-pr))" on the bullet their work enabled. Always link the PR.
+- Use `### Added` / `### Fixed` / `### Breaking` sections (only the ones that
+  apply). Breaking entries say what breaks AND what to do about it.
+- Version entries match `pubspec.yaml` `version:`; check the version wasn't
+  already released before bumping.
+
 ### Commit Guidelines
 
 - **ALWAYS ask before committing** unless the user explicitly says to commit. Present the changes and proposed commit message for approval first.
