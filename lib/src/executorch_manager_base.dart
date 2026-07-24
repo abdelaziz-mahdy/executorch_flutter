@@ -195,9 +195,13 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
 
       case TensorType.uint64:
         // Dart int is 64-bit signed, so values above 2^63-1 are not
-        // representable; clamp negatives to 0 and cap at 2^63-1.
+        // representable to begin with; only clamp negatives to 0. (No upper
+        // clamp: a 2^63-1 literal cannot be represented on the web either.)
         final uint64List = Uint64List.fromList(
-          data.map((e) => e.toInt().clamp(0, 0x7FFFFFFFFFFFFFFF)).toList(),
+          data.map((e) {
+            final v = e.toInt();
+            return v < 0 ? 0 : v;
+          }).toList(),
         );
         return uint64List.buffer.asUint8List();
 
@@ -223,7 +227,7 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
     );
     final view = float32List.buffer.asUint32List();
     final result = Uint8List(data.length * 2);
-    for (int i = 0; i < data.length; i++) {
+    for (var i = 0; i < data.length; i++) {
       final f32 = view[i];
       final int bf16;
       if ((f32 & 0x7FFFFFFF) > 0x7F800000) {
@@ -241,7 +245,8 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
     return result;
   }
 
-  /// Encode a list of numeric values as float16 (IEEE 754 half precision) bytes.
+  /// Encode a list of numeric values as float16 (IEEE 754 half precision)
+  /// bytes.
   ///
   /// Converts float32 → float16 using bitwise operations:
   /// - Sign bit: 1 bit
@@ -253,7 +258,7 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
     );
     final view = float32List.buffer.asUint32List();
     final result = Uint8List(data.length * 2);
-    for (int i = 0; i < data.length; i++) {
+    for (var i = 0; i < data.length; i++) {
       final f32 = view[i];
       final f16 = _float32ToFloat16(f32);
       // Store in little-endian byte order
@@ -298,7 +303,8 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
         return sign16;
       }
       // Denormal: restore the implicit leading 1, then shift the 24-bit
-      // significand into the 10-bit denormal mantissa with round-to-nearest-even.
+      // significand into the 10-bit denormal mantissa, rounding to nearest
+      // even.
       final significand = mant32 | 0x800000;
       final shift = 14 - exp16;
       var mant16 = significand >> shift;
@@ -316,7 +322,9 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
     // infinity); IEEE bit layout makes that carry arithmetic correct.
     var bits = sign16 | (exp16 << 10) | (mant32 >> 13);
     final remainder = mant32 & 0x1FFF;
-    if (remainder > 0x1000 || (remainder == 0x1000 && ((mant32 >> 13) & 1) == 1)) {
+    final roundUp = remainder > 0x1000 ||
+        (remainder == 0x1000 && ((mant32 >> 13) & 1) == 1);
+    if (roundUp) {
       bits++;
     }
     return bits;

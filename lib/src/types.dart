@@ -91,6 +91,8 @@ enum TensorType {
   /// 16-bit brain floating point (Intel BF16).
   bfloat16('BFloat16', 12, 2);
 
+  const TensorType(this.displayName, this.executorchValue, this.sizeInBytes);
+
   /// Human-readable display name.
   final String displayName;
 
@@ -99,8 +101,6 @@ enum TensorType {
 
   /// Size of one element in bytes.
   final int sizeInBytes;
-
-  const TensorType(this.displayName, this.executorchValue, this.sizeInBytes);
 
   /// Inverse map: executorchValue → TensorType (built once at load time).
   static final Map<int, TensorType> _fromValue = {
@@ -114,7 +114,7 @@ enum TensorType {
         value,
         'value',
         'Unsupported ExecuTorch tensor type: $value. '
-        'Supported values: ${_fromValue.keys.toList()}.',
+            'Supported values: ${_fromValue.keys.toList()}.',
       ));
 }
 
@@ -216,9 +216,11 @@ final class TensorData {
 @Deprecated('Use TensorType instead')
 typedef ExtendedTensorType = TensorType;
 
-/// Deprecated extension providing backward compatibility for [ExtendedTensorType].
+/// Deprecated extension providing backward compatibility for
+/// [ExtendedTensorType].
 ///
-/// **Deprecated**: Use [TensorType.displayName] and [TensorType.executorchValue] directly.
+/// **Deprecated**: Use [TensorType.displayName] and
+/// [TensorType.executorchValue] directly.
 @Deprecated(
   'Use TensorType.displayName and TensorType.executorchValue instead',
 )
@@ -233,7 +235,8 @@ extension TensorTypeExtension on TensorType {
 
   /// Converts this tensor type to its [TensorType] equivalent.
   ///
-  /// Returns [this] since [ExtendedTensorType] is now an alias for [TensorType].
+  /// Returns this value unchanged, since [ExtendedTensorType] is now an
+  /// alias for [TensorType].
   @Deprecated('This is now a no-op; ExtendedTensorType is TensorType')
   TensorType get baseType => this;
 }
