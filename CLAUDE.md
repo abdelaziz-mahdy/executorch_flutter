@@ -580,20 +580,28 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 
 ### Pre-Push Checklist
 
-**ALWAYS run these checks before pushing:**
+**ALWAYS run these checks before EVERY push (CI runs exactly these and fails
+on any diff or issue):**
 
 ```bash
-# 1. Run analyzer (must pass with 0 issues)
+# 1. Analyzer — must report 0 issues (CI: flutter analyze lib)
 flutter analyze lib
 
-# 2. Run formatter
-dart format lib
+# 2. Formatter — CI runs `dart format --set-exit-if-changed lib`, so verify
+#    there is nothing left to format:
+dart format --set-exit-if-changed lib
 
-# 3. Run tests if available
+# 3. Tests
 flutter test
 ```
 
-If analyzer reports issues, fix them before pushing. Do NOT push code with lint errors.
+Then check `git status` — **if the formatter touched ANY file, stage and commit
+it in the same push.** (A formatted-but-uncommitted file is the classic way the
+CI format check fails while local looks clean.)
+
+Fork PRs: CI runs need maintainer approval — after pushing to a contributor's
+branch, check `gh run list` for `action_required` and approve via
+`gh api -X POST repos/<owner>/<repo>/actions/runs/<id>/approve`.
 
 ### Publishing Workflow
 
