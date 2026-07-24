@@ -7,12 +7,12 @@
   ([#38](https://github.com/abdelaziz-mahdy/executorch_flutter/pull/38)):
   adds `float64`, `int64`, `int16`, `bool_`, `uint16`, `uint32`, `uint64`,
   `float16`, `bfloat16`, wired through the native layer (prebuilts v1.3.1.9).
-  Unknown dtypes now error instead of silently becoming `float32`.
+  `float16`/`bfloat16` round to nearest even (numpy/PyTorch behavior), and
+  unknown dtypes now error instead of silently becoming `float32`.
 
 ### Fixed
-- Encoder bugs: `uint64` always threw, `int8` biased negatives, `float16`
-  denormals mis-encoded; `float16`/`bfloat16` now round to nearest even
-  (numpy/PyTorch behavior).
+- `int8` tensor encoding applied a +128 bias instead of two's complement,
+  corrupting negative values.
 
 ### Breaking
 - `TensorType` values reordered to match native `ETDType` — don't rely on
