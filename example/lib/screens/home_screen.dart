@@ -58,25 +58,46 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ExecuTorch Examples'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('ExecuTorch Examples'), elevation: 0),
+      // Cards size to their content and stay centred in a readable column
+      // rather than stretching to fill a desktop-sized window. The min-height
+      // constraint keeps them vertically centred while still allowing scroll
+      // on short viewports.
       body: SafeArea(
         child: LayoutBuilder(
-          builder: (context, constraints) {
-            // One column on narrow screens, two when there's room.
-            final crossAxisCount = constraints.maxWidth >= 720 ? 2 : 1;
-            return GridView.count(
-              crossAxisCount: crossAxisCount,
-              padding: const EdgeInsets.all(16),
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: crossAxisCount == 1 ? 2.4 : 1.6,
-              children: [
-                for (final category in _categories)
-                  _CategoryCard(category: category),
-              ],
+          builder: (context, viewport) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: viewport.maxHeight - 48),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 840),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        const gap = 20.0;
+                        // Two across when there's room, stacked when narrow.
+                        final columns = constraints.maxWidth >= 620 ? 2 : 1;
+                        final cardWidth =
+                            (constraints.maxWidth - gap * (columns - 1)) /
+                            columns;
+                        return Wrap(
+                          spacing: gap,
+                          runSpacing: gap,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            for (final category in _categories)
+                              SizedBox(
+                                width: cardWidth,
+                                child: _CategoryCard(category: category),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
             );
           },
         ),
@@ -96,14 +117,14 @@ class _CategoryCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: category.builder),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: category.builder)),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
@@ -116,21 +137,24 @@ class _CategoryCard extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 category.title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               Text(
                 category.subtitle,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
-              const Spacer(),
+              const SizedBox(height: 20),
               Align(
                 alignment: Alignment.bottomRight,
-                child: Icon(Icons.arrow_forward, color: scheme.onSurfaceVariant),
+                child: Icon(
+                  Icons.arrow_forward,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),

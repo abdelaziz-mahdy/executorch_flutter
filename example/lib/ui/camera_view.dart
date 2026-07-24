@@ -349,7 +349,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   }
 
   /// Callback to receive each frame [CameraImage] perform inference on it
-  onLatestImageAvailable(CameraImage cameraImage) async {
+  Future<void> onLatestImageAvailable(CameraImage cameraImage) async {
     // Make sure we are still mounted
     if (!mounted) {
       return;
