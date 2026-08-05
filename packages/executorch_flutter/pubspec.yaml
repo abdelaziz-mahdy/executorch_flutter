@@ -1,0 +1,78 @@
+name: executorch_flutter
+description: >
+  ExecuTorch on-device ML inference for Flutter using dart:ffi — vision models
+  plus experimental streaming LLM (Gemma 4). Android, iOS, macOS, Linux, Windows, Web.
+version: 0.5.0
+homepage: https://github.com/abdelaziz-mahdy/executorch_flutter
+repository: https://github.com/abdelaziz-mahdy/executorch_flutter
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.27.0'
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  ffi: ^2.1.4
+  image: ^4.0.17
+  meta: ^1.9.1
+  path_provider: ^2.1.5
+  # Native assets build dependencies
+  code_assets: ^1.0.0
+  hooks: ^1.0.0
+  native_toolchain_cmake: ^0.2.2
+  logging: ^1.3.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  ffigen: ^20.1.1
+
+flutter:
+  plugin:
+    platforms:
+      # Native platforms use FFI via native assets (no pluginClass needed)
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true
+      macos:
+        ffiPlugin: true
+      linux:
+        ffiPlugin: true
+      windows:
+        ffiPlugin: true
+      # Web uses JS interop
+      web:
+        pluginClass: ExecutorchFlutterWebPlugin
+        fileName: src/web/executorch_web_plugin.dart
+
+executables:
+  setup_web: setup_web
+
+topics:
+  - machine-learning
+  - pytorch
+  - ai
+  - ffi
+  - mobile
+
+# Native assets build hooks configuration
+hooks:
+  user_defines:
+    executorch_flutter:
+      # Set to true for debug output during build
+      debug: false
+      build_mode: "prebuilt"
+      # List of backends to build (default: platform-appropriate)
+      # Available: xnnpack, coreml, mps, vulkan, qnn
+      # backends:
+      #   - xnnpack
+      #   - coreml
