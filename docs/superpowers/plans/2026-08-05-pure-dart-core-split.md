@@ -305,10 +305,11 @@ done
 cd ..
 ```
 
-The web files (`lib/src/web/`, `executorch_llm_web.dart`, `executorch_manager_web_stub.dart`, `executorch_model_web_stub.dart`, `lib/src/ffi/*_web.dart`) stay in `executorch_flutter`. Note `lib/src/ffi/` moved wholesale, so move the three web files back:
+The web files (`lib/src/web/`, `executorch_llm_web.dart`, `executorch_manager_web_stub.dart`, `executorch_model_web_stub.dart`, `lib/src/ffi/*_web.dart`) stay in `executorch_flutter`. Note `lib/src/ffi/` moved wholesale, taking the three web files with it, and leaving no `lib/src/ffi/` in the wrapper. Recreate that directory before moving them back, or `git mv` fails with "destination directory does not exist":
 
 ```bash
 cd packages
+mkdir -p executorch_flutter/lib/src/ffi
 git mv executorch_dart/lib/src/ffi/backend_query_web.dart \
        executorch_flutter/lib/src/ffi/backend_query_web.dart
 git mv executorch_dart/lib/src/ffi/version_web.dart \
@@ -508,7 +509,7 @@ Turn `executorch_flutter` into a thin wrapper: re-export the core, route web, ad
 **Files:**
 - Modify: `packages/executorch_flutter/pubspec.yaml`
 - Rewrite: `packages/executorch_flutter/lib/executorch_flutter.dart`
-- Create: `packages/executorch_flutter/lib/src/assets.dart`
+- Create: `packages/executorch_flutter/lib/src/assets.dart`, `packages/executorch_flutter/test/exports_test.dart`
 - Modify: `packages/executorch_flutter/lib/src/web/executorch_model_web.dart`, `lib/src/web/executorch_manager_web.dart`, `lib/src/executorch_llm_web.dart`, `lib/src/ffi/*_web.dart`
 - Delete: `packages/executorch_flutter/lib/src/web/executorch_web_plugin.dart`, `lib/src/executorch_model_web_stub.dart`, `lib/src/executorch_manager_web_stub.dart`
 
@@ -741,7 +742,45 @@ Known cases, which the analyzer will confirm:
 
 Re-run the analyze command until it reports no URI errors.
 
-- [ ] **Step 9: Verify the wrapper analyzes and tests**
+- [ ] **Step 9: Add the export-lockstep test**
+
+Task 2 moved `test/` to the core, so the wrapper has no tests and `flutter test` would fail with "Test directory 'test' not found". More importantly, nothing yet guards the invariant from Step 7: a name hidden but not routed silently disappears from the Flutter package.
+
+Create `packages/executorch_flutter/test/exports_test.dart`:
+
+```dart
+import 'package:executorch_flutter/executorch_flutter.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('routed names resolve to exactly one declaration', () {
+    // Referencing each name is the assertion: a name hidden from the
+    // blanket export but not routed back fails to compile here.
+    expect(ExecuTorchModel, isNotNull);
+    expect(ExecutorchManager, isNotNull);
+    expect(ExecuTorchLLM, isNotNull);
+    expect(GenConfig, isNotNull);
+    expect(BackendQuery, isNotNull);
+    expect(ExecuTorchVersion, isNotNull);
+    expect(setNativeDebugLogging, isA<Function>());
+  });
+
+  test('Flutter asset helpers are exported', () {
+    expect(loadModelFromAsset, isA<Function>());
+  });
+
+  test('core types pass through the blanket export', () {
+    expect(TensorData, isNotNull);
+    expect(TensorType, isNotNull);
+    expect(Backend, isNotNull);
+    expect(executorchVersion, isNotEmpty);
+  });
+}
+```
+
+These assertions never touch native code, so they need no loaded library and no binding initialization. Their value is compile-time name resolution.
+
+- [ ] **Step 10: Verify the wrapper analyzes and tests**
 
 ```bash
 flutter pub get
@@ -753,7 +792,7 @@ dart format --set-exit-if-changed packages/executorch_dart/lib \
 
 Expected: `No issues found!`, tests pass, formatter reports nothing to change. If the formatter rewrites anything, stage it in this task's commit — an unformatted file is how the CI format check fails while local looks clean.
 
-- [ ] **Step 10: Verify the example app still builds against the wrapper**
+- [ ] **Step 11: Verify the example app still builds against the wrapper**
 
 ```bash
 cd packages/executorch_flutter/example
@@ -763,7 +802,7 @@ cd ../../..
 
 Expected: build succeeds. This is the first end-to-end proof that the renamed native asset id resolves through the hook.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 12: Commit**
 
 ```bash
 git add -A
