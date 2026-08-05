@@ -84,7 +84,7 @@ hooks:
       # MLX runtime note: the GPU path needs `mlx.metallib` (shipped inside the
       # xnnpack-mlx-llm prebuilt's lib/) passed to
       # ExecuTorchLLM.load(mlxMetallibPath:), plus a macOS 14 deployment target.
-      # See docs/LLM.md. To force CPU-only LLM, drop `mlx` from the list below.
+      # See ../docs/LLM.md. To force CPU-only LLM, drop `mlx` from the list below.
       llm: true
       backends:
         - xnnpack

@@ -476,7 +476,7 @@ class _SetupHelp extends StatelessWidget {
   const _SetupHelp();
 
   static const _docsUrl =
-      'https://github.com/abdelaziz-mahdy/executorch_flutter/blob/main/docs/LLM.md';
+      'https://github.com/abdelaziz-mahdy/executorch_flutter/blob/main/packages/executorch_flutter/docs/LLM.md';
   static const _exportUrl =
       'https://github.com/abdelaziz-mahdy/executorch_flutter_models/tree/main/python';
   static const _tokenizerUrl = 'https://huggingface.co/google/gemma-4-E2B-it';
