@@ -39,7 +39,7 @@ python/*.pyc
 example/assets/models/audio_class_labels.json
 
 # Internal development documentation
-specs/
+/specs/
 **/docs/plans/
 
 # Temporary Wasm build artifacts and examples
