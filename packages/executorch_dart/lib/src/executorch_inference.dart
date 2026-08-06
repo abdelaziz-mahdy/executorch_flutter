@@ -5,9 +5,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'executorch_manager_unsupported_stub.dart'
-    if (dart.library.io) 'executorch_manager_native_stub.dart'
-    if (dart.library.js_interop) 'executorch_manager_web_stub.dart'
-    if (dart.library.js) 'executorch_manager_web_stub.dart' as stub;
+    if (dart.library.io) 'executorch_manager_native_stub.dart' as stub;
 import 'executorch_model.dart';
 import 'types.dart';
 
@@ -55,16 +53,8 @@ abstract class ExecutorchManager {
   ///
   /// The model will be cached and accessed later via [getLoadedModel].
   ///
-  /// Note: On web platform, use [loadModelFromAssets] or
-  /// [loadModelFromBytes] instead.
+  /// Note: On web platform, use [loadModelFromBytes] instead.
   Future<ExecuTorchModel> loadModel(String filePath);
-
-  /// Load an ExecuTorch model from asset bundle
-  ///
-  /// [assetPath] should be the path to the model in the Flutter assets bundle.
-  /// This is a convenience method for loading models packaged with the app.
-  /// Works on all platforms including web.
-  Future<ExecuTorchModel> loadModelFromAssets(String assetPath);
 
   /// Load an ExecuTorch model from bytes
   ///

@@ -1,0 +1,16 @@
+# Files to exclude from pub.dev publishing
+# Keep package size small and exclude development files
+
+# Gitignore files (suppress pub.dev warning about checked-in gitignored files)
+.gitignore
+
+# Build artifacts and generated files (root level only, not lib/src/build/)
+/build/
+.dart_tool/
+
+# Internal development documentation
+CLAUDE.md
+native/CLAUDE.md
+
+# Temporary directories
+tmp/

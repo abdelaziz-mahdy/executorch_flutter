@@ -2,5 +2,5 @@
 	path = models
 	url = https://github.com/abdelaziz-mahdy/executorch_flutter_models.git
 [submodule "native"]
-	path = packages/executorch_flutter/native
+	path = packages/executorch_dart/native
 	url = https://github.com/abdelaziz-mahdy/executorch_native.git

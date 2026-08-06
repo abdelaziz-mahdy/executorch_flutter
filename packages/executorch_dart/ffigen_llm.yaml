@@ -14,12 +14,12 @@ output:
 
 # Link to the same native asset as the core bindings
 ffi-native:
-  asset-id: 'package:executorch_flutter/executorch_flutter.dart'
+  asset-id: 'package:executorch_dart/executorch_dart.dart'
 
 # Reuse already-generated symbols (ETStatus, ETErrorCode, ETCallback_1, ...)
 import:
   symbol-files:
-    - 'package:executorch_flutter/src/generated/executorch_symbols.yaml'
+    - 'package:executorch_dart/src/generated/executorch_symbols.yaml'
 
 # Parse the llm header (it includes executorch_ffi.h), but only GENERATE bindings
 # for declarations that live in the llm header itself.

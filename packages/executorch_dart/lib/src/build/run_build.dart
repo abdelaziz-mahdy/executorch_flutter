@@ -3,7 +3,7 @@
 
 // ignore_for_file: avoid_print
 
-/// CMake build orchestration for executorch_flutter native assets.
+/// CMake build orchestration for executorch_dart native assets.
 ///
 /// This file implements the build hook for compiling the native C/C++
 /// library using CMake and native_toolchain_cmake.
@@ -25,7 +25,7 @@
 /// ```yaml
 /// hooks:
 ///   user_defines:
-///     executorch_flutter:
+///     executorch_dart:
 ///       debug: true
 ///       build_mode: "prebuilt"  # or "local" or "source"
 ///       # For local mode: path to directory with lib/ and include/
@@ -68,7 +68,7 @@ import '../version.dart' show executorchVersion;
 const String _libraryName = 'executorch_ffi';
 
 /// Package name.
-const String _packageName = 'executorch_flutter';
+const String _packageName = 'executorch_dart';
 
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
@@ -131,7 +131,7 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
 
   final isSourceBuild = buildMode == 'source';
   final isLocalBuild = buildMode == 'local';
-  logger.info('[executorch_flutter] Build mode: $buildMode\n');
+  logger.info('[executorch_dart] Build mode: $buildMode\n');
 
   // LLM (text generation) runner — opt-in. Compiles executorch_llm_ffi and
   // links extension_llm_runner + tokenizers (see native ET_BUILD_LLM).
@@ -144,7 +144,7 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
       llmDefine == true ||
       (llmDefine is String && _isTruthy(llmDefine));
   if (llmEnabled) {
-    logger.info('[executorch_flutter] LLM runner: ENABLED (ET_BUILD_LLM=ON)\n');
+    logger.info('[executorch_dart] LLM runner: ENABLED (ET_BUILD_LLM=ON)\n');
   }
 
   // Resolve local library directory for local mode
@@ -167,7 +167,7 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
 
     if (localLibDir == null || localLibDir.isEmpty) {
       throw Exception('''
-[executorch_flutter] ERROR: No local build found!
+[executorch_dart] ERROR: No local build found!
 
 When using build_mode: "local", you need compiled libraries.
 
@@ -182,7 +182,7 @@ Option 1: Build with compile-local.sh:
 Option 2: Specify path manually in pubspec.yaml:
   hooks:
     user_defines:
-      executorch_flutter:
+      executorch_dart:
         build_mode: "local"
         local_lib_dir: "/path/to/compiled/libs"
 
@@ -195,7 +195,7 @@ Option 3: Set environment variable:
     final libSubdir = Directory('$localLibDir/lib');
     if (!Directory(localLibDir).existsSync()) {
       throw Exception('''
-[executorch_flutter] ERROR: Local library directory not found!
+[executorch_dart] ERROR: Local library directory not found!
 
   Path: $localLibDir
 
@@ -204,7 +204,7 @@ Please verify the path exists and contains compiled libraries.
     }
     if (!libSubdir.existsSync()) {
       throw Exception('''
-[executorch_flutter] ERROR: Missing lib/ subdirectory!
+[executorch_dart] ERROR: Missing lib/ subdirectory!
 
   Path: $localLibDir
   Expected: $localLibDir/lib/
@@ -214,7 +214,7 @@ Run compile-local.sh to build, or check your path.
     }
 
     logger.info(
-      '[executorch_flutter] Local library dir: $localLibDir\n',
+      '[executorch_dart] Local library dir: $localLibDir\n',
     );
   }
 
@@ -228,7 +228,7 @@ Run compile-local.sh to build, or check your path.
       final sourceDir = Directory(executorchSourceDir);
       if (!sourceDir.existsSync()) {
         throw Exception('''
-[executorch_flutter] ERROR: ExecuTorch source directory not found!
+[executorch_dart] ERROR: ExecuTorch source directory not found!
 
   Path: $executorchSourceDir
 
@@ -236,7 +236,7 @@ Please verify the path to your local ExecuTorch checkout.
 ''');
       }
       logger.info(
-        '[executorch_flutter] ExecuTorch source: $executorchSourceDir\n',
+        '[executorch_dart] ExecuTorch source: $executorchSourceDir\n',
       );
     }
   }
@@ -244,27 +244,27 @@ Please verify the path to your local ExecuTorch checkout.
   // Get prebuilt version (for prebuilt downloads)
   final prebuiltVersion =
       userDefines['prebuilt_version'] as String? ?? _defaultPrebuiltVersion;
-  logger.info('[executorch_flutter] ExecuTorch version: v$executorchVersion\n');
+  logger.info('[executorch_dart] ExecuTorch version: v$executorchVersion\n');
   if (!isSourceBuild && !isLocalBuild) {
-    logger.info('[executorch_flutter] Prebuilt version: v$prebuiltVersion\n');
+    logger.info('[executorch_dart] Prebuilt version: v$prebuiltVersion\n');
   }
 
   // Step 1: Python dependencies (only for source builds)
   String? pythonExecutable;
   if (isSourceBuild) {
     logger.info(
-      '\n[executorch_flutter] Step 1/5: Checking Python dependencies\n',
+      '\n[executorch_dart] Step 1/5: Checking Python dependencies\n',
     );
     final pythonInfo = await _verifyPythonDependencies(logger);
     pythonExecutable = pythonInfo.executable;
   } else {
     logger.info(
-      '\n[executorch_flutter] Step 1/5: Skipping Python check ($buildMode mode)\n',
+      '\n[executorch_dart] Step 1/5: Skipping Python check ($buildMode mode)\n',
     );
   }
 
   // Step 2: Configure backends
-  logger.info('[executorch_flutter] Step 2/5: Configuring backends\n');
+  logger.info('[executorch_dart] Step 2/5: Configuring backends\n');
   final backendDefines = _getBackendDefines(input, targetOS);
   _logBackendConfiguration(logger, backendDefines);
 
@@ -280,21 +280,21 @@ Please verify the path to your local ExecuTorch checkout.
   if (targetOS == OS.macOS && backendDefines['ET_BUILD_MLX'] == 'ON') {
     final reported = input.config.code.macOS.targetVersion;
     logger.info(
-      '[executorch_flutter] ───────────────────────────────────────\n'
-      '[executorch_flutter] MLX backend requires macOS 14.0+.\n'
-      '[executorch_flutter]   Flutter native-assets target is $reported '
+      '[executorch_dart] ───────────────────────────────────────\n'
+      '[executorch_dart] MLX backend requires macOS 14.0+.\n'
+      '[executorch_dart]   Flutter native-assets target is $reported '
       '(hardcoded); building the native library for macOS 14.0.\n'
-      '[executorch_flutter]   ACTION REQUIRED: set your app deployment target '
+      '[executorch_dart]   ACTION REQUIRED: set your app deployment target '
       'to 14.0 too, or the app will not launch:\n'
-      "[executorch_flutter]     - macos/Podfile:          platform :osx, '14.0'\n"
-      '[executorch_flutter]     - Runner.xcodeproj:       '
+      "[executorch_dart]     - macos/Podfile:          platform :osx, '14.0'\n"
+      '[executorch_dart]     - Runner.xcodeproj:       '
       'MACOSX_DEPLOYMENT_TARGET = 14.0\n'
-      '[executorch_flutter] ───────────────────────────────────────\n',
+      '[executorch_dart] ───────────────────────────────────────\n',
     );
   }
 
   // Step 3: Configure CMake generator
-  logger.info('[executorch_flutter] Step 3/5: Configuring build system\n');
+  logger.info('[executorch_dart] Step 3/5: Configuring build system\n');
 
   final generator = switch (targetOS) {
     OS.linux => Generator.ninja,
@@ -307,18 +307,18 @@ Please verify the path to your local ExecuTorch checkout.
         'Unsupported target OS',
       ),
   };
-  logger.info('[executorch_flutter]   Generator: ${generator.name}\n');
+  logger.info('[executorch_dart]   Generator: ${generator.name}\n');
 
   // Cache directory
   final cacheDir = Platform.environment['EXECUTORCH_CACHE_DIR'];
   if (cacheDir != null && cacheDir.isNotEmpty) {
-    logger.info('[executorch_flutter]   Cache directory: $cacheDir\n');
+    logger.info('[executorch_dart]   Cache directory: $cacheDir\n');
   }
 
   // Determine CMake build type based on user_defines debug flag
   // When debug: true is set in pubspec.yaml, use Debug prebuilt libs
   final cmakeBuildType = debugMode ? 'Debug' : 'Release';
-  logger.info('[executorch_flutter]   CMake build type: $cmakeBuildType\n');
+  logger.info('[executorch_dart]   CMake build type: $cmakeBuildType\n');
 
   // Create CMake builder - uses native/ directory (submodule)
   //
@@ -376,29 +376,29 @@ Please verify the path to your local ExecuTorch checkout.
   // Step 4: Build
   if (isSourceBuild) {
     logger
-      ..info('[executorch_flutter] Step 4/5: Building from source\n')
+      ..info('[executorch_dart] Step 4/5: Building from source\n')
       ..info(
-        '[executorch_flutter]   This may take 15-30 minutes on '
+        '[executorch_dart]   This may take 15-30 minutes on '
         'first build...\n',
       )
-      ..info('[executorch_flutter]   (Faster after first build with cache)\n');
+      ..info('[executorch_dart]   (Faster after first build with cache)\n');
   } else if (isLocalBuild) {
     logger
       ..info(
-        '[executorch_flutter] Step 4/5: Using local pre-built '
+        '[executorch_dart] Step 4/5: Using local pre-built '
         'binaries\n',
       )
       ..info(
-        '[executorch_flutter]   Local directory: $localLibDir\n',
+        '[executorch_dart]   Local directory: $localLibDir\n',
       );
   } else {
     logger
       ..info(
-        '[executorch_flutter] Step 4/5: Building with pre-built '
+        '[executorch_dart] Step 4/5: Building with pre-built '
         'binaries\n',
       )
       ..info(
-        '[executorch_flutter]   Downloading and linking pre-built '
+        '[executorch_dart]   Downloading and linking pre-built '
         'ExecuTorch...\n',
       );
   }
@@ -418,7 +418,7 @@ Please verify the path to your local ExecuTorch checkout.
   );
 
   // Step 5: Register code assets
-  logger.info('[executorch_flutter] Step 5/5: Registering native assets\n');
+  logger.info('[executorch_dart] Step 5/5: Registering native assets\n');
 
   final installDir = input.outputDirectory.resolve('install/');
 
@@ -447,7 +447,7 @@ Please verify the path to your local ExecuTorch checkout.
   // which forwards it to the native MLX loader. See README / example.
   if (File.fromUri(installDir.resolve('lib/mlx.metallib')).existsSync()) {
     logger.info(
-      '[executorch_flutter]   MLX metallib built at install/lib/mlx.metallib '
+      '[executorch_dart]   MLX metallib built at install/lib/mlx.metallib '
       '(pass its path to ExecuTorchLLM.load(mlxMetallibPath:))\n',
     );
   }
@@ -539,11 +539,11 @@ void _printBuildHeader(Logger logger, OS targetOS, Architecture? targetArch) {
   final archSuffix = targetArch != null ? ' (${targetArch.name})' : '';
   logger
     ..info('\n')
-    ..info('[executorch_flutter] ═══════════════════════════════════════\n')
-    ..info('[executorch_flutter]  ExecuTorch Flutter Native Build\n')
-    ..info('[executorch_flutter] ═══════════════════════════════════════\n')
-    ..info('[executorch_flutter]  Target: ${targetOS.name}$archSuffix\n')
-    ..info('[executorch_flutter] ───────────────────────────────────────\n');
+    ..info('[executorch_dart] ═══════════════════════════════════════\n')
+    ..info('[executorch_dart]  ExecuTorch Native Build\n')
+    ..info('[executorch_dart] ═══════════════════════════════════════\n')
+    ..info('[executorch_dart]  Target: ${targetOS.name}$archSuffix\n')
+    ..info('[executorch_dart] ───────────────────────────────────────\n');
 }
 
 /// Verify Python dependencies (Python 3.8+ with pyyaml).
@@ -580,7 +580,7 @@ Future<_PythonInfo> _verifyPythonDependencies(Logger logger) async {
 
   if (pythonExecutable == null || pythonVersion == null) {
     throw Exception('''
-[executorch_flutter] ERROR: Python not found!
+[executorch_dart] ERROR: Python not found!
 
 Building from source requires Python 3.8+ for ExecuTorch code generation.
 
@@ -594,7 +594,7 @@ Options:
    In pubspec.yaml:
    hooks:
      user_defines:
-       executorch_flutter:
+       executorch_dart:
          build_mode: "prebuilt"
 ''');
   }
@@ -609,7 +609,7 @@ Options:
     if (major < _minPythonVersion[0] ||
         (major == _minPythonVersion[0] && minor < _minPythonVersion[1])) {
       throw Exception('''
-[executorch_flutter] ERROR: Python version too old!
+[executorch_dart] ERROR: Python version too old!
 
 Found: Python $pythonVersion
 Required: Python ${_minPythonVersion[0]}.${_minPythonVersion[1]}+
@@ -620,7 +620,7 @@ Please upgrade Python or use pre-built mode.
   }
 
   logger.info(
-    '[executorch_flutter]   Python: $pythonVersion ($pythonExecutable)\n',
+    '[executorch_dart]   Python: $pythonVersion ($pythonExecutable)\n',
   );
 
   // Check for pyyaml
@@ -642,7 +642,7 @@ Please upgrade Python or use pre-built mode.
 
   if (pyyamlVersion == null) {
     // Try to install pyyaml automatically
-    logger.info('[executorch_flutter]   pyyaml not found, installing...\n');
+    logger.info('[executorch_dart]   pyyaml not found, installing...\n');
     try {
       final installResult = await Process.run(
           pythonExecutable,
@@ -665,7 +665,7 @@ Please upgrade Python or use pre-built mode.
         if (verifyResult.exitCode == 0) {
           pyyamlVersion = (verifyResult.stdout as String).trim();
           logger.info(
-            '[executorch_flutter]   pyyaml installed: $pyyamlVersion\n',
+            '[executorch_dart]   pyyaml installed: $pyyamlVersion\n',
           );
         }
       }
@@ -673,12 +673,12 @@ Please upgrade Python or use pre-built mode.
       // Installation failed
     }
   } else {
-    logger.info('[executorch_flutter]   pyyaml: $pyyamlVersion\n');
+    logger.info('[executorch_dart]   pyyaml: $pyyamlVersion\n');
   }
 
   if (pyyamlVersion == null) {
     throw Exception('''
-[executorch_flutter] ERROR: pyyaml package not found!
+[executorch_dart] ERROR: pyyaml package not found!
 
 Building from source requires the pyyaml Python package.
 
@@ -689,7 +689,7 @@ Or use pre-built mode (no Python required):
   In pubspec.yaml:
   hooks:
     user_defines:
-      executorch_flutter:
+      executorch_dart:
         build_mode: "prebuilt"
 ''');
   }
@@ -717,12 +717,12 @@ void _logBackendConfiguration(Logger logger, Map<String, String?> defines) {
 
   if (enabledBackends.isNotEmpty) {
     logger.info(
-      '[executorch_flutter]   Enabled: ${enabledBackends.join(", ")}\n',
+      '[executorch_dart]   Enabled: ${enabledBackends.join(", ")}\n',
     );
   }
   if (disabledBackends.isNotEmpty) {
     logger.info(
-      '[executorch_flutter]   Disabled: ${disabledBackends.join(", ")}\n',
+      '[executorch_dart]   Disabled: ${disabledBackends.join(", ")}\n',
     );
   }
 }
@@ -802,7 +802,7 @@ Future<void> _registerAdditionalLibraries(
 
   for (final asset in assets) {
     logger.info(
-      '[executorch_flutter]   Bundled dependency: '
+      '[executorch_dart]   Bundled dependency: '
       '${asset.file?.pathSegments.last}\n',
     );
   }
@@ -876,7 +876,7 @@ Future<void> _addBuildDependencies(
     }
 
     logger?.info(
-      '[executorch_flutter]   Tracking ${dependencies.length} source '
+      '[executorch_dart]   Tracking ${dependencies.length} source '
       'file dependencies for incremental builds\n',
     );
   }
@@ -892,9 +892,9 @@ Future<void> _addBuildDependencies(
 void _printBuildSuccess(Logger logger) {
   logger
     ..info('\n')
-    ..info('[executorch_flutter] ───────────────────────────────────────\n')
-    ..info('[executorch_flutter]  Build completed successfully!\n')
-    ..info('[executorch_flutter] ═══════════════════════════════════════\n')
+    ..info('[executorch_dart] ───────────────────────────────────────\n')
+    ..info('[executorch_dart]  Build completed successfully!\n')
+    ..info('[executorch_dart] ═══════════════════════════════════════\n')
     ..info('\n');
 }
 
@@ -967,7 +967,7 @@ String? _autoDetectLocalBuild(
   );
   if (exactDir.existsSync() && Directory('${exactDir.path}/lib').existsSync()) {
     logger.info(
-      '[executorch_flutter]   Auto-detected: $exactMatch\n',
+      '[executorch_dart]   Auto-detected: $exactMatch\n',
     );
     return exactDir.path;
   }
@@ -981,7 +981,7 @@ String? _autoDetectLocalBuild(
       if (name.startsWith(prefix) &&
           Directory('${entity.path}/lib').existsSync()) {
         logger.info(
-          '[executorch_flutter]   Auto-detected: $name\n',
+          '[executorch_dart]   Auto-detected: $name\n',
         );
         return entity.path;
       }

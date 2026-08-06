@@ -16,7 +16,3 @@ Future<ExecuTorchModel> load(String filePath) => ffi_impl.load(filePath);
 /// Load model from bytes (FFI implementation)
 Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) =>
     ffi_impl.loadFromBytes(modelBytes);
-
-/// Load model from asset bundle (FFI implementation)
-Future<ExecuTorchModel> loadFromAsset(String assetPath) =>
-    ffi_impl.loadFromAsset(assetPath);

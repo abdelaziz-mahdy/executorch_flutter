@@ -8,5 +8,6 @@ environment:
   sdk: '>=3.6.0 <4.0.0'
 
 workspace:
+  - packages/executorch_dart
   - packages/executorch_flutter
   - packages/executorch_flutter/example

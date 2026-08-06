@@ -6,6 +6,4 @@
 library;
 
 export 'executorch_model_unsupported_stub.dart'
-    if (dart.library.ffi) 'executorch_model_ffi_stub.dart'
-    if (dart.library.js_interop) 'executorch_model_web_stub.dart'
-    if (dart.library.js) 'executorch_model_web_stub.dart';
+    if (dart.library.ffi) 'executorch_model_ffi_stub.dart';

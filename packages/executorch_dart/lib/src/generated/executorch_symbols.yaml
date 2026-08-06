@@ -1,6 +1,6 @@
 format_version: 1.0.0
 files:
-  package:executorch_flutter/src/generated/executorch_ffi.g.dart:
+  package:executorch_dart/src/generated/executorch_ffi.g.dart:
     used-config:
       ffi-native: true
     symbols:

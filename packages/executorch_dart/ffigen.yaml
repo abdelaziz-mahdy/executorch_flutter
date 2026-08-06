@@ -11,12 +11,12 @@ description: FFI bindings for ExecuTorch Flutter
 output:
   bindings: lib/src/generated/executorch_ffi.g.dart
   symbol-file:
-    output: 'package:executorch_flutter/src/generated/executorch_symbols.yaml'
-    import-path: 'package:executorch_flutter/src/generated/executorch_ffi.g.dart'
+    output: 'package:executorch_dart/src/generated/executorch_symbols.yaml'
+    import-path: 'package:executorch_dart/src/generated/executorch_ffi.g.dart'
 
 # Link to native asset
 ffi-native:
-  asset-id: 'package:executorch_flutter/executorch_flutter.dart'
+  asset-id: 'package:executorch_dart/executorch_dart.dart'
 
 # Header files to parse
 headers:

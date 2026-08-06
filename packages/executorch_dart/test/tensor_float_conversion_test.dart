@@ -4,11 +4,9 @@
 /// enum values and that round-trip conversions are lossless.
 library;
 
-import 'dart:typed_data';
-
-import 'package:flutter_test/flutter_test.dart';
-import 'package:executorch_flutter/src/types.dart';
-import 'package:executorch_flutter/src/executorch_manager_base.dart';
+import 'package:executorch_dart/src/executorch_manager_base.dart';
+import 'package:executorch_dart/src/types.dart';
+import 'package:test/test.dart';
 
 void main() {
   // -----------------------------------------------------------------------
@@ -21,7 +19,8 @@ void main() {
   //   Source: https://en.wikipedia.org/wiki/Bfloat16_floating-point_format
   //   Float32 bit patterns per IEEE 754-2008 §3.2.2 (binary32):
   //     https://ieeexplore.ieee.org/document/4610730
-  //   Verification: python -c "import struct; print(struct.pack('f', 1.0).hex())"
+  //   Verification:
+  //     python -c "import struct; print(struct.pack('f', 1.0).hex())"
   // -----------------------------------------------------------------------
 
   group('convertNumericDataToBytes bfloat16 encoding', () {
@@ -141,7 +140,8 @@ void main() {
   //     - exp=0x1F + mant=0  → Infinity
   //     - exp=0              → Zero or denormal
   //   Max finite: sign=0, exp=0x1E, mant=0x3FF → 2^(30-15)·(2 - 2^-10) = 65504
-  //   Verification: python -c "import struct; print(struct.pack('e', 1.0).hex())"
+  //   Verification:
+  //     python -c "import struct; print(struct.pack('e', 1.0).hex())"
   //   (Python 3.12+ supports float16 via struct format 'e')
   // -----------------------------------------------------------------------
 
@@ -301,7 +301,7 @@ void main() {
       // Values below 2^-14 (min normal) but above 2^-24 (min denormal)
       // exercise the binary16 denormal branch. Reference bit patterns from
       // python3 -c "import numpy as np; print(np.float16(v).view(np.uint16))"
-      final Map<double, int> denormals = {
+      final denormals = <double, int>{
         6e-5: 0x03EF,
         3e-5: 0x01F7,
         1e-5: 0x00A8,
@@ -322,7 +322,7 @@ void main() {
 
     test('rounds normal values to nearest even like numpy float16', () {
       // numpy: np.float16(3.14) == 0x4248 (rounded up from truncated 0x4247)
-      final Map<double, int> rounded = {
+      final rounded = <double, int>{
         3.14: 0x4248,
         // 1.0009765625 = 1 + 2^-10: representable exactly, no rounding.
         1.0009765625: 0x3C01,
@@ -357,7 +357,7 @@ void main() {
       // PyTorch conversions.
       // Reference: python3 -c "import numpy as np, ml_dtypes;
       //   print(np.float32(v).view(np.uint32) ...)" / torch.tensor(v).bfloat16()
-      final Map<double, int> referenceValues = {
+      final referenceValues = <double, int>{
         // Exact values (lower 16 float32 bits are zero): same as truncation.
         1.0: 0x3F80,
         0.5: 0x3F00,
@@ -393,8 +393,9 @@ void main() {
       //
       // Verified independently via:
       //   python3 -c "import struct; print(struct.pack('>e', 1.0).hex())"
-      //   (Python 3.12+ struct format 'e' = float16, big-endian for readability)
-      final Map<double, int> referenceValues = {
+      //   (Python 3.12+ struct format 'e' = float16, big-endian for
+      //   readability)
+      final referenceValues = <double, int>{
         // sign=0, exp=0,  mant=0        → +zero
         0.0: 0x0000,
         // sign=0, exp=15, mant=0        → 1.0

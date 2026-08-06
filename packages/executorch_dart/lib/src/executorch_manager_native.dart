@@ -52,8 +52,7 @@ class ExecutorchManagerNative extends ExecutorchManagerBase {
   /// The model will be cached and accessed later via [getLoadedModel].
   /// If a model with the same file path is loaded, returns cached instance.
   ///
-  /// Note: On web platform, use [loadModelFromAssets] or
-  /// [loadModelFromBytes] instead.
+  /// Note: On web platform, use [loadModelFromBytes] instead.
   @override
   Future<ExecuTorchModel> loadModel(String filePath) async {
     ensureInitialized();

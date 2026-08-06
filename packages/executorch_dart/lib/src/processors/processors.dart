@@ -73,7 +73,7 @@
 /// text processing, and audio processing.
 library;
 
-import 'package:executorch_flutter/executorch_flutter.dart'
+import 'package:executorch_dart/executorch_dart.dart'
     show
         ExecuTorchPreprocessor,
         ExecuTorchPostprocessor,
@@ -84,7 +84,7 @@ import 'package:executorch_flutter/executorch_flutter.dart'
         PostprocessingException,
         InvalidInputException,
         InvalidOutputException;
-import 'package:executorch_flutter/src/processors/base_processor.dart'
+import 'package:executorch_dart/src/processors/base_processor.dart'
     show
         ExecuTorchPreprocessor,
         ExecuTorchPostprocessor,
@@ -95,7 +95,7 @@ import 'package:executorch_flutter/src/processors/base_processor.dart'
         PostprocessingException,
         InvalidInputException,
         InvalidOutputException;
-import 'package:executorch_flutter/src/processors/processors.dart'
+import 'package:executorch_dart/src/processors/processors.dart'
     show
         ExecuTorchPreprocessor,
         ExecuTorchPostprocessor,

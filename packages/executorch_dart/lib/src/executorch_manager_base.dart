@@ -82,23 +82,6 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
   }
 
   @override
-  Future<ExecuTorchModel> loadModelFromAssets(String assetPath) async {
-    ensureInitialized();
-
-    try {
-      final model = await ExecuTorchModel.loadFromAsset(assetPath);
-      loadedModelsMap[model.modelId] = model;
-      return model;
-    } catch (e) {
-      if (e is ExecuTorchException) rethrow;
-      throw ExecuTorchModelException(
-        'Failed to load model from asset $assetPath: $e',
-        'asset_path: $assetPath, error: ${e.toString()}',
-      );
-    }
-  }
-
-  @override
   Future<ExecuTorchModel> loadModelFromBytes(Uint8List modelBytes) async {
     ensureInitialized();
 

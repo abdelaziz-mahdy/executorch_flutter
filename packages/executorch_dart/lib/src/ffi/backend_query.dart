@@ -25,15 +25,15 @@ import '../types.dart';
 /// ## Example
 ///
 /// ```dart
-/// import 'package:executorch_flutter/executorch_flutter.dart';
+/// import 'package:executorch_dart/executorch_dart.dart';
 ///
 /// // Check if a specific backend is available
 /// if (BackendQuery.isAvailable(Backend.vulkan)) {
 ///   print('Vulkan GPU acceleration is available!');
-///   model = await ExecuTorchModel.loadFromAsset('assets/model_vulkan.pte');
+///   model = await ExecuTorchModel.load('/path/to/model_vulkan.pte');
 /// } else {
 ///   print('Falling back to XNNPACK CPU backend');
-///   model = await ExecuTorchModel.loadFromAsset('assets/model_xnnpack.pte');
+///   model = await ExecuTorchModel.load('/path/to/model_xnnpack.pte');
 /// }
 ///
 /// // Get all available backends

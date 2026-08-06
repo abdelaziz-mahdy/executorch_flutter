@@ -21,10 +21,3 @@ Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) =>
       'ExecuTorchModel is not supported on this platform. '
       'Supported platforms: Android, iOS, macOS, Web.',
     );
-
-/// Load model from asset - throws on unsupported platforms
-Future<ExecuTorchModel> loadFromAsset(String assetPath) =>
-    throw UnsupportedError(
-      'ExecuTorchModel is not supported on this platform. '
-      'Supported platforms: Android, iOS, macOS, Web.',
-    );

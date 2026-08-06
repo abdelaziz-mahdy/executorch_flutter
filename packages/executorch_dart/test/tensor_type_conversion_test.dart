@@ -4,11 +4,9 @@
 /// enum values and that round-trip conversions are lossless.
 library;
 
-import 'dart:typed_data';
-
-import 'package:flutter_test/flutter_test.dart';
-import 'package:executorch_flutter/src/types.dart';
-import 'package:executorch_flutter/src/executorch_manager_base.dart';
+import 'package:executorch_dart/src/executorch_manager_base.dart';
+import 'package:executorch_dart/src/types.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('TensorType executorchValue', () {
@@ -96,8 +94,8 @@ void main() {
   group('TensorType completeness', () {
     test('has exactly 13 types (no fallbacks needed)', () {
       expect(TensorType.values.length, 13,
-          reason:
-              'TensorType must support all 13 ExecuTorch types without fallback');
+          reason: 'TensorType must support all 13 ExecuTorch types '
+              'without fallback');
     });
 
     test('all types are directly supported', () {
@@ -161,7 +159,7 @@ void main() {
   // -----------------------------------------------------------------------
 
   group('convertNumericDataToBytes integer encoding', () {
-    test('int8 uses two\'s complement (no bias)', () {
+    test("int8 uses two's complement (no bias)", () {
       final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
         [-128, -1, 0, 1, 127],
         TensorType.int8,

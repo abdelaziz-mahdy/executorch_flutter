@@ -6,8 +6,6 @@ library;
 
 import 'dart:typed_data';
 
-import 'package:flutter/services.dart' show rootBundle;
-
 import 'executorch_model.dart';
 import 'ffi/native_logging.dart';
 import 'ffi/native_module.dart';
@@ -55,17 +53,6 @@ Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) async {
   ensureNativeLoggingInitialized();
   final module = await NativeModule.loadAsync(modelBytes);
   final modelId = _generateModelId('bytes_${modelBytes.length}');
-  return ExecuTorchModelFfiImpl._(module, modelId);
-}
-
-/// Load an ExecuTorchModel from asset bundle using FFI.
-Future<ExecuTorchModel> loadFromAsset(String assetPath) async {
-  // Ensure debug logging is enabled before model loading
-  ensureNativeLoggingInitialized();
-  final byteData = await rootBundle.load(assetPath);
-  final bytes = byteData.buffer.asUint8List();
-  final module = await NativeModule.loadAsync(bytes);
-  final modelId = _generateModelId(assetPath);
   return ExecuTorchModelFfiImpl._(module, modelId);
 }
 
