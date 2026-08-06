@@ -795,7 +795,26 @@ Neither `dart test` nor `flutter test` accepts `--directory` — only `dart pub`
 
 Expected: `No issues found!`, tests pass, formatter reports nothing to change. If the formatter rewrites anything, stage it in this task's commit — an unformatted file is how the CI format check fails while local looks clean.
 
-- [ ] **Step 11: Verify the example app still builds against the wrapper**
+- [ ] **Step 11: Rename the example's `user_defines` key, preserving every value**
+
+Task 2 moved the build hook to `executorch_dart`, so the example's block is now inert. Its settings are not decorative — they select the LLM prebuilt that the Gemma 4 chat screen depends on:
+
+```yaml
+hooks:
+  user_defines:
+    executorch_dart:      # was: executorch_flutter
+      debug: true
+      llm: true
+      backends:
+        - xnnpack
+        - mlx
+```
+
+Change **only** the key. Keep `debug: true`, `llm: true`, both backends, and every explanatory comment in the block exactly as they are. Dropping `llm: true` silently builds a library without the LLM symbols, and the failure appears at runtime in the chat screen, not at build time.
+
+Leave the sibling `dartcv4:` block untouched — it belongs to a different package.
+
+- [ ] **Step 12: Verify the example app still builds against the wrapper**
 
 ```bash
 cd packages/executorch_flutter/example
@@ -803,9 +822,9 @@ flutter build macos --debug 2>&1 | tail -5
 cd ../../..
 ```
 
-Expected: build succeeds. This is the first end-to-end proof that the renamed native asset id resolves through the hook.
+Expected: build succeeds. This is the first end-to-end proof that the renamed native asset id resolves through the hook, and that the renamed `user_defines` key is picked up.
 
-- [ ] **Step 12: Commit**
+- [ ] **Step 13: Commit**
 
 ```bash
 git add -A
@@ -873,11 +892,13 @@ This hook produces no assets. It exists only to make a silent misconfiguration l
 
 - [ ] **Step 2: Verify the tripwire fires**
 
-Add a temporary block to `packages/executorch_flutter/example/pubspec.yaml`:
+Task 3 renamed the example's key to `executorch_dart:`. To test the tripwire, **temporarily** duplicate that block under the old key — do not edit or delete the real one:
 
 ```yaml
 hooks:
   user_defines:
+    executorch_dart:
+      # ... the real block, untouched ...
     executorch_flutter:
       build_mode: "source"
 ```
@@ -892,24 +913,18 @@ cd ../../..
 
 Expected: the message `executorch_flutter no longer owns the native build.` and a build failure.
 
-- [ ] **Step 3: Verify the tripwire stays quiet when correct**
+- [ ] **Step 3: Remove the temporary block and confirm the build recovers**
 
-Change that block to the new key:
-
-```yaml
-hooks:
-  user_defines:
-    executorch_dart:
-      build_mode: "prebuilt"
-```
+Delete the `executorch_flutter:` block you just added, leaving the real `executorch_dart:` block exactly as Task 3 left it — `debug: true`, `llm: true`, `backends: [xnnpack, mlx]`, comments intact.
 
 ```bash
 cd packages/executorch_flutter/example
+git diff pubspec.yaml
 flutter build macos --debug 2>&1 | tail -3
 cd ../../..
 ```
 
-Expected: build succeeds, no tripwire message.
+Expected: `git diff` reports no changes to the file — you have restored it exactly — and the build succeeds with no tripwire message.
 
 - [ ] **Step 4: Commit**
 
