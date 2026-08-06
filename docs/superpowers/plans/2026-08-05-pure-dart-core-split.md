@@ -1150,31 +1150,33 @@ Add `packages/executorch_dart/example` to the root `pubspec.yaml` `workspace:` l
 
 - [ ] **Step 5: Run it against a real model**
 
-The `models` submodule at the repo root holds exported `.pte` files. List what is there and pick an XNNPACK-delegated MobileNet matching `executorchVersion` 1.3.1:
+The `models` submodule checks in **no `.pte` files** — only `models/<executorch-version>/index.json`, which records each model's metadata and a `remoteUrl` on GitHub Releases. Download one into the scratchpad rather than the repo:
 
 ```bash
-ls models/mobilenet/
+SCRATCH=/private/tmp/claude-501/-Users-AbdelazizMahdy-flutter-projects-executorch-executorch-flutter/0d64468e-77ce-447c-a970-b1982d196559/scratchpad
+curl -L -o "$SCRATCH/mobilenet_v3_small_xnnpack.pte" \
+  https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.3.1/mobilenet_v3_small_xnnpack.pte
 ```
 
-MobileNet takes `[1, 3, 224, 224]` float32, which is what `bin/infer.dart` already builds. Run it:
+That is the XNNPACK-delegated MobileNet for `executorchVersion` 1.3.1 (9.73 MB, `inputSize` 224), so its input is `[1, 3, 224, 224]` float32 — exactly what `bin/infer.dart` builds. Pick XNNPACK deliberately: it is the one backend present on every platform, so the example runs anywhere. A CoreML- or Vulkan-delegated `.pte` fails to load on a build without that backend.
 
 ```bash
 dart pub get
 cd packages/executorch_dart/example
-dart run bin/infer.dart ../../../models/mobilenet/<the-file-you-listed>.pte
+dart run bin/infer.dart "$SCRATCH/mobilenet_v3_small_xnnpack.pte"
 cd ../../..
 ```
 
 Expected: prints the version, the model id, one or more output shapes, then `ok`.
 
-If the model rejects the input shape, the core interface gives you no way to query the expected one — it has no `inputShapes` member. Read the shape from `models/index.json`, which records it per model, and edit the `shape` list in `bin/infer.dart` to match.
+If the model rejects the input shape, the core interface gives you no way to query the expected one — it has no `inputShapes` member. Read `inputSize` for that model from `models/1.3.1/index.json` and edit the `shape` list in `bin/infer.dart` to match.
 
 - [ ] **Step 6: Verify the AOT path too**
 
 ```bash
 cd packages/executorch_dart/example
 dart build cli 2>&1 | tail -3
-./build/cli/*/bundle/bin/infer ../../../models/mobilenet/<file>.pte
+./build/cli/*/bundle/bin/infer "$SCRATCH/mobilenet_v3_small_xnnpack.pte"
 cd ../../..
 ```
 
