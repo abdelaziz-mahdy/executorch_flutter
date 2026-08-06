@@ -9,6 +9,7 @@ environment:
 
 workspace:
   - packages/executorch_dart
+  - packages/executorch_dart/example
   - packages/executorch_flutter
   - packages/executorch_flutter/example
 

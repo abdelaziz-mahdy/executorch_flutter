@@ -32,12 +32,15 @@ migrate_working_dir/
 **/doc/api/
 .dart_tool/
 .flutter-plugins-dependencies
-# Build/coverage output lands both at the workspace root (rare) and inside
-# each package under packages/<name>/ (the common case). Deliberately NOT a
-# blanket "build/", since packages/executorch_flutter/lib/src/build/ is a
-# real, tracked source directory (the native-assets build hook), not output.
+# Build/coverage output lands at the workspace root (rare), inside each
+# package under packages/<name>/ (the common case), and inside package
+# examples under packages/<name>/example/ (e.g. `dart build cli` for
+# executorch_dart's pure-Dart example). Deliberately NOT a blanket "build/",
+# since packages/executorch_flutter/lib/src/build/ is a real, tracked source
+# directory (the native-assets build hook), not output.
 /build/
 packages/*/build/
+packages/*/example/build/
 /coverage/
 packages/*/coverage/
 
