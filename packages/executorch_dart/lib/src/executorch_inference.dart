@@ -11,20 +11,17 @@ import 'types.dart';
 
 /// High-level manager for ExecuTorch inference operations
 ///
-/// This class provides the main API for ExecuTorch Flutter integration,
-/// managing model lifecycle, inference execution, and resource management.
+/// This class provides the main API for ExecuTorch integration, managing
+/// model lifecycle, inference execution, and resource management.
 /// It acts as a facade over the lower-level platform-specific implementations.
 ///
-/// Platform-specific implementations:
-/// - **Native (Android, iOS, macOS, Windows, Linux)**: Uses dart:ffi with
-///   native assets
-/// - **Web**: Uses WebAssembly via JavaScript interop
+/// Runs on Android, iOS, macOS, Windows, and Linux through dart:ffi with
+/// native assets. There is no web implementation here — for web, use
+/// `package:executorch_flutter`.
 abstract class ExecutorchManager {
   /// Get the singleton instance of ExecutorchManager
   ///
-  /// The actual implementation is platform-specific:
-  /// - Native platforms use ExecutorchManagerNative
-  /// - Web platform uses ExecutorchManagerWeb
+  /// The implementation is `ExecutorchManagerNative`, which uses dart:ffi.
   static ExecutorchManager get instance => stub.instance;
 
   /// Initialize the ExecutorchManager
@@ -41,7 +38,6 @@ abstract class ExecutorchManager {
   ///
   /// Note: Debug logging only works in debug builds of the native libraries.
   /// In release builds, this method has no effect.
-  /// On web platform, logs will be printed to the browser console.
   ///
   /// [enabled] - true to enable logging, false to disable
   Future<void> setDebugLogging(bool enabled);
@@ -52,15 +48,13 @@ abstract class ExecutorchManager {
   /// Returns the loaded model instance that can be used for inference.
   ///
   /// The model will be cached and accessed later via [getLoadedModel].
-  ///
-  /// Note: On web platform, use [loadModelFromBytes] instead.
   Future<ExecuTorchModel> loadModel(String filePath);
 
   /// Load an ExecuTorch model from bytes
   ///
   /// [modelBytes] should contain the raw .pte model data.
   /// This is useful for loading models downloaded from network or
-  /// generated dynamically. Works on all platforms including web.
+  /// generated dynamically.
   Future<ExecuTorchModel> loadModelFromBytes(Uint8List modelBytes);
 
   /// Get a loaded model by its ID
@@ -76,8 +70,7 @@ abstract class ExecutorchManager {
 
   /// Get the IDs of all loaded models
   ///
-  /// This queries the platform side for the most up-to-date list on
-  /// native platforms. On web, returns the cached list of model IDs.
+  /// This queries the platform side for the most up-to-date list.
   Future<List<String>> getLoadedModelIds();
 
   /// Dispose a loaded model and free its resources
@@ -101,7 +94,7 @@ abstract class ExecutorchManager {
   /// Check if ExecuTorch is properly initialized and available
   ///
   /// Returns true if the manager is initialized and can communicate
-  /// with the native ExecuTorch libraries or web Wasm module.
+  /// with the native ExecuTorch libraries.
   Future<bool> isAvailable();
 
   /// Create tensor data with validation

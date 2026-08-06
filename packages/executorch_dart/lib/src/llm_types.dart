@@ -1,8 +1,9 @@
 // Copyright (c) 2026 ExecuTorch Flutter. All rights reserved.
 // Licensed under the MIT license.
 
-/// Types for the LLM (text generation) API. Pure Dart — safe to import on all
-/// platforms (including web), so it is shared by the native and web entries.
+/// Types for the LLM (text generation) API. Pure Dart — safe to import on any
+/// platform, so the native entry here and the web entry in
+/// `package:executorch_flutter` both share it.
 library;
 
 /// Generation parameters for `ExecuTorchLLM.generate`.

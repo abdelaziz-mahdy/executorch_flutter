@@ -12,10 +12,7 @@
   `forward`, `dispose`), the `ExecutorchManager` facade, experimental
   streaming LLM through `ExecuTorchLLM`, backend and version queries, and
   the base processors.
-
-### Breaking
-
-- Asset-bundle loading is not part of this package. `loadFromAsset` and
-  `loadModelFromAssets` live in `executorch_flutter`, which layers asset
-  loading and web support on top of this package. Flutter applications
-  should keep depending on `executorch_flutter`.
+- Scope note: asset-bundle loading and web support are deliberately not
+  part of this package. They live in `executorch_flutter`, which layers
+  both on top of this one. Flutter applications should keep depending on
+  `executorch_flutter`.

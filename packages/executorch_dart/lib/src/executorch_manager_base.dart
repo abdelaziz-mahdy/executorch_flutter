@@ -1,8 +1,9 @@
 /// Base implementation of ExecutorchManager with shared logic
 ///
-/// This class contains the common implementation for both native and web
-/// platforms, reducing code duplication. Platform-specific managers
-/// extend this class and override only the methods that differ.
+/// This class contains the implementation shared by the native manager here
+/// and the web manager in `package:executorch_flutter`, reducing code
+/// duplication. Platform-specific managers extend this class and override
+/// only the methods that differ.
 library;
 
 import 'dart:async';

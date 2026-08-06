@@ -49,7 +49,7 @@ import '../types.dart';
 ///
 /// | Backend | Platforms |
 /// |---------|-----------|
-/// | XNNPACK | All (including Web) |
+/// | XNNPACK | All |
 /// | CoreML | iOS, macOS |
 /// | MPS | macOS |
 /// | Vulkan | Android, iOS, macOS, Windows, Linux |

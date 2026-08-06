@@ -14,10 +14,9 @@ import 'types.dart';
 /// This is the main API for loading, managing, and running inference on
 /// ExecuTorch models. It provides a consistent interface across all platforms.
 ///
-/// Platform-specific implementations:
-/// - **Native (Android, iOS, macOS, Windows, Linux)**: Uses dart:ffi with
-///   native assets
-/// - **Web**: Uses WebAssembly via JavaScript interop
+/// Runs on Android, iOS, macOS, Windows, and Linux through dart:ffi with
+/// native assets. There is no web implementation here — for web, use
+/// `package:executorch_flutter`.
 ///
 /// ## Usage Pattern
 ///
@@ -32,8 +31,10 @@ import 'types.dart';
 /// `loadModelFromAsset` from
 /// `package:executorch_flutter/executorch_flutter.dart`.
 ///
-/// ### Loading from Bytes (works on all platforms):
+/// ### Loading from Bytes:
 /// ```dart
+/// import 'dart:io';
+///
 /// final bytes = await File('/path/to/model.pte').readAsBytes();
 /// final model = await ExecuTorchModel.loadFromBytes(bytes);
 /// final outputs = await model.forward(inputs);
@@ -48,8 +49,8 @@ abstract class ExecuTorchModel {
 
   /// Load an ExecuTorch model from a file path (static factory)
   ///
-  /// **Note**: Only available on native platforms (Android, iOS, macOS).
-  /// On web, use [loadFromBytes] instead.
+  /// **Note**: Requires dart:ffi, so this is native-only (Android, iOS,
+  /// macOS, Linux, Windows). For web, use `package:executorch_flutter`.
   ///
   /// ### Parameters:
   /// - [filePath]: Absolute path to a valid ExecuTorch `.pte` model file
@@ -60,14 +61,13 @@ abstract class ExecuTorchModel {
   /// ### Throws:
   /// - [ExecuTorchException] if the file doesn't exist, is not readable,
   ///   or the model format is invalid
-  /// - [UnsupportedError] on web platform
+  /// - [UnsupportedError] on platforms without dart:ffi
   static Future<ExecuTorchModel> load(String filePath) => stub.load(filePath);
 
-  /// Load an ExecuTorch model from bytes (works on all platforms)
+  /// Load an ExecuTorch model from bytes
   ///
-  /// This method works on all platforms:
-  /// - **Native (Android, iOS, macOS)**: Writes bytes to temp file, then loads
-  /// - **Web**: Loads bytes directly into WebAssembly virtual filesystem
+  /// Writes the bytes to a temporary file and loads it. Like [load], this
+  /// requires dart:ffi; for web, use `package:executorch_flutter`.
   ///
   /// ### Parameters:
   /// - [modelBytes]: Model file bytes in .pte format

@@ -1,8 +1,8 @@
 /// Platform-specific model loading
 ///
 /// This file provides conditional exports based on the target platform:
-/// - Web: ExecuTorchModelWeb with byte-based loading
 /// - Native (Android, iOS, macOS, Linux, Windows): FFI-based implementation
+/// - Anywhere without dart:ffi: a stub that throws [UnsupportedError]
 library;
 
 export 'executorch_model_unsupported_stub.dart'

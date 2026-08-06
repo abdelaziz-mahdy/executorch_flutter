@@ -12,12 +12,14 @@ import 'executorch_model.dart';
 /// Load model from file path - throws on unsupported platforms
 Future<ExecuTorchModel> load(String filePath) => throw UnsupportedError(
       'ExecuTorchModel is not supported on this platform. '
-      'Supported platforms: Android, iOS, macOS, Web.',
+      'Supported platforms: Android, iOS, macOS, Linux, Windows. '
+      'For web, use package:executorch_flutter.',
     );
 
 /// Load model from bytes - throws on unsupported platforms
 Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) =>
     throw UnsupportedError(
       'ExecuTorchModel is not supported on this platform. '
-      'Supported platforms: Android, iOS, macOS, Web.',
+      'Supported platforms: Android, iOS, macOS, Linux, Windows. '
+      'For web, use package:executorch_flutter.',
     );
