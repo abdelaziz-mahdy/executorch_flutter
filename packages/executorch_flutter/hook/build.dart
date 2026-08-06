@@ -20,11 +20,11 @@ void main(List<String> args) async {
         .where((key) => input.userDefines[key] != null)
         .toList(growable: false);
     if (stale.isEmpty) return;
-    throw Exception(
-      'executorch_flutter no longer owns the native build.\n'
-      'Rename this key in your pubspec.yaml:\n'
-      '  hooks: user_defines: executorch_flutter:  ->  executorch_dart:\n'
-      'Found under the old key: ${stale.join(', ')}',
+    throw BuildError(
+      message: 'executorch_flutter no longer owns the native build.\n'
+          'Rename this key in your pubspec.yaml:\n'
+          '  hooks: user_defines: executorch_flutter:  ->  executorch_dart:\n'
+          'Found stale keys: ${stale.join(', ')}',
     );
   });
 }
