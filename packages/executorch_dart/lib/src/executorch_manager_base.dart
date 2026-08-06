@@ -82,6 +82,14 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
     return tensor;
   }
 
+  /// Load a model from bytes and cache it.
+  ///
+  /// **Subclasses on platforms without dart:ffi must override this.** The
+  /// implementation here delegates to [ExecuTorchModel.loadFromBytes], which
+  /// resolves to the unsupported stub and throws wherever dart:ffi is absent.
+  /// `package:executorch_flutter`'s web manager overrides it to load through
+  /// the WebAssembly runner; this is the only method in this class that has
+  /// that requirement.
   @override
   Future<ExecuTorchModel> loadModelFromBytes(Uint8List modelBytes) async {
     ensureInitialized();

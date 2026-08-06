@@ -20,7 +20,14 @@ import 'package:flutter/services.dart' show rootBundle;
 ///
 /// Throws [ExecuTorchException] if the asset is missing or the model fails
 /// to load.
-Future<ExecuTorchModel> loadModelFromAsset(String assetPath) async {
+///
+/// The return type is routed, not the bare core interface: on web this
+/// package exports its own Wasm-backed class under the name `ExecuTorchModel`,
+/// and that class only *implements* the core interface. Returning the
+/// interface here would make `ExecuTorchModel m = await loadModelFromAsset(…)`
+/// a compile error on web — and a baffling one, since both types print as
+/// `ExecuTorchModel`.
+Future<impl.ExecuTorchModel> loadModelFromAsset(String assetPath) async {
   final byteData = await rootBundle.load(assetPath);
   return impl.ExecuTorchModel.loadFromBytes(byteData.buffer.asUint8List());
 }
@@ -31,8 +38,22 @@ extension ExecutorchManagerAssets on ExecutorchManager {
   ///
   /// Equivalent to reading the asset yourself and calling
   /// [ExecutorchManager.loadModelFromBytes].
-  Future<ExecuTorchModel> loadModelFromAssets(String assetPath) async {
+  ///
+  /// Like [loadModelFromAsset], the result is typed as the class this package
+  /// exports under the name `ExecuTorchModel` — the core interface on native,
+  /// the Wasm-backed class on web — so assigning it to an `ExecuTorchModel`
+  /// variable compiles on every platform. The narrowing cast is what makes
+  /// that possible: [ExecutorchManager.loadModelFromBytes] is declared in the
+  /// core and can only promise the core interface, but on web every manager
+  /// this package can hand you returns the web class.
+  Future<impl.ExecuTorchModel> loadModelFromAssets(String assetPath) async {
     final byteData = await rootBundle.load(assetPath);
-    return loadModelFromBytes(byteData.buffer.asUint8List());
+    final model = await loadModelFromBytes(byteData.buffer.asUint8List());
+    // Redundant on native, where `impl.ExecuTorchModel` *is* the core
+    // interface — which is the only branch the analyzer ever resolves. On web
+    // it is a real downcast to this package's Wasm-backed class, and without
+    // it this method does not compile there at all.
+    // ignore: unnecessary_cast
+    return model as impl.ExecuTorchModel;
   }
 }

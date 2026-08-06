@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'executorch_manager_base.dart';
 import 'executorch_manager_unsupported_stub.dart'
     if (dart.library.io) 'executorch_manager_native_stub.dart' as stub;
 import 'executorch_model.dart';
@@ -116,6 +117,13 @@ abstract class ExecutorchManager {
 }
 
 /// Utility class for working with ExecuTorch tensors
+///
+/// These helpers build [TensorData] directly rather than going through
+/// [ExecutorchManager.instance]. Routing through the singleton would make them
+/// throw on any platform without a native manager — notably web, where
+/// `package:executorch_flutter` supplies the manager and this library's
+/// [ExecutorchManager.instance] resolves to a stub that throws. Nothing here
+/// needs a manager: the conversion is pure Dart.
 class TensorUtils {
   TensorUtils._();
 
@@ -128,10 +136,13 @@ class TensorUtils {
     final width = height > 0 ? data[0].length : 0;
     final flatData = data.expand((row) => row).toList();
 
-    return ExecutorchManager.instance.createTensorData(
+    return TensorData(
       shape: [height, width],
       dataType: TensorType.float32,
-      data: flatData,
+      data: ExecutorchManagerBase.convertNumericDataToBytes(
+        flatData,
+        TensorType.float32,
+      ),
       name: name,
     );
   }
@@ -147,10 +158,13 @@ class TensorUtils {
     final flatData =
         data.expand((plane) => plane.expand((row) => row)).toList();
 
-    return ExecutorchManager.instance.createTensorData(
+    return TensorData(
       shape: [depth, height, width],
       dataType: TensorType.float32,
-      data: flatData,
+      data: ExecutorchManagerBase.convertNumericDataToBytes(
+        flatData,
+        TensorType.float32,
+      ),
       name: name,
     );
   }
@@ -171,10 +185,13 @@ class TensorUtils {
         )
         .toList();
 
-    return ExecutorchManager.instance.createTensorData(
+    return TensorData(
       shape: [batch, depth, height, width],
       dataType: TensorType.float32,
-      data: flatData,
+      data: ExecutorchManagerBase.convertNumericDataToBytes(
+        flatData,
+        TensorType.float32,
+      ),
       name: name,
     );
   }
