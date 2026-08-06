@@ -924,11 +924,11 @@ Then:
 
 ```bash
 cd packages/executorch_flutter/example
-flutter build macos --debug 2>&1 | grep -i "no longer owns\|Running build hooks failed" | head -3
+flutter build macos --debug 2>&1 | grep -i "no longer owns\|Building native assets failed" | head -3
 cd ../../..
 ```
 
-Expected: the message `executorch_flutter no longer owns the native build.` and a build failure.
+Expected: the message `executorch_flutter no longer owns the native build.` and a build failure. On Flutter stable with Dart 3.12.2 the surrounding SDK line reads `Target dart_build failed: Error: Building native assets failed.` — the wording is not contractual, so match on our own message rather than the SDK's.
 
 - [ ] **Step 3: Remove the temporary block and confirm the build recovers**
 
