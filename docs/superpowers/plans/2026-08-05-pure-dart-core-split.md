@@ -15,7 +15,7 @@
 - Dart SDK constraint stays `'>=3.6.0 <4.0.0'`; Flutter constraint stays `'>=3.27.0'`.
 - Every workspace member pubspec must declare `resolution: workspace`. Pub workspaces fail without it.
 - Both packages ship version `0.6.0`. The wrapper declares `executorch_dart: ^0.6.0`.
-- `executorchVersion` stays `'1.3.1'` (`lib/src/version.dart`). Prebuilt version stays `1.3.1.1`.
+- `executorchVersion` stays `'1.3.1'` (`lib/src/version.dart`). `_defaultPrebuiltVersion` stays `'$executorchVersion.9'` — do not change it. (`CLAUDE.md` documents this as `.1`; `CLAUDE.md` is stale and Task 8 Step 5 fixes it.)
 - Legacy `user_defines` keys the tripwire must detect, exactly these seven: `build_mode`, `backends`, `llm`, `debug`, `local_lib_dir`, `executorch_source`, `prebuilt_version`.
 - `analysis_options.yaml` enables `public_member_api_docs` and `lines_longer_than_80_chars`. Every new public member needs a `///` doc comment and every line must be 80 characters or fewer.
 - `implementation_imports` is enabled. A package must never import another package's `src/`. Anything the wrapper needs from the core must be exported from the core's public library.
@@ -256,7 +256,6 @@ dependencies:
   code_assets: ^1.0.0
   ffi: ^2.1.4
   hooks: ^1.0.0
-  image: ^4.0.17
   logging: ^1.3.0
   meta: ^1.9.1
   native_toolchain_cmake: ^0.2.2
@@ -279,7 +278,7 @@ hooks:
       build_mode: "prebuilt"
 ```
 
-`path_provider` and `flutter_web_plugins` are gone on purpose. `path_provider` had zero references; `flutter_web_plugins` served only the empty registrant.
+`path_provider`, `flutter_web_plugins`, and `image` are gone on purpose. `path_provider` and `image` had zero references anywhere in the package; `flutter_web_plugins` served only the empty registrant. Do not carry an unused dependency into a brand-new package.
 
 - [ ] **Step 3: Move the core sources**
 
@@ -479,8 +478,10 @@ workspace:
 ```bash
 dart pub get --directory=packages/executorch_dart
 dart analyze packages/executorch_dart 2>&1 | tail -3
-dart test --directory=packages/executorch_dart 2>&1 | tail -3
+(cd packages/executorch_dart && dart test 2>&1 | tail -3)
 ```
+
+`dart test` has no `--directory` flag — only `dart pub` does. Run it from inside the package.
 
 Expected: `No issues found!` and both tensor conversion tests passing. Then prove no Flutter leaked in:
 
@@ -785,10 +786,12 @@ These assertions never touch native code, so they need no loaded library and no 
 ```bash
 flutter pub get
 flutter analyze 2>&1 | tail -3
-flutter test --directory=packages/executorch_flutter 2>&1 | tail -3
+(cd packages/executorch_flutter && flutter test 2>&1 | tail -3)
 dart format --set-exit-if-changed packages/executorch_dart/lib \
   packages/executorch_flutter/lib
 ```
+
+Neither `dart test` nor `flutter test` accepts `--directory` — only `dart pub` does. Run them from inside the package.
 
 Expected: `No issues found!`, tests pass, formatter reports nothing to change. If the formatter rewrites anything, stage it in this task's commit — an unformatted file is how the CI format check fails while local looks clean.
 
@@ -1246,7 +1249,8 @@ Append to `.github/workflows/build.yml`:
         run: dart analyze packages/executorch_dart
 
       - name: Test core
-        run: dart test --directory=packages/executorch_dart
+        run: dart test
+        working-directory: packages/executorch_dart
 
       - name: Build CLI example
         run: dart build cli
@@ -1370,8 +1374,8 @@ dart pub get
 flutter analyze 2>&1 | tail -3
 dart format --set-exit-if-changed packages/executorch_dart/lib \
   packages/executorch_flutter/lib
-flutter test --directory=packages/executorch_flutter
-dart test --directory=packages/executorch_dart
+(cd packages/executorch_flutter && flutter test)
+(cd packages/executorch_dart && dart test)
 git status --short
 ```
 
