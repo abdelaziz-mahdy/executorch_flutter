@@ -4,7 +4,7 @@
 /// Web platform implementation of version query functions.
 library;
 
-import '../version.dart' as version_constants;
+import 'package:executorch_dart/executorch_dart.dart' as core;
 
 /// Library version information.
 abstract final class ExecuTorchVersion {
@@ -12,10 +12,10 @@ abstract final class ExecuTorchVersion {
   ///
   /// On web, returns the package version with a "-web" suffix since the WASM
   /// module may not expose version information directly.
-  static String get version => '${version_constants.executorchVersion}-web';
+  static String get version => '${core.executorchVersion}-web';
 
   /// Get the linked ExecuTorch version string.
   ///
   /// On web, returns the version constant from version.dart.
-  static String get executorchVersion => version_constants.executorchVersion;
+  static String get executorchVersion => core.executorchVersion;
 }

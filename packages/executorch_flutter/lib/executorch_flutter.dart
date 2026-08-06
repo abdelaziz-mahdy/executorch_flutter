@@ -18,7 +18,7 @@
 /// import 'package:executorch_flutter/executorch_flutter.dart';
 ///
 /// // Load a model from asset bundle
-/// final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
+/// final model = await loadModelFromAsset('assets/models/model.pte');
 ///
 /// // Prepare input data
 /// final inputTensor = TensorData(
@@ -64,39 +64,42 @@
 /// For detailed documentation and examples, see the class documentation.
 library;
 
-// Core API exports
-export 'src/executorch_errors.dart';
-export 'src/executorch_inference.dart';
-// On-device LLM (text generation) API — native only; web stub throws
-// UnsupportedError on every call.
-export 'src/executorch_llm.dart'
+// Everything from the pure-Dart core except the names routed below.
+export 'package:executorch_dart/executorch_dart.dart'
+    hide
+        BackendQuery,
+        ExecuTorchLLM,
+        ExecuTorchModel,
+        ExecuTorchVersion,
+        ExecutorchManager,
+        GenConfig,
+        setNativeDebugLogging;
+
+// Platform routing. On native each line re-exports the core declaration
+// unchanged; on web it resolves to this package's implementation. Exactly one
+// declaration of each name survives any given compile.
+export 'package:executorch_dart/executorch_dart.dart'
     if (dart.library.js_interop) 'src/executorch_llm_web.dart'
     if (dart.library.js) 'src/executorch_llm_web.dart'
     show ExecuTorchLLM, GenConfig;
-export 'src/executorch_model.dart';
-// Backend query (conditional for web)
-export 'src/ffi/backend_query.dart'
+export 'package:executorch_dart/executorch_dart.dart'
     if (dart.library.js_interop) 'src/ffi/backend_query_web.dart'
     if (dart.library.js) 'src/ffi/backend_query_web.dart' show BackendQuery;
-// Debug logging (native platforms only)
-export 'src/ffi/native_logging.dart'
+export 'package:executorch_dart/executorch_dart.dart'
     if (dart.library.js_interop) 'src/ffi/native_logging_web.dart'
     if (dart.library.js) 'src/ffi/native_logging_web.dart'
     show setNativeDebugLogging;
-// Version query (conditional for web)
-export 'src/ffi/version.dart'
+export 'package:executorch_dart/executorch_dart.dart'
     if (dart.library.js_interop) 'src/ffi/version_web.dart'
     if (dart.library.js) 'src/ffi/version_web.dart' show ExecuTorchVersion;
-// Preprocessing and postprocessing utilities
-export 'src/processors/processors.dart';
-// Core types - tensor data, model result, Backend enum
-export 'src/types.dart'
-    show
-        Backend,
-        ExtendedTensorType,
-        ModelLoadResult,
-        TensorData,
-        TensorType,
-        TensorTypeExtension;
-// Plugin version constant (ExecuTorch version this plugin is built against)
-export 'src/version.dart' show executorchVersion;
+export 'package:executorch_dart/executorch_dart.dart'
+    if (dart.library.js_interop) 'src/web/executorch_model_web.dart'
+    if (dart.library.js) 'src/web/executorch_model_web.dart'
+    show ExecuTorchModel;
+export 'package:executorch_dart/executorch_dart.dart'
+    if (dart.library.js_interop) 'src/web/executorch_manager_web.dart'
+    if (dart.library.js) 'src/web/executorch_manager_web.dart'
+    show ExecutorchManager;
+
+// Flutter-only asset helpers.
+export 'src/assets.dart';

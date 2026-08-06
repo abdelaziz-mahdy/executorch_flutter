@@ -69,37 +69,21 @@ dependencies:
   meta: any
   universal_platform: ^1.1.0
 
-# Native assets build configuration
-hooks:
-  user_defines:
-    executorch_flutter:
-      debug: true
-      # On-device LLM (Gemma 4) from PREBUILT binaries — no toolchain or source
-      # build needed. `llm: true` selects the dedicated LLM prebuilt: xnnpack-llm
-      # on every platform, plus xnnpack-mlx-llm on macOS arm64 (Apple-Silicon GPU,
-      # macOS 14+). `mlx` is dropped automatically on non-arm64-macOS targets, so
-      # this one config builds everywhere. Vision models (MobileNet, YOLO) run on
-      # XNNPACK from the same library.
-      #
-      # MLX runtime note: the GPU path needs `mlx.metallib` (shipped inside the
-      # xnnpack-mlx-llm prebuilt's lib/) passed to
-      # ExecuTorchLLM.load(mlxMetallibPath:), plus a macOS 14 deployment target.
-      # See ../docs/LLM.md. To force CPU-only LLM, drop `mlx` from the list below.
-      llm: true
-      backends:
-        - xnnpack
-        - mlx
-    dartcv4:
-      include_modules:
-        - imgproc
-        - imgcodecs
-        - videoio
+# Native assets build configuration lives in the WORKSPACE ROOT pubspec
+# (../../../pubspec.yaml). In a pub workspace the hook runner reads
+# `hooks: user_defines:` from the root pubspec only; a block here is silently
+# ignored, which would build the library without the LLM runner and only
+# surface at runtime in the chat screen.
 
 dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_test:
     sdk: flutter
+
+  # Pure-Dart core. integration_test/dtype_roundtrip_test.dart reaches into it
+  # directly to exercise the native tensor layer.
+  executorch_dart: ^0.6.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

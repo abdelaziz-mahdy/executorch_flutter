@@ -7,22 +7,19 @@ library;
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:executorch_dart/executorch_dart.dart' as core;
 
-import '../executorch_errors.dart';
-import '../executorch_model.dart';
-import '../types.dart';
 import 'js_interop.dart' as js;
 import 'wasm_module_loader.dart';
 
-/// Web platform implementation of ExecuTorchModel
+/// Web implementation of [core.ExecuTorchModel], backed by WebAssembly.
 ///
 /// This implementation:
 /// - Loads models into the Wasm virtual filesystem
 /// - Runs inference via JavaScript interop
 /// - Manages model lifecycle using JavaScript wrapper
-class ExecuTorchModelWeb implements ExecuTorchModel {
-  ExecuTorchModelWeb._({
+class ExecuTorchModel implements core.ExecuTorchModel {
+  ExecuTorchModel._({
     required this.modelId,
     required this.inputShapes,
     required this.outputShapes,
@@ -39,24 +36,23 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
 
   bool _isDisposed = false;
 
+  /// Loading from a file path is not supported on web.
+  ///
+  /// Use `loadModelFromAsset` or [loadFromBytes] instead.
+  static Future<ExecuTorchModel> load(String filePath) =>
+      throw UnsupportedError(
+        'ExecuTorchModel.load() from a file path is not supported on web. '
+        'Use loadModelFromAsset() or loadFromBytes() instead.',
+      );
+
   /// Load a model from bytes
   ///
   /// [modelBytes] - Model file bytes (.pte format)
   ///
-  /// Returns an [ExecuTorchModelWeb] instance ready for inference
+  /// Returns an [ExecuTorchModel] instance ready for inference
   ///
-  /// Throws [ExecuTorchModelException] if loading fails
-  static Future<ExecuTorchModelWeb> load(Uint8List modelBytes) async =>
-      loadFromBytes(modelBytes);
-
-  /// Load a model from bytes (alias for [load])
-  ///
-  /// [modelBytes] - Model file bytes (.pte format)
-  ///
-  /// Returns an [ExecuTorchModelWeb] instance ready for inference
-  ///
-  /// Throws [ExecuTorchModelException] if loading fails
-  static Future<ExecuTorchModelWeb> loadFromBytes(Uint8List modelBytes) async {
+  /// Throws [core.ExecuTorchModelException] if loading fails
+  static Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes) async {
     try {
       // Ensure Wasm module is initialized
       await WasmModuleLoader.ensureInitialized();
@@ -75,31 +71,13 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
       final inputShapes = jsResult.inputShapes.toDartList2DInt();
       final outputShapes = jsResult.outputShapes.toDartList2DInt();
 
-      return ExecuTorchModelWeb._(
+      return ExecuTorchModel._(
         modelId: modelId,
         inputShapes: inputShapes,
         outputShapes: outputShapes,
       );
     } catch (e) {
-      throw ExecuTorchModelException('Failed to load model: $e');
-    }
-  }
-
-  /// Load a model from Flutter asset bundle
-  ///
-  /// [assetPath] - Path to the model in the asset bundle
-  ///
-  /// Returns an [ExecuTorchModelWeb] instance ready for inference
-  ///
-  /// Throws [ExecuTorchModelException] if asset is not found or loading fails
-  static Future<ExecuTorchModelWeb> loadFromAsset(String assetPath) async {
-    try {
-      final byteData = await rootBundle.load(assetPath);
-      return loadFromBytes(byteData.buffer.asUint8List());
-    } catch (e) {
-      throw ExecuTorchModelException(
-        'Failed to load model from asset $assetPath: $e',
-      );
+      throw core.ExecuTorchModelException('Failed to load model: $e');
     }
   }
 
@@ -109,11 +87,11 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
   ///
   /// Returns list of output tensors from the model
   ///
-  /// Throws [ExecuTorchInferenceException] if inference fails
+  /// Throws [core.ExecuTorchInferenceException] if inference fails
   @override
-  Future<List<TensorData>> forward(List<TensorData> inputs) async {
+  Future<List<core.TensorData>> forward(List<core.TensorData> inputs) async {
     if (_isDisposed) {
-      throw const ExecuTorchModelException(
+      throw const core.ExecuTorchModelException(
         'Cannot run inference on disposed model',
       );
     }
@@ -136,7 +114,10 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
       // Convert JavaScript outputs back to Dart
       return _convertTensorsFromJS(jsOutputs);
     } catch (e) {
-      throw ExecuTorchInferenceException('Inference failed: $e', e.toString());
+      throw core.ExecuTorchInferenceException(
+        'Inference failed: $e',
+        e.toString(),
+      );
     }
   }
 
@@ -158,7 +139,7 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
 
       _isDisposed = true;
     } catch (e) {
-      throw ExecuTorchModelException('Failed to dispose model: $e');
+      throw core.ExecuTorchModelException('Failed to dispose model: $e');
     }
   }
 
@@ -167,24 +148,27 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
   bool get isDisposed => _isDisposed;
 
   /// Convert Dart TensorData list to JavaScript TensorData array
-  List<js.TensorData> _convertTensorsToJS(List<TensorData> tensors) => tensors
-      .map(
-        (tensor) => js.TensorData(
-          shape: tensor.shape.map((dim) => (dim ?? 0).toJS).toList().jsify()
-              as JSArray<JSNumber>,
-          dataType: _tensorTypeToString(tensor.dataType),
-          data: tensor.data.toJSUint8Array(),
-          name: tensor.name,
-        ),
-      )
-      .toList();
+  List<js.TensorData> _convertTensorsToJS(List<core.TensorData> tensors) =>
+      tensors
+          .map(
+            (tensor) => js.TensorData(
+              shape: tensor.shape.map((dim) => (dim ?? 0).toJS).toList().jsify()
+                  as JSArray<JSNumber>,
+              dataType: _tensorTypeToString(tensor.dataType),
+              data: tensor.data.toJSUint8Array(),
+              name: tensor.name,
+            ),
+          )
+          .toList();
 
   /// Convert JavaScript TensorData array to Dart TensorData list
-  List<TensorData> _convertTensorsFromJS(JSArray<js.TensorData> jsTensors) {
+  List<core.TensorData> _convertTensorsFromJS(
+    JSArray<js.TensorData> jsTensors,
+  ) {
     final dartList = jsTensors.toDart;
     return List.generate(dartList.length, (i) {
       final jsTensor = dartList[i];
-      return TensorData(
+      return core.TensorData(
         shape: jsTensor.shape.toDartListInt().cast<int?>(),
         dataType: _stringToTensorType(jsTensor.dataType),
         data: jsTensor.data.toUint8List(),
@@ -194,39 +178,42 @@ class ExecuTorchModelWeb implements ExecuTorchModel {
   }
 
   /// Convert TensorType enum to string for JavaScript.
-  String _tensorTypeToString(TensorType type) => switch (type) {
-        TensorType.float32 => 'float32',
-        TensorType.float64 => 'float64',
-        TensorType.int64 => 'int64',
-        TensorType.int32 => 'int32',
-        TensorType.int16 => 'int16',
-        TensorType.int8 => 'int8',
-        TensorType.uint8 => 'uint8',
-        TensorType.bool_ => 'bool',
-        TensorType.uint16 => 'uint16',
-        TensorType.uint32 => 'uint32',
-        TensorType.uint64 => 'uint64',
-        TensorType.float16 => 'float16',
-        TensorType.bfloat16 => 'bfloat16',
+  String _tensorTypeToString(core.TensorType type) => switch (type) {
+        core.TensorType.float32 => 'float32',
+        core.TensorType.float64 => 'float64',
+        core.TensorType.int64 => 'int64',
+        core.TensorType.int32 => 'int32',
+        core.TensorType.int16 => 'int16',
+        core.TensorType.int8 => 'int8',
+        core.TensorType.uint8 => 'uint8',
+        core.TensorType.bool_ => 'bool',
+        core.TensorType.uint16 => 'uint16',
+        core.TensorType.uint32 => 'uint32',
+        core.TensorType.uint64 => 'uint64',
+        core.TensorType.float16 => 'float16',
+        core.TensorType.bfloat16 => 'bfloat16',
       };
 
   /// Convert string from JavaScript to TensorType enum.
   ///
-  /// Throws [ExecuTorchValidationException] if the type string is unrecognized.
-  TensorType _stringToTensorType(String type) => switch (type) {
-        'float32' => TensorType.float32,
-        'float64' => TensorType.float64,
-        'int64' => TensorType.int64,
-        'int32' => TensorType.int32,
-        'int16' => TensorType.int16,
-        'int8' => TensorType.int8,
-        'uint8' => TensorType.uint8,
-        'bool' => TensorType.bool_,
-        'uint16' => TensorType.uint16,
-        'uint32' => TensorType.uint32,
-        'uint64' => TensorType.uint64,
-        'float16' => TensorType.float16,
-        'bfloat16' => TensorType.bfloat16,
-        _ => throw ExecuTorchValidationException('Unknown tensor type: $type'),
+  /// Throws [core.ExecuTorchValidationException] if the type string is
+  /// unrecognized.
+  core.TensorType _stringToTensorType(String type) => switch (type) {
+        'float32' => core.TensorType.float32,
+        'float64' => core.TensorType.float64,
+        'int64' => core.TensorType.int64,
+        'int32' => core.TensorType.int32,
+        'int16' => core.TensorType.int16,
+        'int8' => core.TensorType.int8,
+        'uint8' => core.TensorType.uint8,
+        'bool' => core.TensorType.bool_,
+        'uint16' => core.TensorType.uint16,
+        'uint32' => core.TensorType.uint32,
+        'uint64' => core.TensorType.uint64,
+        'float16' => core.TensorType.float16,
+        'bfloat16' => core.TensorType.bfloat16,
+        _ => throw core.ExecuTorchValidationException(
+            'Unknown tensor type: $type',
+          ),
       };
 }

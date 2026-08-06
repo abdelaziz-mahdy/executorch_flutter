@@ -5,25 +5,26 @@
 library;
 
 import 'dart:async';
+import 'dart:typed_data';
 
-import '../executorch_errors.dart';
-import '../executorch_manager_base.dart';
-import '../executorch_model.dart';
+import 'package:executorch_dart/executorch_dart.dart' as core;
+
+import 'executorch_model_web.dart';
 import 'js_interop.dart' as js;
 import 'wasm_module_loader.dart';
 
-/// Web platform implementation of ExecutorchManager
+/// Web implementation of the ExecuTorch manager, backed by WebAssembly.
 ///
 /// Uses JavaScript interop for communication with the ExecuTorch Wasm module.
-class ExecutorchManagerWeb extends ExecutorchManagerBase {
-  ExecutorchManagerWeb._();
+class ExecutorchManager extends core.ExecutorchManagerBase {
+  ExecutorchManager._();
 
-  static ExecutorchManagerWeb? _instance;
+  static ExecutorchManager? _instance;
 
-  /// Get the singleton instance of ExecutorchManagerWeb
+  /// Get the singleton instance of ExecutorchManager
   // ignore: prefer_constructors_over_static_methods
-  static ExecutorchManagerWeb get instance {
-    _instance ??= ExecutorchManagerWeb._();
+  static ExecutorchManager get instance {
+    _instance ??= ExecutorchManager._();
     return _instance!;
   }
 
@@ -36,7 +37,7 @@ class ExecutorchManagerWeb extends ExecutorchManagerBase {
       await WasmModuleLoader.ensureInitialized();
       initialized = true;
     } catch (e) {
-      throw ExecuTorchPlatformException(
+      throw core.ExecuTorchPlatformException(
         'Failed to initialize ExecutorchManager: $e\n'
         'Make sure ExecuTorch Wasm module is available.',
         e.toString(),
@@ -51,7 +52,7 @@ class ExecutorchManagerWeb extends ExecutorchManagerBase {
     try {
       js.execuTorchRunner.setDebugLogging(enabled);
     } catch (e) {
-      throw ExecuTorchPlatformException(
+      throw core.ExecuTorchPlatformException(
         'Failed to set debug logging: $e',
         e.toString(),
       );
@@ -59,11 +60,33 @@ class ExecutorchManagerWeb extends ExecutorchManagerBase {
   }
 
   @override
-  Future<ExecuTorchModel> loadModel(String filePath) async {
+  Future<core.ExecuTorchModel> loadModel(String filePath) async {
     throw UnsupportedError(
       'loadModel() from file path is not supported on web. '
       'Use loadModelFromAssets() or loadModelFromBytes() instead.',
     );
+  }
+
+  /// Load a model from bytes and cache it.
+  ///
+  /// Overrides the base implementation, which delegates to the pure-Dart
+  /// core's dart:ffi loader and is therefore unavailable on web. This routes
+  /// through the WebAssembly model implementation instead.
+  @override
+  Future<core.ExecuTorchModel> loadModelFromBytes(Uint8List modelBytes) async {
+    ensureInitialized();
+
+    try {
+      final model = await ExecuTorchModel.loadFromBytes(modelBytes);
+      loadedModelsMap[model.modelId] = model;
+      return model;
+    } catch (e) {
+      if (e is core.ExecuTorchException) rethrow;
+      throw core.ExecuTorchModelException(
+        'Failed to load model from bytes: $e',
+        'bytes_length: ${modelBytes.length}, error: $e',
+      );
+    }
   }
 
   @override

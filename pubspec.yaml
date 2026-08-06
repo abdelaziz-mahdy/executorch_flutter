@@ -11,3 +11,35 @@ workspace:
   - packages/executorch_dart
   - packages/executorch_flutter
   - packages/executorch_flutter/example
+
+# Native assets build configuration for the example app.
+#
+# This block MUST live in the workspace root pubspec: in a pub workspace the
+# hook runner reads `hooks: user_defines:` from the root pubspec only (the
+# generated hook input names it `workspace_pubspec`). The same block inside
+# packages/executorch_flutter/example/pubspec.yaml is silently ignored.
+hooks:
+  user_defines:
+    executorch_dart:
+      debug: true
+      # On-device LLM (Gemma 4) from PREBUILT binaries — no toolchain or source
+      # build needed. `llm: true` selects the dedicated LLM prebuilt: xnnpack-llm
+      # on every platform, plus xnnpack-mlx-llm on macOS arm64 (Apple-Silicon GPU,
+      # macOS 14+). `mlx` is dropped automatically on non-arm64-macOS targets, so
+      # this one config builds everywhere. Vision models (MobileNet, YOLO) run on
+      # XNNPACK from the same library.
+      #
+      # MLX runtime note: the GPU path needs `mlx.metallib` (shipped inside the
+      # xnnpack-mlx-llm prebuilt's lib/) passed to
+      # ExecuTorchLLM.load(mlxMetallibPath:), plus a macOS 14 deployment target.
+      # See packages/executorch_flutter/docs/LLM.md. To force CPU-only LLM,
+      # drop `mlx` from the list below.
+      llm: true
+      backends:
+        - xnnpack
+        - mlx
+    dartcv4:
+      include_modules:
+        - imgproc
+        - imgcodecs
+        - videoio

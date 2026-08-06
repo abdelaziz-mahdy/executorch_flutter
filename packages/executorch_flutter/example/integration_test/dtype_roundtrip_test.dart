@@ -11,8 +11,8 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:executorch_dart/src/ffi/native_tensor.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
-import 'package:executorch_flutter/src/ffi/native_tensor.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
