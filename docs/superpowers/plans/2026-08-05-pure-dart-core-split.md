@@ -893,17 +893,21 @@ void main(List<String> args) async {
         .where((key) => input.userDefines[key] != null)
         .toList(growable: false);
     if (stale.isEmpty) return;
-    throw Exception(
+    throw BuildError(
       'executorch_flutter no longer owns the native build.\n'
       'Rename this key in your pubspec.yaml:\n'
       '  hooks: user_defines: executorch_flutter:  ->  executorch_dart:\n'
-      'Found under the old key: ${stale.join(', ')}',
+      'Found stale keys: ${stale.join(', ')}',
     );
   });
 }
 ```
 
 This hook produces no assets. It exists only to make a silent misconfiguration loud, and it checks a fixed key list so the wrapper can own real build configuration later without tripping itself.
+
+**Throw `BuildError`, not `Exception`.** The `hooks` package documents that a failing builder must throw a `HookError`, and its runner catches only that type — where it calls `output.setFailure(...)`, writes `output.json`, and exits with the error's documented exit code. A bare `Exception` does not extend `Error`, so it skips that branch entirely: no `output.json` is written for the failing run, and the process dies through Dart's generic uncaught-exception handler with exit code 255 instead of 1. The build still fails visibly, but tooling that reads `output.json` or keys off exit codes sees an unhandled hook crash rather than a reported build failure. `BuildError` is exported from `package:hooks/hooks.dart`, which the file already imports.
+
+**Use `!= null`, not a truthiness test.** `debug: false` and `backends: []` are plausible stale values carried forward from a working config, and both must trip the wire.
 
 - [ ] **Step 2: Verify the tripwire fires**
 
