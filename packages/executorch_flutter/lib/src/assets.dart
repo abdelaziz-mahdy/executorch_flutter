@@ -1,10 +1,10 @@
 /// Flutter asset-bundle loading for ExecuTorch models.
 library;
 
-import 'package:executorch_dart/executorch_dart.dart';
+import 'package:executorch_dart/executorch_dart_shared.dart';
 // Routed the same way the public library routes `ExecuTorchModel`: on native
 // this is the core's class, on web it is this package's Wasm-backed one.
-import 'package:executorch_dart/executorch_dart.dart'
+import 'package:executorch_dart/executorch_dart_shared.dart'
     if (dart.library.js_interop) 'web/executorch_model_web.dart'
     if (dart.library.js) 'web/executorch_model_web.dart' as impl;
 import 'package:flutter/services.dart' show rootBundle;

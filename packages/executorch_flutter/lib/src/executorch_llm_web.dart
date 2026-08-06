@@ -8,9 +8,9 @@ library;
 
 import 'dart:async';
 
-import 'package:executorch_dart/executorch_dart.dart' show GenConfig;
+import 'package:executorch_dart/executorch_dart_shared.dart' show GenConfig;
 
-export 'package:executorch_dart/executorch_dart.dart' show GenConfig;
+export 'package:executorch_dart/executorch_dart_shared.dart' show GenConfig;
 
 /// Web stub — not supported. See the native [ExecuTorchLLM] for the real API.
 class ExecuTorchLLM {

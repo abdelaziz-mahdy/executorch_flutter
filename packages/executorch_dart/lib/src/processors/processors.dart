@@ -73,39 +73,23 @@
 /// text processing, and audio processing.
 library;
 
-import 'package:executorch_dart/executorch_dart.dart'
+// Imported solely so the doc comment above can link to these names. This was
+// previously three imports with identical `show` lists — of this package's own
+// public library, of `base_processor.dart`, and of this file itself. The
+// self-import of `executorch_dart.dart` pulled dart:ffi in behind every
+// consumer of the processors, which broke web builds of
+// `package:executorch_flutter`; the other two were redundant with this one.
+import 'base_processor.dart'
     show
-        ExecuTorchPreprocessor,
         ExecuTorchPostprocessor,
-        ExecuTorchProcessor,
-        ProcessorTensorUtils,
-        ProcessorException,
-        PreprocessingException,
-        PostprocessingException,
-        InvalidInputException,
-        InvalidOutputException;
-import 'package:executorch_dart/src/processors/base_processor.dart'
-    show
         ExecuTorchPreprocessor,
-        ExecuTorchPostprocessor,
         ExecuTorchProcessor,
-        ProcessorTensorUtils,
-        ProcessorException,
-        PreprocessingException,
-        PostprocessingException,
         InvalidInputException,
-        InvalidOutputException;
-import 'package:executorch_dart/src/processors/processors.dart'
-    show
-        ExecuTorchPreprocessor,
-        ExecuTorchPostprocessor,
-        ExecuTorchProcessor,
-        ProcessorTensorUtils,
-        ProcessorException,
-        PreprocessingException,
+        InvalidOutputException,
         PostprocessingException,
-        InvalidInputException,
-        InvalidOutputException;
+        PreprocessingException,
+        ProcessorException,
+        ProcessorTensorUtils;
 
 // Base processor classes and utilities only
 export 'base_processor.dart';

@@ -64,8 +64,13 @@
 /// For detailed documentation and examples, see the class documentation.
 library;
 
-// Everything from the pure-Dart core except the names routed below.
+// Everything from the pure-Dart core except the names routed below. The web
+// branch resolves to the core's ffi-free library: `hide` removes a name but
+// still compiles the library it came from, so re-exporting the full core here
+// would drag dart:ffi into web builds and fail dart2js.
 export 'package:executorch_dart/executorch_dart.dart'
+    if (dart.library.js_interop) 'package:executorch_dart/executorch_dart_shared.dart'
+    if (dart.library.js) 'package:executorch_dart/executorch_dart_shared.dart'
     hide
         BackendQuery,
         ExecuTorchLLM,

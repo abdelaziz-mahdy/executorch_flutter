@@ -7,7 +7,7 @@ library;
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:executorch_dart/executorch_dart.dart' as core;
+import 'package:executorch_dart/executorch_dart_shared.dart' as core;
 
 import 'executorch_model_web.dart';
 import 'js_interop.dart' as js;

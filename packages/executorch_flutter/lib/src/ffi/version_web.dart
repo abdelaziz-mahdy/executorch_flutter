@@ -4,7 +4,7 @@
 /// Web platform implementation of version query functions.
 library;
 
-import 'package:executorch_dart/executorch_dart.dart' as core;
+import 'package:executorch_dart/executorch_dart_shared.dart' as core;
 
 /// Library version information.
 abstract final class ExecuTorchVersion {

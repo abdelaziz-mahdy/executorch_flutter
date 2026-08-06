@@ -4,7 +4,7 @@
 /// Web platform implementation of backend query functions.
 library;
 
-import 'package:executorch_dart/executorch_dart.dart' show Backend;
+import 'package:executorch_dart/executorch_dart_shared.dart' show Backend;
 
 /// Query functions for hardware acceleration backend availability.
 ///

@@ -16,21 +16,12 @@
 /// adds asset-bundle loading and web support on top of this package.
 library;
 
-export 'src/executorch_errors.dart';
-export 'src/executorch_inference.dart';
+// Everything that does not need dart:ffi. Add new ffi-free exports there, not
+// here, so the web branch of `package:executorch_flutter` keeps seeing them.
+export 'executorch_dart_shared.dart';
+// The native-only surface. These four reach dart:ffi, which is why they are
+// kept out of `executorch_dart_shared.dart`.
 export 'src/executorch_llm.dart' show ExecuTorchLLM, GenConfig;
-export 'src/executorch_manager_base.dart' show ExecutorchManagerBase;
-export 'src/executorch_model.dart';
 export 'src/ffi/backend_query.dart' show BackendQuery;
 export 'src/ffi/native_logging.dart' show setNativeDebugLogging;
 export 'src/ffi/version.dart' show ExecuTorchVersion;
-export 'src/processors/processors.dart';
-export 'src/types.dart'
-    show
-        Backend,
-        ExtendedTensorType,
-        ModelLoadResult,
-        TensorData,
-        TensorType,
-        TensorTypeExtension;
-export 'src/version.dart' show executorchVersion;
