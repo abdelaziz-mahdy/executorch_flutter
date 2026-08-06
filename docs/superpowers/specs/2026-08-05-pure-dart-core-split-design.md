@@ -78,6 +78,11 @@ through plugin registration.
 
 ### Why web stays in the wrapper
 
+> **Superseded premise.** The paragraph below leads with a `rootBundle` dependency that no
+> longer exists in the web implementation. The decision it argues for still stands — see
+> "Amendment: updated rationale" at the end of this section for the reasons that now carry
+> it.
+
 The web implementation already depends on Flutter — `executorch_model_web.dart:97` calls
 `rootBundle`. Leaving it wrapper-side avoids inventing an asset abstraction for it, keeps
 6 MB of wasm out of a server dependency, and preserves `dart run executorch_flutter:setup_web`
@@ -107,6 +112,35 @@ routed disappears from the Flutter package; a name routed but not hidden collide
 
 The cost is that a pure-Dart web program — dart2js without Flutter — cannot use this package.
 No such consumer exists.
+
+#### Amendment: updated rationale (2026-08-06)
+
+The `rootBundle` premise the section above leads with no longer holds. `rootBundle` moved
+out of the web implementation and into `lib/src/assets.dart` (`loadModelFromAsset` and
+`ExecutorchManagerAssets`). Every file under `lib/src/web/`, plus the web-routed
+`lib/src/ffi/*_web.dart` files and `lib/src/executorch_llm_web.dart`, import no
+`package:flutter/*` at all — the web implementation itself is pure Dart and `dart:js_interop`
+today.
+
+The decision to keep web in the wrapper stands anyway, on different grounds:
+
+- **Payload and package identity.** `web/wasm/` holds ~5 MB of wasm (`executorch.wasm`
+  3 MB, `executor_runner.wasm` 2 MB, per `dart pub publish --dry-run`) — nearly the entire
+  wrapper archive. The core publishes at 109 KB. Moving web into the core would put that
+  wasm into the package whose entire purpose is being a lightweight server dependency, and
+  would make `executorch_dart` a web package on pub.dev — contradicting its own README.
+- **Entry-point stability.** Moving web would also rename the public
+  `dart run executorch_flutter:setup_web` entry point.
+- **The routing block's cost is bounded.** The invariant it depends on — the blanket `hide`
+  list and the routed `show` names must stay identical — is documented in three places (this
+  section, the inline comments in `packages/executorch_flutter/lib/executorch_flutter.dart`,
+  and `packages/executorch_dart/test/library_split_test.dart`) and is now guarded by tests on
+  both sides: `packages/executorch_dart/test/library_split_test.dart` and
+  `packages/executorch_flutter/test/library_split_test.dart`.
+
+**Revisit trigger.** This gets more expensive after publish: `executorch_dart_shared.dart`
+becomes a public library and the routing shape becomes an API commitment, so changing it
+later is a breaking change for both packages rather than a pre-release refactor.
 
 ## API design
 

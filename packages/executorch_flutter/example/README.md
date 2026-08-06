@@ -57,6 +57,14 @@ flutter pub get
 
 **Models are automatically downloaded from GitHub** on first use.
 
+**Copying this example out of the repo?** `pubspec.yaml` pins
+`resolution: workspace`, which only resolves inside this repo's pub
+workspace — delete that line first. The workspace root also supplies this
+example's native build config, which a standalone copy loses silently (no
+LLM runner, no MLX backend); add it back here as a
+`hooks: user_defines: executorch_dart:` block with `llm: true` and
+`backends: [xnnpack, mlx]`.
+
 ### 2. Run the App
 
 ```bash

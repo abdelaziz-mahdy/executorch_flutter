@@ -325,6 +325,10 @@ Step 3: executorch_flutter repo (two packages — update both)
   │     ├── Update native submodule ref:
   │     │     cd packages/executorch_dart/native && git pull origin main && cd -
   │     ├── Bump version in packages/executorch_dart/pubspec.yaml
+  │     ├── Update the hand-maintained versions in packages/executorch_dart/README.md:
+  │     │     the `executorch_dart: ^X.Y.Z` install snippet and the
+  │     │     `prebuilt_version: "X.Y.Z.N"` example (both marked "bump this by hand" —
+  │     │     not auto-updated by CI)
   │     └── Add a packages/executorch_dart/CHANGELOG.md entry
   ├── packages/executorch_flutter (wrapper: Web/Wasm build + asset loading)
   │     ├── Update Dockerfile.wasm: EXECUTORCH_VERSION=vX.Y.Z (stays at repo root)

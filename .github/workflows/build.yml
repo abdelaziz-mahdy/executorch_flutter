@@ -292,6 +292,10 @@ jobs:
       - name: Check formatting
         run: dart format --set-exit-if-changed packages/executorch_flutter/lib
 
+      - name: Test package
+        run: flutter test
+        working-directory: packages/executorch_flutter
+
   # Pure Dart (no Flutter) — regression guard for the core/wrapper split.
   # Installs Dart only. If this job ever needs Flutter to pass, the split
   # has regressed.

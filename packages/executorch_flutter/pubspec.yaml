@@ -8,7 +8,7 @@ repository: https://github.com/abdelaziz-mahdy/executorch_flutter
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
-  flutter: '>=3.27.0'
+  flutter: '>=3.38.0'
 
 resolution: workspace
 

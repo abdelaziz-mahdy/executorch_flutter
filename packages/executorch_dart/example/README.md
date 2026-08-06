@@ -12,3 +12,8 @@ Compile it to a self-contained bundle, native library included:
 dart build cli
 ./build/cli/*/bundle/bin/infer /path/to/model.pte
 ```
+
+**Copying this example out of the repo?** `pubspec.yaml` pins
+`resolution: workspace`, which only resolves inside this repo's pub
+workspace. Delete that line first — the existing `executorch_dart: ^0.6.0`
+dependency then resolves normally from pub.dev.
