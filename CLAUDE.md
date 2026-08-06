@@ -3,41 +3,42 @@
 ## Quick Start
 
 ```bash
-# Analyze code (must pass before pushing)
-flutter analyze lib
+# Analyze code (must pass before pushing) — workspace-wide, run from repo root
+flutter analyze
 
 # Format code
-dart format lib
+dart format packages/executorch_dart/lib packages/executorch_flutter/lib
 
 # Run example app
-cd example && flutter run -d macos
+cd packages/executorch_flutter/example && flutter run -d macos
 
 # Run integration tests
-cd example && flutter test integration_test/models_integration_test.dart -d macos
+cd packages/executorch_flutter/example && flutter test integration_test/models_integration_test.dart -d macos
 
 # Regenerate FFI bindings (after native API changes)
-dart run ffigen
+cd packages/executorch_dart && dart run ffigen
 
-# Publish dry run
-dart pub publish --dry-run
+# Publish dry run (each package publishes separately; core must go first)
+(cd packages/executorch_dart && dart pub publish --dry-run)
+(cd packages/executorch_flutter && dart pub publish --dry-run)
 ```
 
 ## Package Overview
 
-**executorch_flutter** is a Flutter plugin package that provides on-device machine learning inference using PyTorch ExecuTorch. It enables Flutter developers to run optimized ML models on mobile and desktop platforms with a simple, type-safe Dart API.
+**executorch_flutter** is a Flutter plugin package that provides on-device machine learning inference using PyTorch ExecuTorch. It enables Flutter developers to run optimized ML models on mobile and desktop platforms with a simple, type-safe Dart API. It's a thin wrapper over the pure-Dart core, **executorch_dart** (`packages/executorch_dart/`), which has the same `load`/`forward`/`dispose` API with no Flutter SDK required — see `packages/executorch_dart/README.md` for Dart servers and CLI tools.
 
-**Package Name**: `executorch_flutter`
-**Version**: see `pubspec.yaml` (`version:`) — the source of truth
+**Package Names**: `executorch_flutter` (wrapper), `executorch_dart` (core)
+**Version**: each package's own `pubspec.yaml` (`version:`) is the source of truth; both currently release together
 **License**: MIT
-**Platforms**: Android, iOS, macOS, Windows, Linux, Web
-**Flutter Version**: 3.38+ (requires native assets hooks)
+**Platforms**: Android, iOS, macOS, Windows, Linux, Web (`executorch_dart` alone: everything except Web)
+**Flutter Version**: 3.38+ (requires native assets hooks) — not needed at all for `executorch_dart`
 
 ## Current Development Status
 
-- **Status**: published on pub.dev; releases are cut by tagging `v<version>` (CI publishes)
+- **Status**: both packages published on pub.dev; releases are cut by tagging `v<version>` (CI publishes `executorch_dart` before `executorch_flutter`)
 - **API**: vision inference via `ExecuTorchModel` (`load`/`forward`/`dispose`) plus experimental
-  streaming LLM via `ExecuTorchLLM` (see `docs/LLM.md`)
-- **Code Quality**: `flutter analyze lib` and `dart format --set-exit-if-changed lib` must be clean
+  streaming LLM via `ExecuTorchLLM` (see `packages/executorch_flutter/docs/LLM.md`)
+- **Code Quality**: `flutter analyze` and `dart format --set-exit-if-changed` (both packages' `lib/`) must be clean
 - **Build Status**: ✅ Android, ✅ iOS, ✅ macOS, ✅ Windows, ✅ Linux, ✅ Web
 
 ## Core Architecture
@@ -98,60 +99,74 @@ dart pub publish --dry-run
 
 ## Project Structure
 
+This is a pub workspace with two published packages under `packages/`. The
+root `pubspec.yaml` lists them under `workspace:` and is also the only place
+the native build's `hooks: user_defines:` block is read from in this repo —
+see "Native Local Development" below.
+
 ```
-executorch_flutter/
-├── lib/
-│   ├── executorch_flutter.dart              # Main library export
-│   └── src/
-│       ├── executorch_model.dart            # ExecuTorchModel - main API (load/forward/dispose)
-│       ├── executorch_inference.dart        # ExecutorchManager facade
-│       ├── executorch_errors.dart           # Exception hierarchy
-│       ├── types.dart                       # TensorData, TensorType definitions
-│       ├── ffi/                             # FFI layer
-│       │   ├── native_tensor.dart           # NativeTensor wrapper
-│       │   ├── backend.dart                 # Backend query functions
-│       │   ├── version.dart                 # Version query functions
-│       │   └── tensor_type_extensions.dart  # Extended tensor types
-│       ├── build/
-│       │   └── run_build.dart               # Native assets build hook
-│       ├── generated/
-│       │   └── executorch_ffi.g.dart        # ffigen-generated FFI bindings
-│       └── processors/
-│           ├── base_processor.dart          # BaseInputProcessor/BaseOutputProcessor
-│           ├── yolo_processor.dart          # YOLOv8 pre/post processing
-│           └── image_classification_processor.dart  # MobileNet processors
-├── hook/
-│   └── build.dart                           # Native assets build entry point
-├── example/
-│   ├── lib/
-│   │   ├── main.dart                        # Example app entry
-│   │   ├── screens/                         # Demo screens
-│   │   ├── processors/                      # Reference processors
-│   │   └── services/                        # Model management
-│   └── assets/
-│       ├── models/                          # .pte files (gitignored)
-│       └── images/                          # Test images
-├── native/                                   # Git submodule: executorch_native (C/C++ FFI library)
-│   ├── src/
-│   │   ├── executorch_ffi.cpp               # FFI implementation
-│   │   └── executorch_ffi.h                 # FFI header
-│   ├── cmake/
-│   │   ├── download_prebuilt.cmake          # Pre-built binary download logic
-│   │   └── build_from_source.cmake          # Source build logic
-│   ├── scripts/
-│   │   ├── build-android.sh                 # Android build script (all ABIs)
-│   │   ├── build-apple.sh                   # iOS/macOS build script
-│   │   ├── build-linux.sh                   # Linux build script
-│   │   └── build-windows.sh                 # Windows build script
-│   └── CMakeLists.txt                       # Main CMake configuration
-└── models/                                   # Git submodule: executorch_flutter_models
-    ├── python/                               # Model export scripts
-    │   ├── main.py                           # Unified CLI for export
-    │   ├── executorch_exporter.py            # Core exporter framework
-    │   └── BACKENDS.md                       # Backend selection guide
-    ├── mobilenet/                            # MobileNet model files
-    ├── yolo/                                 # YOLO model files
-    └── index.json                            # Model metadata index
+executorch_flutter/                            # Repo root — workspace, not published
+├── pubspec.yaml                                # Workspace members + native build user_defines
+├── packages/
+│   ├── executorch_dart/                        # Pure-Dart core (dart:ffi, no Flutter)
+│   │   ├── lib/
+│   │   │   ├── executorch_dart.dart            # Full public API (native + LLM)
+│   │   │   ├── executorch_dart_shared.dart     # ffi-free subset (only consumer: web branch of executorch_flutter)
+│   │   │   └── src/
+│   │   │       ├── executorch_model.dart       # ExecuTorchModel - main API (load/forward/dispose)
+│   │   │       ├── executorch_inference.dart   # ExecutorchManager facade
+│   │   │       ├── executorch_errors.dart      # Exception hierarchy
+│   │   │       ├── executorch_llm.dart         # ExecuTorchLLM (experimental streaming LLM)
+│   │   │       ├── types.dart                  # TensorData, TensorType definitions
+│   │   │       ├── ffi/                        # FFI layer
+│   │   │       │   ├── native_module.dart      # NativeModule wrapper (load/forward/dispose)
+│   │   │       │   ├── backend_query.dart      # Backend query functions
+│   │   │       │   └── version.dart            # Version query functions
+│   │   │       ├── build/
+│   │   │       │   └── run_build.dart          # Native assets build hook (CMake orchestration)
+│   │   │       ├── generated/
+│   │   │       │   └── executorch_ffi.g.dart   # ffigen-generated FFI bindings
+│   │   │       └── processors/
+│   │   │           └── base_processor.dart     # ExecuTorchPreprocessor/ExecuTorchPostprocessor
+│   │   ├── hook/build.dart                     # Native assets build entry point
+│   │   ├── native/                             # Git submodule: executorch_native (C/C++ FFI library)
+│   │   │   ├── src/
+│   │   │   │   ├── executorch_ffi.cpp          # FFI implementation
+│   │   │   │   └── executorch_ffi.h            # FFI header
+│   │   │   ├── cmake/
+│   │   │   │   ├── download_prebuilt.cmake     # Pre-built binary download logic
+│   │   │   │   └── build_from_source.cmake     # Source build logic
+│   │   │   ├── scripts/                        # Platform build scripts + compile-local.sh
+│   │   │   └── CMakeLists.txt                  # Main CMake configuration
+│   │   └── example/                            # Pure-Dart CLI example — dart:io only, no Flutter
+│   │       └── bin/infer.dart
+│   └── executorch_flutter/                     # Flutter plugin — thin wrapper over executorch_dart
+│       ├── lib/
+│       │   ├── executorch_flutter.dart         # Re-exports executorch_dart; routes native vs. web
+│       │   └── src/
+│       │       ├── assets.dart                 # loadModelFromAsset / loadModelFromAssets
+│       │       └── web/                        # WebAssembly-backed implementations
+│       │           ├── executorch_model_web.dart
+│       │           └── wasm_module_loader.dart
+│       ├── hook/build.dart                     # No native build here — just the legacy-key tripwire
+│       ├── android/ ios/ macos/ linux/ windows/ web/  # Platform plugin registration + Wasm assets
+│       ├── docs/LLM.md                         # On-device LLM guide
+│       └── example/                            # Full Flutter demo app (YOLO, MobileNet, camera, LLM chat)
+│           ├── lib/
+│           │   ├── main.dart                   # Example app entry
+│           │   ├── screens/                    # Demo screens
+│           │   ├── processors/                 # Reference processors
+│           │   └── services/                   # Model management
+│           └── assets/
+│               └── images/                     # Test images (models are downloaded at runtime)
+└── models/                                     # Git submodule: executorch_flutter_models (still at repo root)
+    ├── python/                                 # Model export scripts
+    │   ├── main.py                             # Unified CLI for export
+    │   ├── executorch_exporter.py              # Core exporter framework
+    │   └── BACKENDS.md                         # Backend selection guide
+    ├── mobilenet/                               # MobileNet model files
+    ├── yolo/                                    # YOLO model files
+    └── index.json                               # Model metadata index
 ```
 
 ## Git Submodules
@@ -162,8 +177,8 @@ This repository uses git submodules for native code and model assets. **Always b
 
 | Directory | Repository | Purpose |
 |-----------|------------|---------|
-| `native/` | `abdelaziz-mahdy/executorch_native` | C/C++ FFI library, CMake build system, platform build scripts |
-| `models/` | `abdelaziz-mahdy/executorch_flutter_models` | Model export scripts, pre-exported .pte files, labels |
+| `packages/executorch_dart/native/` | `abdelaziz-mahdy/executorch_native` | C/C++ FFI library, CMake build system, platform build scripts. Lives under the core package since it owns the native build |
+| `models/` | `abdelaziz-mahdy/executorch_flutter_models` | Model export scripts, pre-exported .pte files, labels. Stays at the repo root — shared by both packages |
 
 ### Working with Submodules
 
@@ -177,7 +192,7 @@ git submodule update --init --recursive
 **Making changes to a submodule:**
 ```bash
 # 1. Navigate to submodule directory
-cd native/  # or models/
+cd packages/executorch_dart/native/  # or models/ (repo root)
 
 # 2. Make your changes
 # 3. Commit and push within the submodule
@@ -186,8 +201,8 @@ git commit -m "Your commit message"
 git push
 
 # 4. Go back to parent repo and update submodule reference
-cd ..
-git add native/  # or models/
+cd -
+git add packages/executorch_dart/native/  # or models/
 git commit -m "Update native submodule"
 git push
 ```
@@ -197,9 +212,9 @@ git push
 git submodule update --remote --merge
 ```
 
-### Native Submodule (`native/`)
+### Native Submodule (`packages/executorch_dart/native/`)
 
-The `native/` directory contains the C/C++ FFI library that bridges Dart to ExecuTorch. This is a separate repository because:
+The `packages/executorch_dart/native/` directory contains the C/C++ FFI library that bridges Dart to ExecuTorch. This is a separate repository because:
 - It has its own CI/CD for building pre-built binaries
 - Pre-built binaries are published as GitHub Releases
 - Changes here require a new release to update prebuilts
@@ -211,10 +226,10 @@ The `native/` directory contains the C/C++ FFI library that bridges Dart to Exec
 - `CMakeLists.txt` - Main build configuration
 
 **Release workflow:**
-1. Make changes in `native/`
+1. Make changes in `packages/executorch_dart/native/`
 2. Commit and push to `executorch_native` repository:
    ```bash
-   cd native
+   cd packages/executorch_dart/native
    git add .
    git commit -m "feat: Your change description"
    git push
@@ -226,12 +241,12 @@ The `native/` directory contains the C/C++ FFI library that bridges Dart to Exec
    ```
 4. Wait for GitHub Actions to build all platform variants
 5. **Update versions in both repos:**
-   - Update `_defaultPrebuiltVersion` in `lib/src/build/run_build.dart` (line ~59)
-   - Update `EXECUTORCH_PREBUILT_VERSION` in `native/CMakeLists.txt` if needed
+   - Update `_defaultPrebuiltVersion` in `packages/executorch_dart/lib/src/build/run_build.dart` (line ~76)
+   - Update `EXECUTORCH_PREBUILT_VERSION` in `packages/executorch_dart/native/CMakeLists.txt` if needed
 6. **Commit the submodule reference in the parent repo:**
    ```bash
-   cd ..  # back to executorch_flutter root
-   git add native
+   cd -  # back to executorch_flutter root
+   git add packages/executorch_dart/native
    git commit -m "chore: Update native submodule to v1.0.1.7"
    git push
    ```
@@ -299,51 +314,67 @@ Step 2: executorch_flutter_models
   └── WAIT for CI to export models, generate index.json, update versions.json, and commit
       NOTE: versions.json is auto-generated OUTPUT, not input — don't edit it manually
 
-Step 3: executorch_flutter
-  ├── Update lib/src/version.dart: executorchVersion = 'X.Y.Z'
-  ├── Update lib/src/build/run_build.dart: prebuilt suffix (e.g., .1)
-  ├── Update Dockerfile.wasm: EXECUTORCH_VERSION=vX.Y.Z
-  ├── Rebuild WebAssembly binaries: ./scripts/build_wasm.sh
-  │     (builds Docker image, runs container, copies executorch.js + executorch.wasm
-  │      to web/wasm/ and example/web/wasm/)
-  ├── Bump version in pubspec.yaml
-  ├── Add CHANGELOG.md entry
-  ├── Update native submodule ref: cd native && git pull origin main && cd ..
-  ├── Update models submodule ref: cd models && git pull origin main && cd ..
+Step 3: executorch_flutter repo (two packages — update both)
+  ├── packages/executorch_dart (core: owns the ExecuTorch version + native build)
+  │     ├── Update packages/executorch_dart/lib/src/version.dart: executorchVersion = 'X.Y.Z'
+  │     ├── Update packages/executorch_dart/lib/src/build/run_build.dart: prebuilt suffix,
+  │     │     reset to .1 for the new version (e.g. 'X.Y.Z.1')
+  │     ├── Update native submodule ref:
+  │     │     cd packages/executorch_dart/native && git pull origin main && cd -
+  │     ├── Bump version in packages/executorch_dart/pubspec.yaml
+  │     └── Add a packages/executorch_dart/CHANGELOG.md entry
+  ├── packages/executorch_flutter (wrapper: Web/Wasm build + asset loading)
+  │     ├── Update Dockerfile.wasm: EXECUTORCH_VERSION=vX.Y.Z (stays at repo root)
+  │     ├── Rebuild WebAssembly binaries: ./scripts/build_wasm.sh (stays at repo root)
+  │     │     (builds Docker image, runs container, copies executorch.js + executorch.wasm
+  │     │      to packages/executorch_flutter/web/wasm/ and
+  │     │      packages/executorch_flutter/example/web/wasm/)
+  │     ├── Bump the `executorch_dart: ^X.Y.Z` constraint in
+  │     │     packages/executorch_flutter/pubspec.yaml if it needs the new core version
+  │     ├── Bump version in packages/executorch_flutter/pubspec.yaml
+  │     └── Add a packages/executorch_flutter/CHANGELOG.md entry
+  ├── Update models submodule ref: cd models && git pull origin main && cd -
   ├── Merge PR to main (update-readme.yml auto-updates README links)
   └── Tag for pub.dev release: git tag v0.X.0 && git push origin v0.X.0
-      (release.yml creates GitHub Release + publishes to pub.dev)
+      (release.yml creates the GitHub Release, then publishes executorch_dart
+      to pub.dev BEFORE executorch_flutter — see release.yml's `publish` job)
 ```
 
 **Version Sources of Truth (this repo):**
-- `lib/src/version.dart` → `executorchVersion` (e.g., `'1.2.0'`)
-- `lib/src/build/run_build.dart` → `_defaultPrebuiltVersion` = `'$executorchVersion.1'` (e.g., `1.2.0.1`)
-- `pubspec.yaml` → `version:` (package version, e.g., `0.4.0`)
+- `packages/executorch_dart/lib/src/version.dart` → `executorchVersion` (currently `'1.3.1'`)
+- `packages/executorch_dart/lib/src/build/run_build.dart` → `_defaultPrebuiltVersion` =
+  `'$executorchVersion.<n>'`, a manually incremented prebuilt-build counter that resets to
+  `.1` when `executorchVersion` bumps to a new upstream release (currently `1.3.1.9` — do
+  **not** assume the suffix is always `.1`; it climbs with every prebuilt re-release of the
+  same ExecuTorch version)
+- `packages/executorch_dart/pubspec.yaml` and `packages/executorch_flutter/pubspec.yaml` →
+  `version:` (both packages currently release together at `0.6.0`)
 
 ## Key APIs
 
 ### ExecuTorchModel
 
-The primary API for loading models and running inference. Simple, minimal, and direct.
+The primary API for loading models and running inference. Simple, minimal, and
+direct — defined in `packages/executorch_dart` (`lib/src/executorch_model.dart`),
+re-exported by `packages/executorch_flutter`.
 
 ```dart
-// Load a model from asset bundle
-import 'package:flutter/services.dart' show rootBundle;
+// Flutter: load from the asset bundle
+import 'package:executorch_flutter/executorch_flutter.dart';
 
-final modelBytes = await rootBundle.load('assets/models/model.pte');
-final model = await ExecuTorchModel.load(
-  modelBytes.buffer.asUint8List(),
-);
+final model = await loadModelFromAsset('assets/models/model.pte');
 
-// Or load from file path (if model is stored externally)
-final model = await ExecuTorchModel.load(
-  File('/path/to/model.pte').readAsBytesSync(),
-);
+// Pure Dart (no Flutter): load from a file path or from bytes
+import 'package:executorch_dart/executorch_dart.dart';
+
+final model = await ExecuTorchModel.load('/path/to/model.pte');
+// or:
+final bytes = await File('/path/to/model.pte').readAsBytes();
+final model = await ExecuTorchModel.loadFromBytes(bytes);
 
 // Model properties
-print(model.modelId);        // Unique identifier (auto-generated)
-print(model.inputShapes);    // Expected input tensor shapes
-print(model.outputShapes);   // Expected output tensor shapes
+print(model.modelId);      // Unique identifier (auto-generated)
+print(model.isDisposed);   // Whether dispose() has been called
 
 // Run inference
 final outputs = await model.forward([tensorData]);
@@ -352,15 +383,20 @@ final outputs = await model.forward([tensorData]);
 await model.dispose();
 ```
 
+`ExecuTorchModel` has exactly four instance members — `modelId`,
+`isDisposed`, `forward`, `dispose` — plus the two static loaders above.
+There's no `inputShapes`/`outputShapes` introspection; check tensor shapes
+against the model's export script instead.
+
 **Key Design Points**:
-- **No file paths**: Models are loaded from `Uint8List` bytes, enabling asset bundle loading
 - **No options/timeouts**: Simplified API with just input tensors
 - **Direct outputs**: Returns `List<TensorData>` directly (no wrapper object)
-- **Asset-first**: Recommended pattern is to bundle models in `assets/` and load via `rootBundle`
+- **Asset-first for Flutter**: `loadModelFromAsset` folds the `rootBundle` read and `loadFromBytes` call into one
 
 ### TensorData
 
-Input/output tensor representation (defined in `lib/src/types.dart`):
+Input/output tensor representation (defined in
+`packages/executorch_dart/lib/src/types.dart`):
 
 ```dart
 final tensor = TensorData(
@@ -373,40 +409,39 @@ final tensor = TensorData(
 
 ### Model Loading Pattern
 
-**Recommended: Load from Asset Bundle**
+**Recommended (Flutter): Load from Asset Bundle**
 
 ```dart
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:executorch_flutter/executorch_flutter.dart';
 
 // 1. Add model to pubspec.yaml assets:
 //    flutter:
 //      assets:
 //        - assets/models/
 
-// 2. Load model bytes from asset bundle
-final modelBytes = await rootBundle.load('assets/models/model.pte');
+// 2. Load and create the model instance in one call
+final model = await loadModelFromAsset('assets/models/model.pte');
 
-// 3. Create model instance
-final model = await ExecuTorchModel.load(
-  modelBytes.buffer.asUint8List(),
-);
-
-// 4. Run inference
+// 3. Run inference
 final outputs = await model.forward([inputTensor]);
 
-// 5. Clean up
+// 4. Clean up
 await model.dispose();
 ```
 
-**Alternative: Load from File System**
+**Alternative: Load from File System (native platforms only)**
 
 ```dart
 import 'dart:io';
+import 'package:executorch_dart/executorch_dart.dart';
 
-// Load from downloaded/cached file
+// Load from a downloaded/cached file's path
 final modelFile = File('/path/to/downloaded/model.pte');
-final model = await ExecuTorchModel.load(
-  modelFile.readAsBytesSync(),
+final model = await ExecuTorchModel.load(modelFile.path);
+
+// Or from its bytes
+final model = await ExecuTorchModel.loadFromBytes(
+  await modelFile.readAsBytes(),
 );
 ```
 
@@ -444,7 +479,7 @@ ExecuTorchException              // Base exception
 The example app includes integration tests for native platforms:
 
 ```bash
-cd example
+cd packages/executorch_flutter/example
 flutter test integration_test/models_integration_test.dart -d macos   # macOS
 flutter test integration_test/models_integration_test.dart -d ios     # iOS
 flutter test integration_test/models_integration_test.dart -d android # Android
@@ -464,12 +499,18 @@ The package includes reference processors for common model types:
 
 ### BaseProcessor
 ```dart
-abstract class BaseInputProcessor<T> {
+abstract class ExecuTorchPreprocessor<T> {
   Future<List<TensorData>> preprocess(T input);
 }
 
-abstract class BaseOutputProcessor<T, R> {
+abstract class ExecuTorchPostprocessor<R> {
   Future<R> postprocess(List<TensorData> outputs);
+}
+
+// Combines both into one pipeline:
+abstract class ExecuTorchProcessor<T, R> {
+  ExecuTorchPreprocessor<T> get preprocessor;
+  ExecuTorchPostprocessor<R> get postprocessor;
 }
 ```
 
@@ -483,7 +524,10 @@ abstract class BaseOutputProcessor<T, R> {
 - **Output**: Top-K class predictions with confidence scores
 - **Use Case**: Image classification (MobileNetV3, ResNet)
 
-**Location**: `lib/src/processors/` (package) and `example/lib/processors/` (reference implementations)
+**Location**: `packages/executorch_dart/lib/src/processors/` (base classes
+only — `ExecuTorchPreprocessor`/`ExecuTorchPostprocessor`/`ExecuTorchProcessor`)
+and `packages/executorch_flutter/example/lib/processors/` (concrete
+YOLO/MobileNet reference implementations)
 
 ## GPU-Accelerated Preprocessing
 
@@ -496,8 +540,8 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 | OpenCV | 10-15ms | Desktop, complex transforms |
 
 **Key files:**
-- `example/shaders/*.frag` - GLSL shaders for letterbox/crop/normalize
-- `example/lib/processors/gpu_*.dart` - GPU preprocessor implementations
+- `packages/executorch_flutter/example/shaders/*.frag` - GLSL shaders for letterbox/crop/normalize
+- `packages/executorch_flutter/example/lib/processors/gpu_*.dart` - GPU preprocessor implementations
 
 **Key patterns:**
 - Use `ui.decodeImageFromList()` for hardware-accelerated decode
@@ -509,19 +553,34 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 **Full guide: `CONTRIBUTING.md` (Build Modes / Local Build & Testing / Source Build sections). Read it before touching native code.** Key facts:
 
 - The plugin has three build modes, set in the **consuming app's** `pubspec.yaml`
-  (`hooks: user_defines: executorch_flutter: build_mode:`):
+  (`hooks: user_defines: executorch_dart: build_mode:`). The key is
+  `executorch_dart` — `executorch_dart` owns the native build even when the
+  app only depends on `executorch_flutter`. The old `executorch_flutter:` key
+  fails the build with a message telling you to rename it (see the 0.6.0
+  breaking-change entry in `packages/executorch_flutter/CHANGELOG.md`).
   - **prebuilt** (default): downloads an already-compiled `libexecutorch_ffi` from
-    GitHub Releases. **Local edits to `native/src/*.cpp` have NO effect in this mode.**
+    GitHub Releases. **Local edits to `packages/executorch_dart/native/src/*.cpp`
+    have NO effect in this mode.**
   - **source**: the app's build phase compiles ExecuTorch + FFI from a local checkout —
     set `executorch_source: "/path/to/executorch"`. This is the RECOMMENDED way to test
     native changes: no manual cmake, `flutter run`/`flutter test` does everything.
     First build 15-30+ min, incremental after (ccache helps).
-  - **local**: consumes `native/local-builds/<variant>/` produced by
-    `native/scripts/compile-local.sh` (or `local_lib_dir:`).
-- **Do NOT hand-drive cmake/ninja in stale `native/build-local-*` dirs** — that path
+  - **local**: consumes `packages/executorch_dart/native/local-builds/<variant>/`
+    produced by `packages/executorch_dart/native/scripts/compile-local.sh`
+    (or `local_lib_dir:`).
+- **When editing this repo's own example apps**, put the `user_defines` block
+  in the **workspace root** `pubspec.yaml`, not
+  `packages/executorch_flutter/example/pubspec.yaml`. Pub workspaces only read
+  `hooks: user_defines:` from the root pubspec — the same block in a member
+  package is silently ignored and the build falls back to defaults with no
+  error. This doesn't affect a normal consumer app, which is its own root
+  package. See `CONTRIBUTING.md` for details.
+- **Do NOT hand-drive cmake/ninja in stale `packages/executorch_dart/native/build-local-*`
+  dirs** — that path
   caused a cascade of traps (python wrapper self-exec on reconfigure, dead-venv torch
   paths, libomp install-name/sandbox failures, stale hooks cache needing
-  `flutter clean`). All documented in `native/CLAUDE.md` → "Local Compilation".
+  `flutter clean`). All documented in `packages/executorch_dart/native/CLAUDE.md` →
+  "Local Compilation".
 - Backend set must match your test models: xnnpack-delegated `.pte` files fail to
   load on a build without XNNPACK.
 - New native dtypes / API changes require a native release (tag `vX.Y.Z.W` in the
@@ -531,12 +590,16 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 
 ### Adding New Features
 
-1. **Update C API**: Edit `native/src/executorch_ffi.h` and `native/src/executorch_ffi.cpp`
-2. **Regenerate FFI Bindings**: Run `dart run ffigen` to regenerate `lib/src/generated/executorch_ffi.g.dart`
-3. **Add Dart Wrapper**: Update `lib/src/ffi/` layer or higher-level APIs
+1. **Update C API**: Edit `packages/executorch_dart/native/src/executorch_ffi.h` and
+   `packages/executorch_dart/native/src/executorch_ffi.cpp`
+2. **Regenerate FFI Bindings**: From `packages/executorch_dart`, run `dart run ffigen`
+   to regenerate `lib/src/generated/executorch_ffi.g.dart`
+3. **Add Dart Wrapper**: Update `packages/executorch_dart/lib/src/ffi/` layer or
+   higher-level APIs
 4. **Test**: Run example app on all platforms
 5. **Document**: Update README and dartdoc comments
-6. **Release Native**: Tag new version in `native/` submodule if C API changed
+6. **Release Native**: Tag new version in the `packages/executorch_dart/native/`
+   submodule if C API changed
 
 ### Testing Strategy
 
@@ -549,7 +612,7 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 ### Code Style
 
 - **Dart**: Follow `dart format` and `dart analyze` recommendations
-- **C/C++**: Follow `clang-format` conventions (used in native/ submodule)
+- **C/C++**: Follow `clang-format` conventions (used in the `packages/executorch_dart/native/` submodule)
 - **Lint**: All lint rules enabled, `dart fix --apply` used for auto-fixes
 
 ### Changelog Guidelines
@@ -580,19 +643,25 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 
 ### Pre-Push Checklist
 
-**ALWAYS run these checks before EVERY push (CI runs exactly these and fails
-on any diff or issue):**
+**ALWAYS run these checks before EVERY push.** CI (`build.yml`) checks both
+packages in two different jobs: a Flutter-based job that analyzes only
+`packages/executorch_flutter/lib`, and a separate no-Flutter job that copies
+`packages/executorch_dart` out of the workspace and analyzes/formats/tests it
+in isolation — a regression guard proving the core has zero Flutter in its
+dependency graph. Locally, this simpler sequence from the workspace root
+covers both packages with equivalent effect:
 
 ```bash
-# 1. Analyzer — must report 0 issues (CI: flutter analyze lib)
-flutter analyze lib
+# 1. Analyzer — must report 0 issues, for both packages
+flutter analyze
 
-# 2. Formatter — CI runs `dart format --set-exit-if-changed lib`, so verify
-#    there is nothing left to format:
-dart format --set-exit-if-changed lib
+# 2. Formatter — verify there is nothing left to format
+dart format --set-exit-if-changed packages/executorch_dart/lib \
+  packages/executorch_flutter/lib
 
-# 3. Tests
-flutter test
+# 3. Tests — each package has its own test runner
+(cd packages/executorch_flutter && flutter test)
+(cd packages/executorch_dart && dart test)
 ```
 
 Then check `git status` — **if the formatter touched ANY file, stage and commit
@@ -605,19 +674,32 @@ branch, check `gh run list` for `action_required` and approve via
 
 ### Publishing Workflow
 
-1. **Analyze**: `flutter analyze` (0 errors in `lib/`)
-2. **Fix Lints**: `dart fix --apply lib/`
-3. **Dry Run**: `dart pub publish --dry-run`
-4. **Review**: Check warnings, package size, dependencies
-5. **Publish**: `dart pub publish` (when ready)
+Each package publishes separately, core first — `packages/executorch_dart`
+before `packages/executorch_flutter` (see `release.yml`'s `publish` job, or
+the "ExecuTorch Version Upgrade Procedure" above). For each package:
 
-**Files Excluded from Publishing** (`.pubignore`):
-- `specs/` (internal development docs)
-- `CLAUDE.md` (AI agent context)
-- `native/` (submodule, built via native assets)
-- `models/` (submodule, large model files)
-- `tmp/` (temporary files)
-- Large example assets (users generate their own models)
+1. **Analyze**: `flutter analyze` (0 errors)
+2. **Fix Lints**: `dart fix --apply`
+3. **Dry Run**: `dart pub publish --dry-run --directory=packages/<name>`
+4. **Review**: Check warnings, package size, dependencies
+5. **Publish**: CI does this automatically (`release.yml`) when a `vX.Y.Z` tag
+   is pushed — per the CI/CD rules above, don't run `dart pub publish` by hand
+
+**Files Excluded from Publishing** — each package has its own `.pubignore`
+(`packages/executorch_dart/.pubignore`, `packages/executorch_flutter/.pubignore`):
+- `CLAUDE.md` (AI agent context) — both packages; the wrapper also excludes
+  `example/CLAUDE.md`, the core also excludes `native/CLAUDE.md`
+- Build artifacts (`/build/`, `.dart_tool/`, `.flutter-plugins*`) — both packages
+- `tmp/` (temporary files) — both packages
+- Large example assets the wrapper's example downloads instead of bundling
+  (`example/assets/models/*.pte`, `example/assets/images/*.jpg`)
+
+`specs/`, `.superpowers/`, and `models/` (the models submodule) live at the
+**repo root**, outside both package directories, so `pub publish` never sees
+them regardless of `.pubignore`. `packages/executorch_dart/native/` (the
+native submodule) *is* inside a published package — only its own `CLAUDE.md`
+is excluded; the C/C++ sources publish as part of `executorch_dart` (needed
+for `build_mode: "source"`/`"local"`).
 
 ## Troubleshooting
 
@@ -634,10 +716,13 @@ branch, check `gh run list` for `action_required` and approve via
 **2. Inference Returns Error**
 - **Issue**: Wrong tensor shapes, data types, or model compatibility
 - **Solution**:
-  - Check `model.inputShapes` and `model.outputShapes` to verify expected formats
+  - `ExecuTorchModel` doesn't expose shape introspection — verify the
+    `shape:`/`dataType:` you pass against the model's export script instead
   - Verify tensor data types match model expectations (Float32, Int32, Int8, UInt8)
   - Ensure tensor shapes match exactly (including batch dimension)
-  - Check ExecuTorch version compatibility (Android: 1.0.1, iOS/macOS: SPM 1.0.1)
+  - Check ExecuTorch version compatibility — all platforms build against the
+    same upstream version now (`executorchVersion` in
+    `packages/executorch_dart/lib/src/version.dart`, currently `1.3.1`)
 
 **3. Memory Issues**
 - **Issue**: Models not disposed, accumulating in memory
@@ -675,7 +760,9 @@ branch, check `gh run list` for `action_required` and approve via
 
 ## Version History
 
-See `CHANGELOG.md` — it is the source of truth and is updated every release.
+See each package's own `CHANGELOG.md` (`packages/executorch_dart/CHANGELOG.md`,
+`packages/executorch_flutter/CHANGELOG.md`) — each is the source of truth for
+its package and is updated every release.
 
 ## Known Limitations
 
@@ -692,25 +779,34 @@ See `CHANGELOG.md` — it is the source of truth and is updated every release.
 
 ## Native Assets Architecture
 
-The package uses dart:ffi with Flutter's native assets system for cross-platform support:
+`packages/executorch_dart` uses `dart:ffi` with Dart's native assets system
+for cross-platform support — no Flutter SDK required (`dart run`, `dart test`,
+and `dart build cli` all invoke the build hook directly, same as `flutter
+run`). `packages/executorch_flutter` inherits this by depending on the core;
+it registers no native build of its own.
 
 - **All platforms**: Unified C/C++ FFI library for ExecuTorch integration
-- **Build System**: CMake-based compilation via native assets hooks (Flutter 3.38+)
+- **Build System**: CMake-based compilation via native assets hooks (Dart 3.6+ / Flutter 3.38+)
 - **Pre-built binaries**: Available from GitHub Releases for faster builds
 - **Source builds**: Optional for custom ExecuTorch configurations
 
 **Key Components:**
 
-- `native/src/executorch_ffi.cpp` - C FFI implementation wrapping ExecuTorch
-- `native/CMakeLists.txt` - CMake build configuration
-- `lib/src/build/run_build.dart` - Native assets build hook
-- `lib/src/ffi/` - Dart FFI bindings
+- `packages/executorch_dart/native/src/executorch_ffi.cpp` - C FFI implementation wrapping ExecuTorch
+- `packages/executorch_dart/native/CMakeLists.txt` - CMake build configuration
+- `packages/executorch_dart/lib/src/build/run_build.dart` - Native assets build hook
+- `packages/executorch_dart/lib/src/ffi/` - Dart FFI bindings
 
 ## Example App Architecture
 
-The example app (`example/`) demonstrates a complete implementation with multiple model types (YOLO, MobileNet) in a unified playground.
+The Flutter demo app (`packages/executorch_flutter/example/`) demonstrates a
+complete implementation with multiple model types (YOLO, MobileNet) in a
+unified playground. (The pure-Dart CLI example at
+`packages/executorch_dart/example/` is intentionally minimal — see its own
+README, not this section.)
 
-**For detailed example app architecture and adding new models, see: `example/CLAUDE.md`**
+**For detailed example app architecture and adding new models, see:
+`packages/executorch_flutter/example/CLAUDE.md`**
 
 Key features:
 - Strategy pattern for model definitions
@@ -719,7 +815,9 @@ Key features:
 - Model-specific settings and processors
 - Python export scripts for PyTorch → ExecuTorch conversion
 
-**Important**: When making changes to the example app, always refer to `example/CLAUDE.md` for architecture guidelines and step-by-step instructions for adding new model support.
+**Important**: When making changes to the example app, always refer to
+`packages/executorch_flutter/example/CLAUDE.md` for architecture guidelines
+and step-by-step instructions for adding new model support.
 
 ## Contact and Support
 
@@ -731,6 +829,6 @@ Key features:
 
 ---
 
-**Flutter Version**: 3.38+
+**Flutter Version**: 3.38+ (`executorch_flutter` only — `executorch_dart` needs no Flutter)
 **API**: Simplified to `load()` + `forward()` + `dispose()` only
 **Architecture**: dart:ffi with native assets hooks

@@ -58,38 +58,70 @@ Thank you for your interest in contributing to ExecuTorch Flutter! This guide wi
 
 2. **Run the example app**:
    ```bash
-   cd example
+   cd packages/executorch_flutter/example
    flutter run
    ```
 
 ## Project Structure
 
+This repo is a [pub workspace](https://dart.dev/tools/pub/workspaces) with two
+published packages under `packages/`:
+
 ```
-executorch_flutter/
-├── lib/                        # Dart library code
-│   ├── src/
-│   │   ├── ffi/                # dart:ffi bindings and FFI layer
-│   │   ├── generated/          # ffigen-generated FFI bindings
-│   │   ├── build/              # Native assets build hook
-│   │   ├── executorch_model.dart
-│   │   ├── executorch_inference.dart
-│   │   └── executorch_errors.dart
-│   └── executorch_flutter.dart # Public API exports
-├── native/                     # Git submodule: C/C++ FFI library
-│   ├── src/                    # FFI implementation
-│   ├── cmake/                  # CMake build configuration
-│   └── scripts/                # Platform build scripts
-└── example/                    # Example Flutter app
+executorch_flutter/                        # Repo root — pub workspace (not published)
+├── pubspec.yaml                            # Workspace members + native build user_defines (see below)
+├── packages/
+│   ├── executorch_dart/                    # Pure-Dart core — owns the native build, no Flutter needed
+│   │   ├── lib/
+│   │   │   ├── executorch_dart.dart        # Full public API
+│   │   │   ├── executorch_dart_shared.dart # ffi-free subset (see below)
+│   │   │   └── src/
+│   │   │       ├── ffi/                    # dart:ffi bindings and FFI layer
+│   │   │       ├── generated/              # ffigen-generated FFI bindings
+│   │   │       ├── build/                  # Native assets build hook
+│   │   │       ├── executorch_model.dart
+│   │   │       ├── executorch_inference.dart
+│   │   │       └── executorch_errors.dart
+│   │   ├── native/                         # Git submodule: C/C++ FFI library
+│   │   │   ├── src/                        # FFI implementation
+│   │   │   ├── cmake/                      # CMake build configuration
+│   │   │   └── scripts/                    # Platform build scripts
+│   │   └── example/                        # Pure-Dart CLI example (dart:io only)
+│   └── executorch_flutter/                 # Flutter plugin — thin wrapper over executorch_dart
+│       ├── lib/executorch_flutter.dart     # Public API: re-exports the core, routes native vs. web
+│       └── example/                        # Full Flutter demo app
+└── models/                                 # Git submodule: model export scripts + pre-exported .pte files
 ```
+
+`executorch_dart` exposes two public libraries:
+- `package:executorch_dart/executorch_dart.dart` — the full native API
+  (`ExecuTorchModel`, `ExecuTorchLLM`, `BackendQuery`, etc.). Application code
+  should import this one.
+- `package:executorch_dart/executorch_dart_shared.dart` — the `dart:ffi`-free
+  subset (tensor/model types, error hierarchy, processor base classes). It
+  exists for one consumer: `executorch_flutter`'s web branch, which cannot
+  pull `dart:ffi` into a dart2js compile. You only need this if you're
+  working on the wrapper's web routing; don't import it from application code.
 
 ## Build Modes
 
 The plugin supports three build modes for the native C/C++ library. Configure via `pubspec.yaml`:
 
+> **This repo is a pub workspace — put `user_defines` in the root
+> `pubspec.yaml`.** Pub workspaces read `hooks: user_defines:` only from the
+> **workspace root** `pubspec.yaml`. The same block inside
+> `packages/executorch_flutter/example/pubspec.yaml` (or any other member
+> package) is silently ignored — the hook receives `{}` and the build quietly
+> falls back to defaults, with no error to tell you why. This only matters
+> when you're working in *this* repo; it doesn't affect a consumer
+> application, which is its own root package. Every `pubspec.yaml` snippet
+> below that this repo's own example apps use goes in the **workspace root**
+> `pubspec.yaml`, not the example's own.
+
 ```yaml
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       build_mode: "prebuilt"   # or "local" or "source"
 ```
 
@@ -122,10 +154,10 @@ The workflow is:
 
 ### Step 1: Compile the Native Library
 
-Use the `compile-local.sh` script in `native/scripts/`:
+Use the `compile-local.sh` script in `packages/executorch_dart/native/scripts/`:
 
 ```bash
-cd native/scripts
+cd packages/executorch_dart/native/scripts
 
 # Build for Android arm64 with XNNPACK + Vulkan
 ./compile-local.sh \
@@ -158,21 +190,23 @@ cd native/scripts
 | `--build-type` | No | `Release` | `Release` or `Debug` |
 | `--ndk` | Android only | `$ANDROID_NDK_HOME` | Path to Android NDK |
 
-The output goes to `native/local-builds/<platform>-<arch>-<backends>-<build_type>/`
+The output goes to
+`packages/executorch_dart/native/local-builds/<platform>-<arch>-<backends>-<build_type>/`
 with `lib/` and `include/` subdirectories.
 
 ### Step 2: Configure the Flutter Plugin
 
 **Option A: Auto-detection** (recommended when using `compile-local.sh`)
 
-The plugin automatically finds builds in `native/local-builds/` matching your
-target platform, architecture, and backends:
+The plugin automatically finds builds in
+`packages/executorch_dart/native/local-builds/` matching your target
+platform, architecture, and backends:
 
 ```yaml
-# In your app's pubspec.yaml (e.g., example/pubspec.yaml)
+# In the workspace root pubspec.yaml (see the callout above)
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       build_mode: "local"
       backends:
         - xnnpack
@@ -186,7 +220,7 @@ Point directly at any directory containing `lib/` and `include/`:
 ```yaml
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       build_mode: "local"
       local_lib_dir: "/absolute/path/to/compiled/libs"
       backends:
@@ -205,7 +239,7 @@ export EXECUTORCH_BUILD_MODE="local"
 ### Step 3: Run the App
 
 ```bash
-cd example
+cd packages/executorch_flutter/example
 flutter run -d <your_device>
 ```
 
@@ -221,7 +255,7 @@ cd ~/executorch
 git checkout fix/my-vulkan-fix
 
 # 2. Compile the native library for Android
-cd /path/to/executorch_flutter/native/scripts
+cd /path/to/executorch_flutter/packages/executorch_dart/native/scripts
 ./compile-local.sh \
   --executorch-source ~/executorch \
   --platform android \
@@ -229,17 +263,18 @@ cd /path/to/executorch_flutter/native/scripts
   --backends xnnpack,vulkan
 
 # 3. Configure the example app to use local build
-# Edit example/pubspec.yaml and add:
+# Edit the WORKSPACE ROOT pubspec.yaml (/path/to/executorch_flutter/pubspec.yaml)
+# and add:
 #   hooks:
 #     user_defines:
-#       executorch_flutter:
+#       executorch_dart:
 #         build_mode: "local"
 #         backends:
 #           - xnnpack
 #           - vulkan
 
 # 4. Run on your Android device
-cd /path/to/executorch_flutter/example
+cd /path/to/executorch_flutter/packages/executorch_flutter/example
 flutter run -d <android_device_id>
 ```
 
@@ -250,7 +285,7 @@ Remove or change the `build_mode` in your `pubspec.yaml`:
 ```yaml
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       # build_mode: "local"    # comment out or remove
       backends:
         - xnnpack
@@ -261,7 +296,7 @@ Or explicitly set it back:
 ```yaml
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       build_mode: "prebuilt"
 ```
 
@@ -270,7 +305,7 @@ hooks:
 After running `compile-local.sh`, the output looks like:
 
 ```
-native/
+packages/executorch_dart/native/
 ├── local-builds/                              # gitignored
 │   ├── android-arm64-v8a-xnnpack-vulkan-release/
 │   │   ├── lib/
@@ -310,12 +345,14 @@ This is useful when:
 
 ### Configuration
 
-Add to your app's `pubspec.yaml`:
+Add to your app's `pubspec.yaml` (the workspace root `pubspec.yaml` when
+testing against this repo's own example — see the callout under "Build
+Modes"):
 
 ```yaml
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       build_mode: "source"
       executorch_source: "/path/to/executorch"
       backends:
@@ -355,17 +392,17 @@ cd executorch
 git checkout fix/my-patch
 
 # 2. Configure the example app
-# Edit example/pubspec.yaml:
+# Edit the WORKSPACE ROOT pubspec.yaml (/path/to/executorch_flutter/pubspec.yaml):
 #   hooks:
 #     user_defines:
-#       executorch_flutter:
+#       executorch_dart:
 #         build_mode: "source"
 #         executorch_source: "/path/to/executorch"
 #         backends:
 #           - xnnpack
 
 # 3. Run - Flutter builds ExecuTorch from your local source
-cd /path/to/executorch_flutter/example
+cd /path/to/executorch_flutter/packages/executorch_flutter/example
 flutter run -d <device>
 ```
 
@@ -376,21 +413,23 @@ and much faster (minutes). The build cache is preserved between runs.
 
 Prefer source mode driven by `pubspec.yaml` over manually running cmake/ninja in
 old build directories — stale caches cause most of the failures below. The full
-trap list lives in `native/CLAUDE.md` → "Local Compilation". Highlights:
+trap list lives in `packages/executorch_dart/native/CLAUDE.md` → "Local
+Compilation". Highlights:
 
 - **`install TARGETS given target "xnnpack-operator-delete" which does not exist`**:
   the XNNPACK submodule in your ExecuTorch checkout has drifted. Fix:
   `git submodule update backends/xnnpack/third-party/XNNPACK` in the checkout.
 - **`python_wrapper.sh: Argument list too long` / `Undefined error: 0`** on
   reconfigure: old build dir hit the wrapper self-exec bug (fixed in
-  `native/cmake/build_from_source.cmake`). Re-run cmake with
-  `-DPYTHON_EXECUTABLE=/path/to/python3` once, or delete the build dir.
+  `packages/executorch_dart/native/cmake/build_from_source.cmake`). Re-run
+  cmake with `-DPYTHON_EXECUTABLE=/path/to/python3` once, or delete the build
+  dir.
 - **`MLX backend requires the Xcode Metal Toolchain`**: one-time install:
   `xcodebuild -downloadComponent MetalToolchain` (~700 MB), then rebuild.
 - **`dlopen ... Library not loaded: /opt/homebrew/opt/libomp/lib/libomp.dylib`**
   (macOS, Metal/AOTI builds): the sandboxed app can't load torch's libomp from a
-  system path. See `native/CLAUDE.md` for the bundling fix; xnnpack-only builds
-  are unaffected.
+  system path. See `packages/executorch_dart/native/CLAUDE.md` for the
+  bundling fix; xnnpack-only builds are unaffected.
 - **App keeps loading old native code** after swapping libraries: hooks cache —
   run `flutter clean` in the app.
 - **Model fails to load in a custom build**: check the build actually enables the
@@ -469,11 +508,11 @@ docs(readme): update installation instructions
 
 If modifying the FFI layer:
 
-1. **Update** C/C++ code in `native/src/`
-2. **Update** header files in `native/src/executorch_ffi.h`
+1. **Update** C/C++ code in `packages/executorch_dart/native/src/`
+2. **Update** header files in `packages/executorch_dart/native/src/executorch_ffi.h`
 3. **Regenerate** FFI bindings:
    ```bash
-   dart run ffigen
+   cd packages/executorch_dart && dart run ffigen
    ```
 4. **Test** changes using integration tests (see below)
 
@@ -482,7 +521,7 @@ If modifying the FFI layer:
 After making changes, run the integration tests:
 
 ```bash
-cd example
+cd packages/executorch_flutter/example
 flutter test integration_test/models_integration_test.dart -d macos   # macOS
 flutter test integration_test/models_integration_test.dart -d ios     # iOS
 flutter test integration_test/models_integration_test.dart -d android # Android

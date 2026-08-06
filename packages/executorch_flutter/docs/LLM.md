@@ -93,7 +93,7 @@ The LLM runner + MLX backend are shipped as **dedicated prebuilt variants**
 ```yaml
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       llm: true
       backends:
         - xnnpack          # CPU LLM — all platforms

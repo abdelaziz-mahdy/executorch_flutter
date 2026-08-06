@@ -1,0 +1,15 @@
+# Workspace-root analysis config.
+#
+# Each package under packages/ has its own analysis_options.yaml, which
+# governs the files inside it (the analyzer resolves the nearest enclosing
+# options file, so this one does not loosen or override either package's
+# rules). This file's only job is what it does for files that belong to
+# *neither* package: a workspace-wide `flutter analyze` / `dart analyze` run
+# from the repo root also walks `specs/` — pre-split, exploratory design
+# contracts (some reference a `pigeon`-based API that predates the dart:ffi
+# approach this repo actually ships) that were never part of a pub package
+# and were never meant to be analyzed. Without this exclude, those stray
+# files surface as unrelated analyzer errors in an otherwise-clean run.
+analyzer:
+  exclude:
+    - specs/**

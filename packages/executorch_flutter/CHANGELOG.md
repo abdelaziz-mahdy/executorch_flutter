@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.6.0
+
+### Breaking
+
+- The native build configuration key moved from `executorch_flutter` to
+  `executorch_dart`. Rename it under `hooks: user_defines:` in your
+  `pubspec.yaml` or the build silently falls back to defaults — the package
+  now fails the build with instructions when it finds the old key.
+- `ExecuTorchModel.loadFromAsset(...)` is now the top-level
+  `loadModelFromAsset(...)`. Run `dart fix --apply` to migrate.
+  `manager.loadModelFromAssets(...)` is unchanged.
+
+### Added
+
+- A pure-Dart core, `executorch_dart`, so Dart servers and command-line
+  programs can run ExecuTorch models without a Flutter SDK
+  ([#42](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/42)).
+  `executorch_flutter` is now a thin wrapper over it and keeps asset loading,
+  web, and every platform it supported before.
+
 ## 0.5.0
 
 First stable release of the 0.5.x line (supersedes 0.5.0-rc.1 … rc.4).

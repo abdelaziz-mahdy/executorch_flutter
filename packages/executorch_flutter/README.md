@@ -35,6 +35,11 @@ A Flutter plugin for on-device ML inference using PyTorch ExecuTorch, supporting
 
 ExecuTorch Flutter provides a simple Dart API for loading and running ExecuTorch models (`.pte` files) in your Flutter applications. The package handles all native platform integration, providing you with a straightforward interface for on-device machine learning inference.
 
+Writing a Dart server or command-line tool instead — no Flutter SDK involved?
+Use **[`executorch_dart`](https://pub.dev/packages/executorch_dart)** directly;
+this package is a thin wrapper over it that adds Flutter asset-bundle loading
+and Web support.
+
 ## Features
 
 - **Cross-Platform**: Android (API 23+), iOS (13.0+), macOS (11.0+), Windows, Linux, and Web
@@ -76,7 +81,7 @@ dependencies:
 import 'package:executorch_flutter/executorch_flutter.dart';
 
 // Load from Flutter assets (recommended - works on all platforms)
-final model = await ExecuTorchModel.loadFromAsset('assets/models/model.pte');
+final model = await loadModelFromAsset('assets/models/model.pte');
 ```
 
 ### 2. Run Inference
@@ -105,9 +110,13 @@ await model.dispose();
 
 | Method | Platforms | Use Case |
 |--------|-----------|----------|
-| `loadFromAsset(path)` | All (including web) | Bundled assets |
-| `loadFromBytes(bytes)` | All (including web) | Downloaded/cached models |
-| `load(filePath)` | Native only | External file paths |
+| `loadModelFromAsset(path)` | All (including web) | Bundled assets |
+| `ExecuTorchModel.loadFromBytes(bytes)` | All (including web) | Downloaded/cached models |
+| `ExecuTorchModel.load(filePath)` | Native only | External file paths |
+
+`loadModelFromAsset` is a top-level function, not a static method on
+`ExecuTorchModel` — this is what changed in 0.6.0 (see
+[CHANGELOG.md](CHANGELOG.md)).
 
 ```dart
 // From bytes
@@ -165,8 +174,10 @@ flutter clean && flutter pub get && flutter build <platform>
 ### ExecuTorchModel
 
 ```dart
-// Load methods
-static Future<ExecuTorchModel> loadFromAsset(String assetPath)
+// Top-level loader — Flutter asset bundle, all platforms including web
+Future<ExecuTorchModel> loadModelFromAsset(String assetPath)
+
+// ExecuTorchModel static factories
 static Future<ExecuTorchModel> loadFromBytes(Uint8List modelBytes)
 static Future<ExecuTorchModel> load(String filePath)  // Native only
 
@@ -176,7 +187,12 @@ Future<List<TensorData>> forward(List<TensorData> inputs)
 // Lifecycle
 Future<void> dispose()
 bool get isDisposed
+String get modelId
 ```
+
+`ExecutorchManager.instance` also has `loadModelFromAssets(assetPath)` — an
+extension method that does the same thing but caches the model in the
+manager, like its `loadModel`/`loadModelFromBytes` counterparts.
 
 ### ExecuTorchLLM (experimental)
 
@@ -220,7 +236,7 @@ await for (final piece in llm.generate(prompt,
 await llm.dispose();
 ```
 
-Enable it in `pubspec.yaml` (`hooks.user_defines.executorch_flutter`):
+Enable it in `pubspec.yaml` (`hooks.user_defines.executorch_dart`):
 
 ```yaml
 llm: true
@@ -272,9 +288,9 @@ Query available backends at runtime:
 ```dart
 // Check specific backend
 if (BackendQuery.isAvailable(Backend.coreml)) {
-  model = await ExecuTorchModel.loadFromAsset('assets/model_coreml.pte');
+  model = await loadModelFromAsset('assets/model_coreml.pte');
 } else {
-  model = await ExecuTorchModel.loadFromAsset('assets/model_xnnpack.pte');
+  model = await loadModelFromAsset('assets/model_xnnpack.pte');
 }
 
 // List all available backends
@@ -312,7 +328,7 @@ Configure the native build in your app's `pubspec.yaml`:
 ```yaml
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       debug: false              # Enable debug logging
       build_mode: "prebuilt"    # "prebuilt", "local", or "source"
       # prebuilt_version: "1.3.1.9"  # Optional: pin specific native version
@@ -326,6 +342,11 @@ hooks:
         - coreml
         - metal
 ```
+
+The key under `user_defines:` is the package that owns the native build —
+`executorch_dart`, even though you depend on `executorch_flutter`. This
+package used to own the build directly and read `executorch_flutter:` here;
+see the 0.6.0 entry in [CHANGELOG.md](CHANGELOG.md) if you're migrating.
 
 ### Options
 
@@ -474,7 +495,9 @@ See **[docs/LLM.md](docs/LLM.md)** for the full export recipe, the required
 <details>
 <summary><b>Inference returns error</b></summary>
 
-- Check `model.inputShapes` / `model.outputShapes`
+- Double-check the `shape:`/`dataType:` you pass match what the model was
+  exported with — `ExecuTorchModel` doesn't expose shape introspection, so
+  this has to come from the export script or the model's documentation
 - Ensure shapes match exactly (including batch dimension)
 - Verify the dtype matches what the model was exported with — a `data size
   mismatch` error means `data.length` != `elementCount * dataType.sizeInBytes`
@@ -488,7 +511,7 @@ See **[docs/LLM.md](docs/LLM.md)** for the full export recipe, the required
 The default `prebuilt` build mode downloads an already-compiled library, so
 local changes under `native/` are ignored. Use `build_mode: "source"` with
 `executorch_source:` pointing at a local ExecuTorch checkout. See
-[CONTRIBUTING.md](CONTRIBUTING.md#source-build-from-local-executorch-checkout).
+[CONTRIBUTING.md](../../CONTRIBUTING.md#source-build-from-local-executorch-checkout).
 </details>
 
 <details>
@@ -517,7 +540,7 @@ local changes under `native/` are ignored. Use `build_mode: "source"` with
 ```yaml
 hooks:
   user_defines:
-    executorch_flutter:
+    executorch_dart:
       backends:
         - xnnpack
         - vulkan
@@ -549,7 +572,7 @@ Some PowerVR devices may produce incorrect Vulkan results due to texture dimensi
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions welcome! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 
 ## Acknowledgments
 
@@ -563,7 +586,7 @@ MIT License - see [LICENSE](LICENSE).
 
 - [Official ExecuTorch Documentation](https://pytorch.org/executorch/stable/getting-started-architecture.html)
 - [Report Issues](https://github.com/abdelaziz-mahdy/executorch_flutter/issues)
-- [Roadmap](ROADMAP.md)
+- [Roadmap](../../ROADMAP.md)
 
 ---
 
