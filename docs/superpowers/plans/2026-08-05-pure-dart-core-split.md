@@ -678,9 +678,15 @@ extension ExecutorchManagerAssets on ExecutorchManager {
 
 Replace the exports at the bottom of `packages/executorch_flutter/lib/executorch_flutter.dart` — keep the existing file-level doc comment, but change the `loadFromAsset` line in its Quick Start example to `loadModelFromAsset`. The export block becomes:
 
+**`hide` does not prevent compilation.** `export X hide Y` still loads and compiles `X`. The core's public library unconditionally exports four `dart:ffi`-backed libraries, so a plain blanket export drags `dart:ffi` into every web compile and `flutter build web` fails. The blanket export must therefore be conditional too, resolving on web to a web-safe library the core provides:
+
 ```dart
 // Everything from the pure-Dart core except the names routed below.
+// On web this resolves to the core's ffi-free library — `hide` alone is not
+// enough, because the hidden library would still be compiled.
 export 'package:executorch_dart/executorch_dart.dart'
+    if (dart.library.js_interop) 'package:executorch_dart/executorch_dart_shared.dart'
+    if (dart.library.js) 'package:executorch_dart/executorch_dart_shared.dart'
     hide
         BackendQuery,
         ExecuTorchLLM,
@@ -795,9 +801,11 @@ Neither `dart test` nor `flutter test` accepts `--directory` — only `dart pub`
 
 Expected: `No issues found!`, tests pass, formatter reports nothing to change. If the formatter rewrites anything, stage it in this task's commit — an unformatted file is how the CI format check fails while local looks clean.
 
-- [ ] **Step 11: Rename the example's `user_defines` key, preserving every value**
+- [ ] **Step 11: Move the example's `user_defines` block to the workspace root, renaming the key**
 
-Task 2 moved the build hook to `executorch_dart`, so the example's block is now inert. Its settings are not decorative — they select the LLM prebuilt that the Gemma 4 chat screen depends on:
+**In a pub workspace, the hook runner reads `user_defines` only from the root pubspec.** A block in a member package's pubspec is silently ignored — hooks receive `{}`. Task 1's move therefore broke `user_defines` delivery for the example entirely, for `executorch_dart` and the unrelated `dartcv4` alike. Renaming the key in place would be a no-op.
+
+Move the whole `hooks:` block from `packages/executorch_flutter/example/pubspec.yaml` to the root `pubspec.yaml`, renaming only the key:
 
 ```yaml
 hooks:
@@ -808,11 +816,18 @@ hooks:
       backends:
         - xnnpack
         - mlx
+    dartcv4:
+      include_modules:
+        - imgproc
+        - imgcodecs
+        - videoio
 ```
 
-Change **only** the key. Keep `debug: true`, `llm: true`, both backends, and every explanatory comment in the block exactly as they are. Dropping `llm: true` silently builds a library without the LLM symbols, and the failure appears at runtime in the chat screen, not at build time.
+Keep `debug: true`, `llm: true`, both backends, the `dartcv4:` sibling, and every explanatory comment byte-for-byte. Dropping `llm: true` silently builds a library with no LLM symbols, and the failure appears at runtime in the chat screen, not at build time.
 
-Leave the sibling `dartcv4:` block untouched — it belongs to a different package.
+Verify by symbol count rather than by a successful build: after Step 12, the linked `executorch_ffi` binary must contain `_et_llm_*` symbols. A build that succeeds with zero of them is the exact silent failure this step exists to prevent.
+
+Note this affects only workspace members. A real consumer app is its own root package, so its `user_defines` work normally and the migration story in the CHANGELOG is unchanged.
 
 - [ ] **Step 12: Verify the example app still builds against the wrapper**
 
@@ -892,7 +907,9 @@ This hook produces no assets. It exists only to make a silent misconfiguration l
 
 - [ ] **Step 2: Verify the tripwire fires**
 
-Task 3 renamed the example's key to `executorch_dart:`. To test the tripwire, **temporarily** duplicate that block under the old key — do not edit or delete the real one:
+Task 3 moved the example's block to the **root** `pubspec.yaml` and renamed its key to `executorch_dart:`. Pub workspaces read `user_defines` only from the root pubspec, so the tripwire test must happen there too — a block added to a member pubspec is silently ignored and would make the tripwire look broken when it is not.
+
+In the **root** `pubspec.yaml`, **temporarily** duplicate the block under the old key — do not edit or delete the real one:
 
 ```yaml
 hooks:
@@ -915,16 +932,16 @@ Expected: the message `executorch_flutter no longer owns the native build.` and 
 
 - [ ] **Step 3: Remove the temporary block and confirm the build recovers**
 
-Delete the `executorch_flutter:` block you just added, leaving the real `executorch_dart:` block exactly as Task 3 left it — `debug: true`, `llm: true`, `backends: [xnnpack, mlx]`, comments intact.
+Delete the `executorch_flutter:` block you just added to the root `pubspec.yaml`, leaving the real `executorch_dart:` and `dartcv4:` blocks exactly as Task 3 left them — `debug: true`, `llm: true`, `backends: [xnnpack, mlx]`, comments intact.
 
 ```bash
-cd packages/executorch_flutter/example
 git diff pubspec.yaml
+cd packages/executorch_flutter/example
 flutter build macos --debug 2>&1 | tail -3
 cd ../../..
 ```
 
-Expected: `git diff` reports no changes to the file — you have restored it exactly — and the build succeeds with no tripwire message.
+Expected: `git diff` reports no changes to the root pubspec — you have restored it exactly — and the build succeeds with no tripwire message.
 
 - [ ] **Step 4: Commit**
 
@@ -1381,6 +1398,10 @@ The project-structure tree, the "Quick Start" commands, and the ExecuTorch versi
 - [ ] **Step 6: Update `CONTRIBUTING.md`**
 
 The build-modes section documents `hooks: user_defines: executorch_flutter:`. Change every occurrence to `executorch_dart:` and update the `native/local-builds/` paths to sit under `packages/executorch_dart/`.
+
+Add a note that pub workspaces read `user_defines` only from the **root** pubspec, so contributors working in this repo must put build configuration in the workspace root rather than in `packages/executorch_flutter/example/pubspec.yaml`. A block in a member pubspec is silently ignored — hooks receive `{}` and the build quietly falls back to defaults. Consumer applications are unaffected, since an app is its own root package.
+
+Also document the core's two public libraries: `package:executorch_dart/executorch_dart.dart` is the full native API, and `package:executorch_dart/executorch_dart_shared.dart` is the ffi-free subset that exists so the Flutter wrapper can compile for web. Application code should import the former; only the wrapper needs the latter.
 
 - [ ] **Step 7: Final verification**
 
