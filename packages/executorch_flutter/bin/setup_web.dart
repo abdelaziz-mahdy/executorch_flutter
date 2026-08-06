@@ -150,7 +150,8 @@ String? _findProjectRoot() {
 /// Find the package root
 String? _findPackageRoot() {
   // First, check if we're running from within the package itself
-  // Must match exactly "name: executorch_flutter" (not executorch_flutter_example)
+  // Must match exactly "name: executorch_flutter" (not
+  // executorch_flutter_example)
   final currentPubspec = File(
     _joinPath(Directory.current.path, 'pubspec.yaml'),
   );

@@ -169,9 +169,7 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
         );
 
       case TensorType.bool_:
-        return Uint8List.fromList(
-          data.map((e) => (e != 0 ? 1 : 0)).toList(),
-        );
+        return Uint8List.fromList(data.map((e) => (e != 0 ? 1 : 0)).toList());
 
       case TensorType.uint16:
         final uint16List = Uint16List.fromList(
@@ -314,7 +312,8 @@ abstract class ExecutorchManagerBase implements ExecutorchManager {
     // infinity); IEEE bit layout makes that carry arithmetic correct.
     var bits = sign16 | (exp16 << 10) | (mant32 >> 13);
     final remainder = mant32 & 0x1FFF;
-    final roundUp = remainder > 0x1000 ||
+    final roundUp =
+        remainder > 0x1000 ||
         (remainder == 0x1000 && ((mant32 >> 13) & 1) == 1);
     if (roundUp) {
       bits++;

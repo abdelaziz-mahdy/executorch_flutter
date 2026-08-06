@@ -6,8 +6,8 @@
 
 - The native build configuration key moved from `executorch_flutter` to
   `executorch_dart`. Rename it under `hooks: user_defines:` in your
-  `pubspec.yaml` or the build silently falls back to defaults — the package
-  now fails the build with instructions when it finds the old key.
+  `pubspec.yaml` — the package fails the build with rename instructions if it
+  finds the old key there, rather than silently falling back to defaults.
 - `ExecuTorchModel.loadFromAsset(...)` is now the top-level
   `loadModelFromAsset(...)`. Run `dart fix --apply` to migrate.
   `manager.loadModelFromAssets(...)` is unchanged.

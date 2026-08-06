@@ -17,9 +17,7 @@ import '' as self;
 
 /// Free a token string handed to an ETTokenCallback. Safe to call with NULL.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
-external void et_llm_string_free(
-  ffi.Pointer<ffi.Char> token,
-);
+external void et_llm_string_free(ffi.Pointer<ffi.Char> token);
 
 /// Create a runner from a model file and a tokenizer file.
 ///
@@ -34,11 +32,13 @@ external void et_llm_string_free(
 /// @param out            Out-param; on success receives a non-NULL ETLLMRunner*.
 /// @return ETStatus*     code==ET_OK on success; otherwise an error. Caller frees.
 @ffi.Native<
-    ffi.Pointer<imp$1.ETStatus> Function(
-        ffi.Pointer<ffi.Char>,
-        ffi.Pointer<ffi.Char>,
-        ffi.Pointer<ffi.Char>,
-        ffi.Pointer<ffi.Pointer<ETLLMRunner>>)>()
+  ffi.Pointer<imp$1.ETStatus> Function(
+    ffi.Pointer<ffi.Char>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Pointer<ffi.Pointer<ETLLMRunner>>,
+  )
+>()
 external ffi.Pointer<imp$1.ETStatus> et_llm_runner_create(
   ffi.Pointer<ffi.Char> model_path,
   ffi.Pointer<ffi.Char> tokenizer_path,
@@ -55,16 +55,12 @@ external ffi.Pointer<imp$1.ETStatus> et_llm_runner_load(
 
 /// @return 1 if the runner has loaded its model, 0 otherwise (0 if runner is NULL).
 @ffi.Native<ffi.Int32 Function(ffi.Pointer<ETLLMRunner>)>(isLeaf: true)
-external int et_llm_is_loaded(
-  ffi.Pointer<ETLLMRunner> runner,
-);
+external int et_llm_is_loaded(ffi.Pointer<ETLLMRunner> runner);
 
 /// Free the runner and all owned resources. Safe to call with NULL.
 /// Do not call concurrently with an in-flight generate on the same runner.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ETLLMRunner>)>()
-external void et_llm_runner_free(
-  ffi.Pointer<ETLLMRunner> runner,
-);
+external void et_llm_runner_free(ffi.Pointer<ETLLMRunner> runner);
 
 /// Synchronous streaming generation. Invokes `token_cb` for each generated UTF-8
 /// piece on the CALLING thread, returning when generation finishes (EOS / token
@@ -72,12 +68,14 @@ external void et_llm_runner_free(
 ///
 /// @return ETStatus* code==ET_OK on success; otherwise an error. Caller frees.
 @ffi.Native<
-    ffi.Pointer<imp$1.ETStatus> Function(
-        ffi.Pointer<ETLLMRunner>,
-        ffi.Pointer<ffi.Char>,
-        ffi.Pointer<ETGenConfig>,
-        ETTokenCallback,
-        ffi.Pointer<ffi.Void>)>()
+  ffi.Pointer<imp$1.ETStatus> Function(
+    ffi.Pointer<ETLLMRunner>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Pointer<ETGenConfig>,
+    ETTokenCallback,
+    ffi.Pointer<ffi.Void>,
+  )
+>()
 external ffi.Pointer<imp$1.ETStatus> et_llm_generate(
   ffi.Pointer<ETLLMRunner> runner,
   ffi.Pointer<ffi.Char> prompt,
@@ -95,13 +93,15 @@ external ffi.Pointer<imp$1.ETStatus> et_llm_generate(
 /// @param token_user_data Passed through to every token_cb invocation.
 /// @param done_cb         Completion callback; receives ETStatus* as its void* argument.
 @ffi.Native<
-    ffi.Void Function(
-        ffi.Pointer<ETLLMRunner>,
-        ffi.Pointer<ffi.Char>,
-        ffi.Pointer<ETGenConfig>,
-        ETTokenCallback,
-        ffi.Pointer<ffi.Void>,
-        imp$1.ETCallback_1)>()
+  ffi.Void Function(
+    ffi.Pointer<ETLLMRunner>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Pointer<ETGenConfig>,
+    ETTokenCallback,
+    ffi.Pointer<ffi.Void>,
+    imp$1.ETCallback_1,
+  )
+>()
 external void et_llm_generate_async(
   ffi.Pointer<ETLLMRunner> runner,
   ffi.Pointer<ffi.Char> prompt,
@@ -114,16 +114,12 @@ external void et_llm_generate_async(
 /// Cooperatively stop an in-flight generation. Safe to call from a different thread
 /// than the one running generate(). No-op if nothing is generating.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ETLLMRunner>)>()
-external void et_llm_stop(
-  ffi.Pointer<ETLLMRunner> runner,
-);
+external void et_llm_stop(ffi.Pointer<ETLLMRunner> runner);
 
 /// Clear the KV cache and reset the conversation start position (begin a fresh
 /// conversation). Do not call during an in-flight generation.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ETLLMRunner>)>()
-external void et_llm_reset(
-  ffi.Pointer<ETLLMRunner> runner,
-);
+external void et_llm_reset(ffi.Pointer<ETLLMRunner> runner);
 
 /// Set the absolute path to the MLX Metal kernel library (mlx.metallib).
 ///
@@ -139,16 +135,14 @@ external void et_llm_reset(
 /// Thread-safety: sets a process environment variable; call once at startup or
 /// before et_llm_runner_create, not concurrently with generation.
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
-external void et_llm_set_metallib_path(
-  ffi.Pointer<ffi.Char> path,
-);
+external void et_llm_set_metallib_path(ffi.Pointer<ffi.Char> path);
 
 const addresses = _SymbolAddresses();
 
 class _SymbolAddresses {
   const _SymbolAddresses();
   ffi.Pointer<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ETLLMRunner>)>>
-      get et_llm_runner_free => ffi.Native.addressOf(self.et_llm_runner_free);
+  get et_llm_runner_free => ffi.Native.addressOf(self.et_llm_runner_free);
 }
 
 final class ETLLMRunner extends ffi.Opaque {}
@@ -196,7 +190,12 @@ final class ETGenConfig extends ffi.Struct {
 /// pointer — is required so the string survives the asynchronous hop
 /// to the Dart isolate via NativeCallable.listener.)
 /// @param user_data Opaque pointer passed through from the generate call.
-typedef ETTokenCallback = ffi.Pointer<
-    ffi.NativeFunction<
+typedef ETTokenCallback =
+    ffi.Pointer<
+      ffi.NativeFunction<
         ffi.Void Function(
-            ffi.Pointer<ffi.Char> token, ffi.Pointer<ffi.Void> user_data)>>;
+          ffi.Pointer<ffi.Char> token,
+          ffi.Pointer<ffi.Void> user_data,
+        )
+      >
+    >;

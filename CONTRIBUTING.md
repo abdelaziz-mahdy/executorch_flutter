@@ -32,7 +32,8 @@ Thank you for your interest in contributing to ExecuTorch Flutter! This guide wi
 ### Prerequisites
 
 - Flutter SDK 3.38+ (first version with native assets hooks)
-- Dart SDK 3.0.0 or later
+- Dart SDK 3.10.0 or later (required by `native_toolchain_cmake`, a direct
+  dependency of `executorch_dart`)
 - **Android Development**:
   - Android Studio with SDK API 23+
   - NDK for native development

@@ -35,7 +35,7 @@ cd packages/executorch_dart && dart run ffigen
 
 ## Current Development Status
 
-- **Status**: both packages published on pub.dev; releases are cut by tagging `v<version>` (CI publishes `executorch_dart` before `executorch_flutter`)
+- **Status**: `executorch_flutter` is published on pub.dev; `executorch_dart` is new and has not been published yet (0.6.0 is its first release). Once tagged, both release together — CI publishes `executorch_dart` before `executorch_flutter`; see "Version Sources of Truth" below
 - **API**: vision inference via `ExecuTorchModel` (`load`/`forward`/`dispose`) plus experimental
   streaming LLM via `ExecuTorchLLM` (see `packages/executorch_flutter/docs/LLM.md`)
 - **Code Quality**: `flutter analyze` and `dart format --set-exit-if-changed` (both packages' `lib/`) must be clean
@@ -221,7 +221,10 @@ The `packages/executorch_dart/native/` directory contains the C/C++ FFI library 
 
 **Key files:**
 - `scripts/build-android.sh` - Builds all Android ABIs (arm64-v8a, armeabi-v7a, x86_64, x86)
-- `scripts/build-apple.sh` - Builds iOS/macOS variants
+- `scripts/build-ios.sh` - Builds iOS variants
+- `scripts/build-macos.sh` - Builds macOS variants
+- `scripts/build-windows.ps1` - Builds Windows (PowerShell, not a shell script)
+- `scripts/build-linux.sh` - Builds Linux variants
 - `cmake/download_prebuilt.cmake` - Downloads pre-built binaries from GitHub Releases
 - `CMakeLists.txt` - Main build configuration
 
@@ -541,7 +544,7 @@ The example app includes GPU-accelerated preprocessing using **Flutter Fragment 
 
 **Key files:**
 - `packages/executorch_flutter/example/shaders/*.frag` - GLSL shaders for letterbox/crop/normalize
-- `packages/executorch_flutter/example/lib/processors/gpu_*.dart` - GPU preprocessor implementations
+- `packages/executorch_flutter/example/lib/processors/shaders/gpu_*.dart` - GPU preprocessor implementations
 
 **Key patterns:**
 - Use `ui.decodeImageFromList()` for hardware-accelerated decode
@@ -689,7 +692,10 @@ the "ExecuTorch Version Upgrade Procedure" above). For each package:
 (`packages/executorch_dart/.pubignore`, `packages/executorch_flutter/.pubignore`):
 - `CLAUDE.md` (AI agent context) — both packages; the wrapper also excludes
   `example/CLAUDE.md`, the core also excludes `native/CLAUDE.md`
-- Build artifacts (`/build/`, `.dart_tool/`, `.flutter-plugins*`) — both packages
+- Build artifacts (`/build/`, `.dart_tool/`) — both packages; the wrapper
+  additionally excludes Flutter-specific artifacts (`.flutter-plugins*`,
+  `.packages`, `example/build/`, `example/.dart_tool/`,
+  `example/.flutter-plugins*`) that don't exist for the pure-Dart core
 - `tmp/` (temporary files) — both packages
 - Large example assets the wrapper's example downloads instead of bundling
   (`example/assets/models/*.pte`, `example/assets/images/*.jpg`)
@@ -786,7 +792,7 @@ run`). `packages/executorch_flutter` inherits this by depending on the core;
 it registers no native build of its own.
 
 - **All platforms**: Unified C/C++ FFI library for ExecuTorch integration
-- **Build System**: CMake-based compilation via native assets hooks (Dart 3.6+ / Flutter 3.38+)
+- **Build System**: CMake-based compilation via native assets hooks (Dart 3.10+ / Flutter 3.38+)
 - **Pre-built binaries**: Available from GitHub Releases for faster builds
 - **Source builds**: Optional for custom ExecuTorch configurations
 

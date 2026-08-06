@@ -125,7 +125,8 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   _printBuildHeader(logger, targetOS, targetArch);
 
   // Determine build mode
-  final buildMode = Platform.environment['EXECUTORCH_BUILD_MODE'] ??
+  final buildMode =
+      Platform.environment['EXECUTORCH_BUILD_MODE'] ??
       userDefines['build_mode'] as String? ??
       _defaultBuildMode;
 
@@ -140,7 +141,8 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   // (xnnpack-llm on every platform, xnnpack-mlx-llm on macOS arm64), so this
   // works in prebuilt mode as well as source/local.
   final llmDefine = userDefines['llm'];
-  final llmEnabled = _isTruthy(Platform.environment['EXECUTORCH_BUILD_LLM']) ||
+  final llmEnabled =
+      _isTruthy(Platform.environment['EXECUTORCH_BUILD_LLM']) ||
       llmDefine == true ||
       (llmDefine is String && _isTruthy(llmDefine));
   if (llmEnabled) {
@@ -150,7 +152,8 @@ Future<void> runBuild(BuildInput input, BuildOutputBuilder output) async {
   // Resolve local library directory for local mode
   String? localLibDir;
   if (isLocalBuild) {
-    localLibDir = Platform.environment['EXECUTORCH_INSTALL_DIR'] ??
+    localLibDir =
+        Platform.environment['EXECUTORCH_INSTALL_DIR'] ??
         userDefines['local_lib_dir'] as String?;
 
     // Auto-detect: look in native/local-builds/ for matching build
@@ -213,15 +216,14 @@ Run compile-local.sh to build, or check your path.
 ''');
     }
 
-    logger.info(
-      '[executorch_dart] Local library dir: $localLibDir\n',
-    );
+    logger.info('[executorch_dart] Local library dir: $localLibDir\n');
   }
 
   // Resolve ExecuTorch source directory for source mode
   String? executorchSourceDir;
   if (isSourceBuild) {
-    executorchSourceDir = Platform.environment['EXECUTORCH_SOURCE_DIR'] ??
+    executorchSourceDir =
+        Platform.environment['EXECUTORCH_SOURCE_DIR'] ??
         userDefines['executorch_source'] as String?;
 
     if (executorchSourceDir != null && executorchSourceDir.isNotEmpty) {
@@ -252,9 +254,7 @@ Please verify the path to your local ExecuTorch checkout.
   // Step 1: Python dependencies (only for source builds)
   String? pythonExecutable;
   if (isSourceBuild) {
-    logger.info(
-      '\n[executorch_dart] Step 1/5: Checking Python dependencies\n',
-    );
+    logger.info('\n[executorch_dart] Step 1/5: Checking Python dependencies\n');
     final pythonInfo = await _verifyPythonDependencies(logger);
     pythonExecutable = pythonInfo.executable;
   } else {
@@ -302,10 +302,10 @@ Please verify the path to your local ExecuTorch checkout.
     OS.windows => Generator.defaultGenerator,
     OS.android => Generator.ninja,
     _ => throw ArgumentError.value(
-        targetOS,
-        'targetOS',
-        'Unsupported target OS',
-      ),
+      targetOS,
+      'targetOS',
+      'Unsupported target OS',
+    ),
   };
   logger.info('[executorch_dart]   Generator: ${generator.name}\n');
 
@@ -360,12 +360,14 @@ Please verify the path to your local ExecuTorch checkout.
       // CMake FATAL_ERRORs below that), so bump the macOS target when the mlx
       // backend is enabled — the app's macOS deployment target must match.
       if (targetOS == OS.macOS)
-        'CMAKE_OSX_DEPLOYMENT_TARGET':
-            backendDefines['ET_BUILD_MLX'] == 'ON' ? '14.0' : '11.0',
+        'CMAKE_OSX_DEPLOYMENT_TARGET': backendDefines['ET_BUILD_MLX'] == 'ON'
+            ? '14.0'
+            : '11.0',
       if (targetOS == OS.iOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '13.0',
       // Install prefix
-      'CMAKE_INSTALL_PREFIX':
-          input.outputDirectory.resolve('install/').toFilePath(),
+      'CMAKE_INSTALL_PREFIX': input.outputDirectory
+          .resolve('install/')
+          .toFilePath(),
       // Backend defines
       ...backendDefines,
       // LLM (text generation) runner — opt-in
@@ -388,9 +390,7 @@ Please verify the path to your local ExecuTorch checkout.
         '[executorch_dart] Step 4/5: Using local pre-built '
         'binaries\n',
       )
-      ..info(
-        '[executorch_dart]   Local directory: $localLibDir\n',
-      );
+      ..info('[executorch_dart]   Local directory: $localLibDir\n');
   } else {
     logger
       ..info(
@@ -476,7 +476,8 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   // build only produces a macos-arm64-xnnpack-mlx-llm prebuilt; gating here on
   // arm64 too keeps the prebuilt-variant selection from requesting a
   // macos-x86_64-xnnpack-mlx-llm that doesn't exist (404 on Intel Macs).
-  final supportsMlx = targetOS == OS.macOS &&
+  final supportsMlx =
+      targetOS == OS.macOS &&
       input.config.code.targetArchitecture == Architecture.arm64;
   // Vulkan available on all native platforms (native assets don't run for web)
   // Note: On Apple platforms, Vulkan via MoltenVK may crash - use at own risk
@@ -561,12 +562,9 @@ Future<_PythonInfo> _verifyPythonDependencies(Logger logger) async {
 
   for (final name in pythonNames) {
     try {
-      final result = await Process.run(
-          name,
-          [
-            '--version',
-          ],
-          runInShell: Platform.isWindows);
+      final result = await Process.run(name, [
+        '--version',
+      ], runInShell: Platform.isWindows);
       if (result.exitCode == 0) {
         pythonExecutable = name;
         final output = (result.stdout as String).trim();
@@ -626,13 +624,10 @@ Please upgrade Python or use pre-built mode.
   // Check for pyyaml
   String? pyyamlVersion;
   try {
-    final result = await Process.run(
-        pythonExecutable,
-        [
-          '-c',
-          'import yaml; print(yaml.__version__)',
-        ],
-        runInShell: Platform.isWindows);
+    final result = await Process.run(pythonExecutable, [
+      '-c',
+      'import yaml; print(yaml.__version__)',
+    ], runInShell: Platform.isWindows);
     if (result.exitCode == 0) {
       pyyamlVersion = (result.stdout as String).trim();
     }
@@ -644,29 +639,21 @@ Please upgrade Python or use pre-built mode.
     // Try to install pyyaml automatically
     logger.info('[executorch_dart]   pyyaml not found, installing...\n');
     try {
-      final installResult = await Process.run(
-          pythonExecutable,
-          [
-            '-m',
-            'pip',
-            'install',
-            '--user',
-            'pyyaml',
-          ],
-          runInShell: Platform.isWindows);
+      final installResult = await Process.run(pythonExecutable, [
+        '-m',
+        'pip',
+        'install',
+        '--user',
+        'pyyaml',
+      ], runInShell: Platform.isWindows);
       if (installResult.exitCode == 0) {
-        final verifyResult = await Process.run(
-            pythonExecutable,
-            [
-              '-c',
-              'import yaml; print(yaml.__version__)',
-            ],
-            runInShell: Platform.isWindows);
+        final verifyResult = await Process.run(pythonExecutable, [
+          '-c',
+          'import yaml; print(yaml.__version__)',
+        ], runInShell: Platform.isWindows);
         if (verifyResult.exitCode == 0) {
           pyyamlVersion = (verifyResult.stdout as String).trim();
-          logger.info(
-            '[executorch_dart]   pyyaml installed: $pyyamlVersion\n',
-          );
+          logger.info('[executorch_dart]   pyyaml installed: $pyyamlVersion\n');
         }
       }
     } catch (_) {
@@ -716,9 +703,7 @@ void _logBackendConfiguration(Logger logger, Map<String, String?> defines) {
   }
 
   if (enabledBackends.isNotEmpty) {
-    logger.info(
-      '[executorch_dart]   Enabled: ${enabledBackends.join(", ")}\n',
-    );
+    logger.info('[executorch_dart]   Enabled: ${enabledBackends.join(", ")}\n');
   }
   if (disabledBackends.isNotEmpty) {
     logger.info(
@@ -882,9 +867,7 @@ Future<void> _addBuildDependencies(
   }
 
   // Only add files that actually exist on disk.
-  final existing = dependencies.where(
-    (uri) => File.fromUri(uri).existsSync(),
-  );
+  final existing = dependencies.where((uri) => File.fromUri(uri).existsSync());
   output.dependencies.addAll(existing);
 }
 
@@ -900,13 +883,13 @@ void _printBuildSuccess(Logger logger) {
 
 /// Convert OS enum to platform name used in local-builds directory.
 String _osToPlatformName(OS os) => switch (os) {
-      OS.android => 'android',
-      OS.iOS => 'ios',
-      OS.macOS => 'macos',
-      OS.linux => 'linux',
-      OS.windows => 'windows',
-      _ => os.name,
-    };
+  OS.android => 'android',
+  OS.iOS => 'ios',
+  OS.macOS => 'macos',
+  OS.linux => 'linux',
+  OS.windows => 'windows',
+  _ => os.name,
+};
 
 /// Convert Architecture to the name used in local-builds directory.
 String _archToBuildName(OS os, Architecture? arch) {
@@ -940,9 +923,7 @@ String? _autoDetectLocalBuild(
   bool debugMode,
   Logger logger,
 ) {
-  final localBuildsDir = Directory(
-    '$packagePath/native/local-builds',
-  );
+  final localBuildsDir = Directory('$packagePath/native/local-builds');
   if (!localBuildsDir.existsSync()) return null;
 
   final platform = _osToPlatformName(targetOS);
@@ -962,13 +943,9 @@ String? _autoDetectLocalBuild(
 
   // Try exact match first: platform-arch-variant-buildtype
   final exactMatch = '$platform-$arch-$variant-$buildType';
-  final exactDir = Directory(
-    '${localBuildsDir.path}/$exactMatch',
-  );
+  final exactDir = Directory('${localBuildsDir.path}/$exactMatch');
   if (exactDir.existsSync() && Directory('${exactDir.path}/lib').existsSync()) {
-    logger.info(
-      '[executorch_dart]   Auto-detected: $exactMatch\n',
-    );
+    logger.info('[executorch_dart]   Auto-detected: $exactMatch\n');
     return exactDir.path;
   }
 
@@ -980,9 +957,7 @@ String? _autoDetectLocalBuild(
       final name = entity.uri.pathSegments.where((s) => s.isNotEmpty).last;
       if (name.startsWith(prefix) &&
           Directory('${entity.path}/lib').existsSync()) {
-        logger.info(
-          '[executorch_dart]   Auto-detected: $name\n',
-        );
+        logger.info('[executorch_dart]   Auto-detected: $name\n');
         return entity.path;
       }
     }

@@ -6,7 +6,8 @@ import 'dart:typed_data';
 
 import 'executorch_errors.dart';
 import 'executorch_model_unsupported_stub.dart'
-    if (dart.library.ffi) 'executorch_model_ffi_stub.dart' as stub;
+    if (dart.library.ffi) 'executorch_model_ffi_stub.dart'
+    as stub;
 import 'types.dart';
 
 /// High-level wrapper for an ExecuTorch model instance

@@ -8,7 +8,6 @@
 // Run with:
 //   flutter test integration_test/dispose_race_test.dart -d macos
 
-import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';

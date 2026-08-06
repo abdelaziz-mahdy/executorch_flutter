@@ -57,14 +57,13 @@ class GenConfig {
     bool? ignoreEos,
     int? numBos,
     int? numEos,
-  }) =>
-      GenConfig(
-        maxNewTokens: maxNewTokens ?? this.maxNewTokens,
-        seqLen: seqLen ?? this.seqLen,
-        temperature: temperature ?? this.temperature,
-        echo: echo ?? this.echo,
-        ignoreEos: ignoreEos ?? this.ignoreEos,
-        numBos: numBos ?? this.numBos,
-        numEos: numEos ?? this.numEos,
-      );
+  }) => GenConfig(
+    maxNewTokens: maxNewTokens ?? this.maxNewTokens,
+    seqLen: seqLen ?? this.seqLen,
+    temperature: temperature ?? this.temperature,
+    echo: echo ?? this.echo,
+    ignoreEos: ignoreEos ?? this.ignoreEos,
+    numBos: numBos ?? this.numBos,
+    numEos: numEos ?? this.numEos,
+  );
 }

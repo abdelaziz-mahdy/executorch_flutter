@@ -152,8 +152,9 @@ class ExecuTorchModel implements core.ExecuTorchModel {
       tensors
           .map(
             (tensor) => js.TensorData(
-              shape: tensor.shape.map((dim) => (dim ?? 0).toJS).toList().jsify()
-                  as JSArray<JSNumber>,
+              shape:
+                  tensor.shape.map((dim) => (dim ?? 0).toJS).toList().jsify()
+                      as JSArray<JSNumber>,
               dataType: _tensorTypeToString(tensor.dataType),
               data: tensor.data.toJSUint8Array(),
               name: tensor.name,
@@ -179,41 +180,39 @@ class ExecuTorchModel implements core.ExecuTorchModel {
 
   /// Convert TensorType enum to string for JavaScript.
   String _tensorTypeToString(core.TensorType type) => switch (type) {
-        core.TensorType.float32 => 'float32',
-        core.TensorType.float64 => 'float64',
-        core.TensorType.int64 => 'int64',
-        core.TensorType.int32 => 'int32',
-        core.TensorType.int16 => 'int16',
-        core.TensorType.int8 => 'int8',
-        core.TensorType.uint8 => 'uint8',
-        core.TensorType.bool_ => 'bool',
-        core.TensorType.uint16 => 'uint16',
-        core.TensorType.uint32 => 'uint32',
-        core.TensorType.uint64 => 'uint64',
-        core.TensorType.float16 => 'float16',
-        core.TensorType.bfloat16 => 'bfloat16',
-      };
+    core.TensorType.float32 => 'float32',
+    core.TensorType.float64 => 'float64',
+    core.TensorType.int64 => 'int64',
+    core.TensorType.int32 => 'int32',
+    core.TensorType.int16 => 'int16',
+    core.TensorType.int8 => 'int8',
+    core.TensorType.uint8 => 'uint8',
+    core.TensorType.bool_ => 'bool',
+    core.TensorType.uint16 => 'uint16',
+    core.TensorType.uint32 => 'uint32',
+    core.TensorType.uint64 => 'uint64',
+    core.TensorType.float16 => 'float16',
+    core.TensorType.bfloat16 => 'bfloat16',
+  };
 
   /// Convert string from JavaScript to TensorType enum.
   ///
   /// Throws [core.ExecuTorchValidationException] if the type string is
   /// unrecognized.
   core.TensorType _stringToTensorType(String type) => switch (type) {
-        'float32' => core.TensorType.float32,
-        'float64' => core.TensorType.float64,
-        'int64' => core.TensorType.int64,
-        'int32' => core.TensorType.int32,
-        'int16' => core.TensorType.int16,
-        'int8' => core.TensorType.int8,
-        'uint8' => core.TensorType.uint8,
-        'bool' => core.TensorType.bool_,
-        'uint16' => core.TensorType.uint16,
-        'uint32' => core.TensorType.uint32,
-        'uint64' => core.TensorType.uint64,
-        'float16' => core.TensorType.float16,
-        'bfloat16' => core.TensorType.bfloat16,
-        _ => throw core.ExecuTorchValidationException(
-            'Unknown tensor type: $type',
-          ),
-      };
+    'float32' => core.TensorType.float32,
+    'float64' => core.TensorType.float64,
+    'int64' => core.TensorType.int64,
+    'int32' => core.TensorType.int32,
+    'int16' => core.TensorType.int16,
+    'int8' => core.TensorType.int8,
+    'uint8' => core.TensorType.uint8,
+    'bool' => core.TensorType.bool_,
+    'uint16' => core.TensorType.uint16,
+    'uint32' => core.TensorType.uint32,
+    'uint64' => core.TensorType.uint64,
+    'float16' => core.TensorType.float16,
+    'bfloat16' => core.TensorType.bfloat16,
+    _ => throw core.ExecuTorchValidationException('Unknown tensor type: $type'),
+  };
 }

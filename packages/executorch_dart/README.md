@@ -45,10 +45,12 @@ Dart server.
 
 ## Installation
 
-**Requirements:** Dart SDK 3.6+ with native assets support. `dart run`,
+**Requirements:** Dart SDK 3.10+ with native assets support. `dart run`,
 `dart test`, and `dart build` all invoke this package's build hook
 automatically — there's nothing to compile by hand.
 
+<!-- Not auto-updated by CI (update-readme.yml only rewrites
+     packages/executorch_flutter/README.md) — bump this by hand on release. -->
 ```yaml
 dependencies:
   executorch_dart: ^0.6.0
@@ -226,6 +228,8 @@ hook. Configure it under `hooks: user_defines: executorch_dart:` in **your
 application's** `pubspec.yaml` — the package that will actually run, not a
 library you merely depend on:
 
+<!-- The prebuilt_version below is not auto-updated by CI — bump it by hand
+     on release, alongside _defaultPrebuiltVersion in run_build.dart. -->
 ```yaml
 hooks:
   user_defines:

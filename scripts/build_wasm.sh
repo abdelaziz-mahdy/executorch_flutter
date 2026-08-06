@@ -14,7 +14,11 @@ NC='\033[0m' # No Color
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-WEB_WASM_DIR="${PACKAGE_ROOT}/web/wasm"
+# The wrapper package's web/wasm/ output dir. Dockerfile.wasm and this
+# script itself stay at the repo root (PACKAGE_ROOT), but the Flutter
+# wrapper — the only package with a web target — moved to packages/
+# executorch_flutter/ in the pure-Dart core split, and so did its output dir.
+WEB_WASM_DIR="${PACKAGE_ROOT}/packages/executorch_flutter/web/wasm"
 
 echo -e "${BLUE}========================================"
 echo "ExecuTorch Wasm Build Script"
@@ -199,14 +203,14 @@ echo "========================================${NC}"
 # Copy files to example project directly (avoid dart run which triggers native build hooks)
 echo ""
 echo -e "${BLUE}Setting up web files for example project...${NC}"
-EXAMPLE_WASM_DIR="${PACKAGE_ROOT}/example/web/wasm"
+EXAMPLE_WASM_DIR="${PACKAGE_ROOT}/packages/executorch_flutter/example/web/wasm"
 mkdir -p "${EXAMPLE_WASM_DIR}"
 cp "${WEB_WASM_DIR}/executorch.js" "${EXAMPLE_WASM_DIR}/"
 cp "${WEB_WASM_DIR}/executorch.wasm" "${EXAMPLE_WASM_DIR}/"
-echo -e "${GREEN}✅ Copied WASM files to example/web/wasm/${NC}"
+echo -e "${GREEN}✅ Copied WASM files to packages/executorch_flutter/example/web/wasm/${NC}"
 
 echo ""
 echo -e "${GREEN}✅ Web setup complete!${NC}"
 echo ""
 echo "To test:"
-echo "  cd example && flutter run -d chrome"
+echo "  cd packages/executorch_flutter/example && flutter run -d chrome"

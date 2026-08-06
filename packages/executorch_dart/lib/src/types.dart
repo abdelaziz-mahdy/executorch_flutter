@@ -37,13 +37,13 @@ enum Backend {
 
   /// Human-readable display name for this backend.
   String get displayName => switch (this) {
-        Backend.xnnpack => 'XNNPACK',
-        Backend.coreml => 'CoreML',
-        Backend.mps => 'Metal Performance Shaders',
-        Backend.metal => 'Metal',
-        Backend.vulkan => 'Vulkan',
-        Backend.qnn => 'Qualcomm QNN',
-      };
+    Backend.xnnpack => 'XNNPACK',
+    Backend.coreml => 'CoreML',
+    Backend.mps => 'Metal Performance Shaders',
+    Backend.metal => 'Metal',
+    Backend.vulkan => 'Vulkan',
+    Backend.qnn => 'Qualcomm QNN',
+  };
 }
 
 /// Tensor data type enumeration.
@@ -221,9 +221,7 @@ typedef ExtendedTensorType = TensorType;
 ///
 /// **Deprecated**: Use [TensorType.displayName] and
 /// [TensorType.executorchValue] directly.
-@Deprecated(
-  'Use TensorType.displayName and TensorType.executorchValue instead',
-)
+@Deprecated('Use TensorType.displayName and TensorType.executorchValue instead')
 extension TensorTypeExtension on TensorType {
   /// Returns a human-readable name for this tensor type.
   @Deprecated('Use TensorType.displayName instead')

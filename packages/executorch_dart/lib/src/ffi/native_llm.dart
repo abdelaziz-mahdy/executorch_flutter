@@ -122,10 +122,11 @@ class NativeLLMRunner implements ffi.Finalizable {
       ..num_eos = config.numEos;
 
     late final ffi.NativeCallable<
-            ffi.Void Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)>
-        tokenCallable;
+      ffi.Void Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)
+    >
+    tokenCallable;
     late final ffi.NativeCallable<ffi.Void Function(ffi.Pointer<ffi.Void>)>
-        doneCallable;
+    doneCallable;
 
     var cleaned = false;
     void cleanup() {

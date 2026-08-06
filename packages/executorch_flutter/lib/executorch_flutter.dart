@@ -89,14 +89,16 @@ export 'package:executorch_dart/executorch_dart.dart'
     show ExecuTorchLLM, GenConfig;
 export 'package:executorch_dart/executorch_dart.dart'
     if (dart.library.js_interop) 'src/ffi/backend_query_web.dart'
-    if (dart.library.js) 'src/ffi/backend_query_web.dart' show BackendQuery;
+    if (dart.library.js) 'src/ffi/backend_query_web.dart'
+    show BackendQuery;
 export 'package:executorch_dart/executorch_dart.dart'
     if (dart.library.js_interop) 'src/ffi/native_logging_web.dart'
     if (dart.library.js) 'src/ffi/native_logging_web.dart'
     show setNativeDebugLogging;
 export 'package:executorch_dart/executorch_dart.dart'
     if (dart.library.js_interop) 'src/ffi/version_web.dart'
-    if (dart.library.js) 'src/ffi/version_web.dart' show ExecuTorchVersion;
+    if (dart.library.js) 'src/ffi/version_web.dart'
+    show ExecuTorchVersion;
 export 'package:executorch_dart/executorch_dart.dart'
     if (dart.library.js_interop) 'src/web/executorch_model_web.dart'
     if (dart.library.js) 'src/web/executorch_model_web.dart'

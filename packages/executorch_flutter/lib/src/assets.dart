@@ -6,7 +6,8 @@ import 'package:executorch_dart/executorch_dart_shared.dart';
 // this is the core's class, on web it is this package's Wasm-backed one.
 import 'package:executorch_dart/executorch_dart_shared.dart'
     if (dart.library.js_interop) 'web/executorch_model_web.dart'
-    if (dart.library.js) 'web/executorch_model_web.dart' as impl;
+    if (dart.library.js) 'web/executorch_model_web.dart'
+    as impl;
 import 'package:flutter/services.dart' show rootBundle;
 
 /// Loads an ExecuTorch model from the Flutter asset bundle.

@@ -100,21 +100,21 @@ abstract final class BackendQuery {
 
   /// Convert Backend to native ETBackend enum.
   static ETBackend _toNative(Backend backend) => switch (backend) {
-        Backend.xnnpack => ETBackend.ET_BACKEND_XNNPACK,
-        Backend.coreml => ETBackend.ET_BACKEND_COREML,
-        Backend.mps => ETBackend.ET_BACKEND_MPS,
-        Backend.metal => ETBackend.ET_BACKEND_METAL,
-        Backend.vulkan => ETBackend.ET_BACKEND_VULKAN,
-        Backend.qnn => ETBackend.ET_BACKEND_QNN,
-      };
+    Backend.xnnpack => ETBackend.ET_BACKEND_XNNPACK,
+    Backend.coreml => ETBackend.ET_BACKEND_COREML,
+    Backend.mps => ETBackend.ET_BACKEND_MPS,
+    Backend.metal => ETBackend.ET_BACKEND_METAL,
+    Backend.vulkan => ETBackend.ET_BACKEND_VULKAN,
+    Backend.qnn => ETBackend.ET_BACKEND_QNN,
+  };
 
   /// Convert from native ETBackend enum.
   static Backend _fromNative(ETBackend native) => switch (native) {
-        ETBackend.ET_BACKEND_XNNPACK => Backend.xnnpack,
-        ETBackend.ET_BACKEND_COREML => Backend.coreml,
-        ETBackend.ET_BACKEND_MPS => Backend.mps,
-        ETBackend.ET_BACKEND_METAL => Backend.metal,
-        ETBackend.ET_BACKEND_VULKAN => Backend.vulkan,
-        ETBackend.ET_BACKEND_QNN => Backend.qnn,
-      };
+    ETBackend.ET_BACKEND_XNNPACK => Backend.xnnpack,
+    ETBackend.ET_BACKEND_COREML => Backend.coreml,
+    ETBackend.ET_BACKEND_MPS => Backend.mps,
+    ETBackend.ET_BACKEND_METAL => Backend.metal,
+    ETBackend.ET_BACKEND_VULKAN => Backend.vulkan,
+    ETBackend.ET_BACKEND_QNN => Backend.qnn,
+  };
 }

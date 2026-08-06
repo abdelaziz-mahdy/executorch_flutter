@@ -18,8 +18,8 @@ import 'native_status.dart';
 import 'native_tensor.dart';
 
 /// Native callback type for async functions that pass a void* result.
-typedef ETNativeCallback
-    = ffi.Pointer<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>;
+typedef ETNativeCallback =
+    ffi.Pointer<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>;
 
 /// Run a native FFI function asynchronously using NativeCallable.listener.
 ///
@@ -34,11 +34,11 @@ typedef ETNativeCallback
 Future<T> etRunAsync<T>(
   void Function(ETNativeCallback callback) func,
   void Function(Completer<T> completer, ffi.Pointer<ffi.Void> result)
-      onComplete,
+  onComplete,
 ) {
   final completer = Completer<T>();
   late final ffi.NativeCallable<ffi.Void Function(ffi.Pointer<ffi.Void>)>
-      nativeCallable;
+  nativeCallable;
   void onResponse(ffi.Pointer<ffi.Void> result) {
     onComplete(completer, result);
     nativeCallable.close();

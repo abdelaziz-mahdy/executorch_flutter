@@ -6,7 +6,8 @@ import 'dart:typed_data';
 
 import 'executorch_manager_base.dart';
 import 'executorch_manager_unsupported_stub.dart'
-    if (dart.library.io) 'executorch_manager_native_stub.dart' as stub;
+    if (dart.library.io) 'executorch_manager_native_stub.dart'
+    as stub;
 import 'executorch_model.dart';
 import 'types.dart';
 
@@ -155,8 +156,9 @@ class TensorUtils {
     final depth = data.length;
     final height = depth > 0 ? data[0].length : 0;
     final width = height > 0 ? data[0][0].length : 0;
-    final flatData =
-        data.expand((plane) => plane.expand((row) => row)).toList();
+    final flatData = data
+        .expand((plane) => plane.expand((row) => row))
+        .toList();
 
     return TensorData(
       shape: [depth, height, width],

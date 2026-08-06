@@ -81,8 +81,7 @@ class ExecuTorchLLM {
   Stream<String> generate(
     String prompt, {
     GenConfig config = const GenConfig(),
-  }) =>
-      _runner.generate(prompt, config: config);
+  }) => _runner.generate(prompt, config: config);
 
   /// Cooperatively stop an in-flight generation.
   void stop() => _runner.stop();
