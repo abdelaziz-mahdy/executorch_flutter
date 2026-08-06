@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Dart SDK constraint stays `'>=3.6.0 <4.0.0'`; Flutter constraint stays `'>=3.27.0'`.
+- Dart SDK constraint is `'>=3.10.0 <4.0.0'`. (The plan originally said `'>=3.6.0'`, copied from the pre-split pubspec; that floor never resolved, because `native_toolchain_cmake ^0.2.2` requires 3.10.0 in every published version. Corrected during Task 8.) Flutter constraint stays `'>=3.27.0'` — but see the open question below.
 - Every workspace member pubspec must declare `resolution: workspace`. Pub workspaces fail without it.
 - Both packages ship version `0.6.0`. The wrapper declares `executorch_dart: ^0.6.0`.
 - `executorchVersion` stays `'1.3.1'` (`lib/src/version.dart`). `_defaultPrebuiltVersion` stays `'$executorchVersion.9'` — do not change it. (`CLAUDE.md` documents this as `.1`; `CLAUDE.md` is stale and Task 8 Step 5 fixes it.)
@@ -1462,3 +1462,5 @@ Two items the spec flags as unverified, to check before merging:
 
 - **MLX metallib bundling under `dart build cli`.** `run_build.dart:444` hand-bundles `mlx.metallib` because native assets does not carry it. Task 6 Step 6 exercises the AOT bundle; if an MLX-enabled build drops the metallib, fix it there. macOS and LLM-GPU only.
 - **Pub workspace behavior with Flutter.** Task 1 Step 8 is the gate. If `flutter pub get` or `flutter analyze` misbehaves at the workspace root, stop and resolve it before Task 2 — every later task assumes workspace resolution works.
+
+- **The Flutter SDK floor is unverified.** Both pubspecs declare `flutter: '>=3.27.0'`, but `CLAUDE.md` states the package requires Flutter 3.38+ because native-assets hooks need it. If 3.38 is the real minimum, the declared floor has the same defect the Dart floor had — it lets an incompatible SDK resolve and fail later. Derive the true minimum and reconcile the two before release.
