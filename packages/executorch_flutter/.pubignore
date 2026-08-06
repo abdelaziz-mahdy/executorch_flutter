@@ -10,7 +10,8 @@ example/ios/.gitignore
 example/macos/.gitignore
 ios/.gitignore
 
-# Build artifacts and generated files (root level only, not lib/src/build/)
+# Build artifacts and generated files (root level only, not
+# packages/executorch_dart/lib/src/build/run_build.dart, which is source)
 /build/
 .dart_tool/
 .flutter-plugins
@@ -22,13 +23,8 @@ example/.flutter-plugins
 example/.flutter-plugins-dependencies
 
 # Internal development documentation
-specs/
 CLAUDE.md
-native/CLAUDE.md
 example/CLAUDE.md
-
-# Python scripts and tools
-python/
 
 # Temporary directories
 tmp/
@@ -36,6 +32,3 @@ tmp/
 # Large example assets - users should generate their own
 example/assets/models/*.pte
 example/assets/images/*.jpg
-
-# Models directory (large .pte files)
-models/

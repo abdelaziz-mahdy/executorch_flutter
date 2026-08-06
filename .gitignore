@@ -36,8 +36,8 @@ migrate_working_dir/
 # package under packages/<name>/ (the common case), and inside package
 # examples under packages/<name>/example/ (e.g. `dart build cli` for
 # executorch_dart's pure-Dart example). Deliberately NOT a blanket "build/",
-# since packages/executorch_flutter/lib/src/build/ is a real, tracked source
-# directory (the native-assets build hook), not output.
+# since packages/executorch_dart/lib/src/build/run_build.dart is a real,
+# tracked source file (the native-assets build hook), not output.
 /build/
 packages/*/build/
 packages/*/example/build/

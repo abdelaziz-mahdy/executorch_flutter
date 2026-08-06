@@ -28,19 +28,19 @@ jobs:
         run: flutter config --enable-swift-package-manager
         
       - name: Install Flutter Dependencies
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         run: flutter pub get
 
       - name: Setup Web Files
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         run: dart run ../bin/setup_web.dart
 
       - name: Build Flutter Web
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         run: flutter build web --release --base-href "/executorch_flutter/"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./example/build/web
+          publish_dir: ./packages/executorch_flutter/example/build/web
