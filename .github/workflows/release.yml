@@ -208,8 +208,29 @@ jobs:
             fi
           done
 
+      # Guarded so a re-run after a partial failure (core published, wrapper
+      # not — the only failure state this order enforcement can produce)
+      # recovers instead of aborting: pub.dev rejects re-publishing a
+      # version that already exists, so check first and skip rather than
+      # let that rejection fail the job before the wrapper gets a turn.
       - name: Publish executorch_dart
-        run: dart pub publish --force --directory=packages/executorch_dart
+        run: |
+          version=$(grep '^version:' packages/executorch_dart/pubspec.yaml | sed 's/^version: *//')
+          http_status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+            "https://pub.dev/api/packages/executorch_dart/versions/$version" || echo "000")
+          if [ "$http_status" = "200" ]; then
+            echo "executorch_dart $version is already on pub.dev — skipping (partial-publish recovery)."
+          else
+            dart pub publish --force --directory=packages/executorch_dart
+          fi
 
       - name: Publish executorch_flutter
-        run: dart pub publish --force --directory=packages/executorch_flutter
+        run: |
+          version=$(grep '^version:' packages/executorch_flutter/pubspec.yaml | sed 's/^version: *//')
+          http_status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+            "https://pub.dev/api/packages/executorch_flutter/versions/$version" || echo "000")
+          if [ "$http_status" = "200" ]; then
+            echo "executorch_flutter $version is already on pub.dev — skipping (partial-publish recovery)."
+          else
+            dart pub publish --force --directory=packages/executorch_flutter
+          fi
