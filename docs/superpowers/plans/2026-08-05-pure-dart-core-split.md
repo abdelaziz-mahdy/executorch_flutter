@@ -1327,6 +1327,8 @@ tmp/
 
 Then trim `packages/executorch_flutter/.pubignore`: drop the `native/`, `models/`, `python/`, and `specs/` entries, which no longer sit inside that package, and repoint the `example/` entries, which still do.
 
+Also fix the stale comment at `.gitignore:39`. It justifies the anti-blanket-`build/` patterns by naming `packages/executorch_flutter/lib/src/build/` as a tracked source directory, but that path does not exist — the tracked build hook is `packages/executorch_dart/lib/src/build/run_build.dart`. The patterns themselves are correct and package-name-agnostic; only the prose is wrong.
+
 - [ ] **Step 7: Verify both packages pass a publish dry run**
 
 ```bash
@@ -1358,6 +1360,21 @@ and Windows, and publishes executorch_dart before executorch_flutter."
 **Interfaces:**
 - Consumes: every task above.
 - Produces: no code. Documentation matching what shipped.
+
+- [ ] **Step 0: Make the CLI example fail cleanly**
+
+`packages/executorch_dart/example/bin/infer.dart` has no error handling around `ExecuTorchModel.load()` or `model.forward()`, so a missing file or an incompatible `.pte` surfaces as a raw Dart stack trace. This is the reference example for the whole split, and developers will copy its shape. Wrap the body:
+
+```dart
+  try {
+    // ... load, forward, dispose ...
+  } on ExecuTorchException catch (e) {
+    stderr.writeln('Error: $e');
+    exit(1);
+  }
+```
+
+Keep it to that. The example's value is being minimal; do not grow it into a CLI framework.
 
 - [ ] **Step 1: Write the core readme**
 
