@@ -37,7 +37,64 @@ jobs:
 
       - name: Build Flutter Web
         working-directory: packages/executorch_flutter/example
-        run: flutter build web --release --base-href "/executorch_flutter/"
+        run: |
+          flutter build web --release \
+            --base-href "/executorch_flutter/" \
+            --dart-define=MODEL_BASE_URL=models
+
+      # GitHub release assets send no Access-Control-Allow-Origin header, so a
+      # browser cannot fetch them cross-origin — model loading fails in the
+      # deployed demo. Download them here instead, server-side where CORS does
+      # not apply, and serve them from the site's own origin.
+      #
+      # Only XNNPACK models are fetched: it is the sole backend the Wasm build
+      # supports, and the app's model picker already filters to it on web.
+      - name: Fetch models into the published site
+        working-directory: packages/executorch_flutter/example
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oE "executorchVersion = '[^']+'" \
+            ../../executorch_dart/lib/src/version.dart | cut -d"'" -f2)
+          echo "Pinned ExecuTorch version: $VERSION"
+
+          INDEX="https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main/$VERSION/index.json"
+          mkdir -p build/web/models
+          curl -fsSL "$INDEX" -o /tmp/index.json
+
+          python3 - "$VERSION" <<'PY'
+          import json, subprocess, sys
+          version = sys.argv[1]
+          models = json.load(open('/tmp/index.json'))['models']
+          xnnpack = [m for m in models if m['backend'] == 'xnnpack']
+          if not xnnpack:
+              sys.exit(f'No xnnpack models in the {version} index')
+
+          def fetch(url):
+              name = url.split('?')[0].rsplit('/', 1)[-1]
+              subprocess.run(
+                  ['curl', '-fsSL', url, '-o', f'build/web/models/{name}'],
+                  check=True)
+              return name
+
+          total = 0
+          labels = set()
+          for m in xnnpack:
+              print(f"  {m['name']} ({m['sizeMB']} MB)")
+              fetch(m['remoteUrl'])
+              total += m['size']
+              # Label files are fetched from the same release and hit the same
+              # CORS wall, so they must be served from our origin too.
+              if m.get('labelsRemoteUrl'):
+                  labels.add(m['labelsRemoteUrl'])
+
+          for url in sorted(labels):
+              print(f"  {fetch(url)}")
+
+          print(f"Fetched {len(xnnpack)} models ({total / 1e6:.1f} MB) "
+                f"and {len(labels)} label files")
+          PY
+
+          ls -la build/web/models | head -12
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

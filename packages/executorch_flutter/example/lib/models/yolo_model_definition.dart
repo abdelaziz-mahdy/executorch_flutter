@@ -8,6 +8,7 @@ import '../processors/yolo_processor.dart';
 import '../processors/yolo_input_processor.dart';
 import '../processors/yolo_output_processor.dart';
 import '../renderers/screens/object_detection_renderer.dart';
+import '../services/model_download_service.dart' show resolveModelUrl;
 import '../services/model_index_service.dart';
 import '../widgets/image_input_widget.dart';
 import 'model_definition.dart';
@@ -40,8 +41,11 @@ class YoloModelDefinition
       return _labelsCache[labelsRemoteUrl]!;
     }
 
-    // Download labels from remote URL (with cache buster)
-    final urlWithCacheBuster = ModelIndexService.addCacheBuster(labelsRemoteUrl);
+    // Download labels, honouring MODEL_BASE_URL when the build injected one
+    // (see resolveModelUrl), then add a cache buster.
+    final urlWithCacheBuster = ModelIndexService.addCacheBuster(
+      resolveModelUrl(labelsRemoteUrl),
+    );
     final response = await http.get(Uri.parse(urlWithCacheBuster));
     if (response.statusCode != 200) {
       throw Exception('Failed to download labels from $labelsRemoteUrl');

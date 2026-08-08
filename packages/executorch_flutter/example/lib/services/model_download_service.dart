@@ -9,6 +9,31 @@ import 'model_cache_storage_stub.dart'
     as storage;
 import 'model_index_service.dart';
 
+/// Base location for model files, injected at build time with
+/// `--dart-define=MODEL_BASE_URL=...`.
+///
+/// Empty by default, in which case models are fetched from the `remoteUrl`
+/// recorded in the model index — a GitHub release asset.
+///
+/// The web deployment sets this to a path served from the app's own origin,
+/// because GitHub release assets send no `Access-Control-Allow-Origin` header
+/// and a browser therefore cannot fetch them. See `.github/workflows/
+/// deploy-web.yml`, which downloads the models into the published site.
+const String modelBaseUrlOverride = String.fromEnvironment('MODEL_BASE_URL');
+
+/// Resolves where to download a model from.
+///
+/// Returns [remoteUrl] unchanged unless [modelBaseUrlOverride] is set, in
+/// which case the file name is appended to that base. Any query string on
+/// [remoteUrl] is dropped, since the override is same-origin and needs no
+/// cache busting of its own.
+String resolveModelUrl(String remoteUrl) {
+  if (modelBaseUrlOverride.isEmpty) return remoteUrl;
+  final segments = Uri.parse(remoteUrl).pathSegments;
+  if (segments.isEmpty) return remoteUrl;
+  return '$modelBaseUrlOverride/${segments.last}';
+}
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -203,7 +228,11 @@ class CachedModelDataSource implements ModelDataSource {
     }
 
     // Download from inner source
-    final data = await _inner.fetchModel(key, remoteUrl, onProgress: onProgress);
+    final data = await _inner.fetchModel(
+      key,
+      remoteUrl,
+      onProgress: onProgress,
+    );
 
     // Verify downloaded data if hash provided
     if (expectedHash != null &&
@@ -285,8 +314,9 @@ class ModelDownloadService extends ChangeNotifier {
   static ModelDownloadService get instance => _instance;
 
   // Decorated data source: HTTP + Caching
-  static final CachedModelDataSource _dataSource =
-      CachedModelDataSource(HttpModelDataSource());
+  static final CachedModelDataSource _dataSource = CachedModelDataSource(
+    HttpModelDataSource(),
+  );
 
   final Map<String, ModelDownloadInfo> _downloadStates = {};
 
@@ -360,8 +390,10 @@ class ModelDownloadService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Add cache buster to invalidate CDN cache
-      final urlWithCacheBuster = ModelIndexService.addCacheBuster(remoteUrl);
+      // Resolve against MODEL_BASE_URL when the build injected one, then add a
+      // cache buster to invalidate CDN cache.
+      final resolvedUrl = resolveModelUrl(remoteUrl);
+      final urlWithCacheBuster = ModelIndexService.addCacheBuster(resolvedUrl);
 
       // Download with caching and hash verification
       final Uint8List bytes;
