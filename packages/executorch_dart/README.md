@@ -1,7 +1,7 @@
 # executorch_dart
 
 [![pub package](https://img.shields.io/pub/v/executorch_dart.svg)](https://pub.dev/packages/executorch_dart)
-[![build](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/build.yml/badge.svg)](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/build.yml)
+[![build](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/release.yml/badge.svg)](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/release.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Pure-Dart on-device ML inference with PyTorch ExecuTorch. **No Flutter SDK
@@ -53,7 +53,7 @@ automatically — there's nothing to compile by hand.
      packages/executorch_flutter/README.md) — bump this by hand on release. -->
 ```yaml
 dependencies:
-  executorch_dart: ^0.6.1
+  executorch_dart: ^0.6.2
 ```
 
 ## Quick Start

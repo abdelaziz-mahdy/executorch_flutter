@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.2
+
+### Fixed
+
+- Web was no longer advertised as a supported platform. The plugin's web
+  registration was removed in 0.6.0 because it does no work at runtime, but
+  that entry is what declares Web support to pub tooling — pub.dev reported
+  the package as web-incompatible even though the WebAssembly build works.
+  Restored.
+- Dependency constraints held `hooks` back from its latest release. Widened,
+  which also recovers the pub.dev points lost for out-of-date dependencies.
+- The Android plugin no longer applies the Kotlin Gradle plugin. It contained
+  no Kotlin beyond a template test for a class that never existed, and the
+  legacy configuration is flagged by Flutter's built-in-Kotlin migration.
+
 ## 0.6.1
 
 ### Breaking

@@ -1,7 +1,7 @@
 # ExecuTorch Flutter
 
 [![pub package](https://img.shields.io/pub/v/executorch_flutter.svg)](https://pub.dev/packages/executorch_flutter)
-[![build](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/build.yml/badge.svg)](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/build.yml)
+[![build](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/release.yml/badge.svg)](https://github.com/abdelaziz-mahdy/executorch_flutter/actions/workflows/release.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A Flutter plugin for on-device ML inference using PyTorch ExecuTorch, supporting Android, iOS, macOS, Windows, Linux, and Web.

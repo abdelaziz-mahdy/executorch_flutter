@@ -1,3 +1,11 @@
+## 0.6.2
+
+### Fixed
+
+- Dependency constraints held `hooks`, `native_toolchain_cmake`, and
+  `code_assets` back from their latest releases. Widened, which also recovers
+  the pub.dev points lost for out-of-date dependencies.
+
 ## 0.6.1
 
 ### Fixed
