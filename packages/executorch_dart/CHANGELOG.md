@@ -1,3 +1,11 @@
+## 0.6.1
+
+### Fixed
+
+- The example shown on pub.dev now leads with how to use the package —
+  loading a model, running it, and disposing it — instead of notes that only
+  apply inside this repository.
+
 ## 0.6.0
 
 ### Added

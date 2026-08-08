@@ -173,7 +173,7 @@ jobs:
   publish:
     name: Publish to pub.dev
     if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version != ''
-    needs: [create-release]
+    needs: [get-version, create-release]
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for pub.dev OIDC authentication
@@ -214,8 +214,18 @@ jobs:
       # version that already exists, so check first and skip rather than
       # let that rejection fail the job before the wrapper gets a turn.
       - name: Publish executorch_dart
+        env:
+          TAG_VERSION: ${{ needs.get-version.outputs.version }}
         run: |
           version=$(grep '^version:' packages/executorch_dart/pubspec.yaml | sed 's/^version: *//')
+          # pub.dev's OIDC check requires the tag version to equal the version
+          # being published, so a package whose version does not match this tag
+          # cannot publish from it. Skipping lets the two packages hold
+          # different versions and release under their own tags.
+          if [ "$version" != "$TAG_VERSION" ]; then
+            echo "executorch_dart is $version, tag is $TAG_VERSION — not this package's release, skipping."
+            exit 0
+          fi
           http_status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
             "https://pub.dev/api/packages/executorch_dart/versions/$version" || echo "000")
           if [ "$http_status" = "200" ]; then
@@ -225,8 +235,18 @@ jobs:
           fi
 
       - name: Publish executorch_flutter
+        env:
+          TAG_VERSION: ${{ needs.get-version.outputs.version }}
         run: |
           version=$(grep '^version:' packages/executorch_flutter/pubspec.yaml | sed 's/^version: *//')
+          # pub.dev's OIDC check requires the tag version to equal the version
+          # being published, so a package whose version does not match this tag
+          # cannot publish from it. Skipping lets the two packages hold
+          # different versions and release under their own tags.
+          if [ "$version" != "$TAG_VERSION" ]; then
+            echo "executorch_flutter is $version, tag is $TAG_VERSION — not this package's release, skipping."
+            exit 0
+          fi
           http_status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
             "https://pub.dev/api/packages/executorch_flutter/versions/$version" || echo "000")
           if [ "$http_status" = "200" ]; then
