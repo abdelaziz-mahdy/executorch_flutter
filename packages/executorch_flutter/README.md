@@ -115,7 +115,7 @@ await model.dispose();
 | `ExecuTorchModel.load(filePath)` | Native only | External file paths |
 
 `loadModelFromAsset` is a top-level function, not a static method on
-`ExecuTorchModel` — this is what changed in 0.6.0 (see
+`ExecuTorchModel` — this is what changed in 0.6.1 (see
 [CHANGELOG.md](CHANGELOG.md)).
 
 ```dart
@@ -346,7 +346,7 @@ hooks:
 The key under `user_defines:` is the package that owns the native build —
 `executorch_dart`, even though you depend on `executorch_flutter`. This
 package used to own the build directly and read `executorch_flutter:` here;
-see the 0.6.0 entry in [CHANGELOG.md](CHANGELOG.md) if you're migrating.
+see the 0.6.1 entry in [CHANGELOG.md](CHANGELOG.md) if you're migrating.
 
 ### Options
 

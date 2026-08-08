@@ -53,7 +53,7 @@ automatically — there's nothing to compile by hand.
      packages/executorch_flutter/README.md) — bump this by hand on release. -->
 ```yaml
 dependencies:
-  executorch_dart: ^0.6.0
+  executorch_dart: ^0.6.1
 ```
 
 ## Quick Start
@@ -274,13 +274,6 @@ See **[executorch_flutter's
 README](https://github.com/abdelaziz-mahdy/executorch_flutter/blob/main/packages/executorch_flutter/README.md#build-configuration)**
 for the environment-variable overrides and troubleshooting — it's the same
 build hook underneath.
-
-> **Working in this monorepo?** Pub workspaces read `hooks: user_defines:`
-> only from the **workspace root** `pubspec.yaml` — the same block in a
-> member package's `pubspec.yaml` is silently ignored, and the build falls
-> back to defaults with no error. This only matters if you're building this
-> repo itself; a consumer application is unaffected, since it's its own root
-> package.
 
 ---
 
