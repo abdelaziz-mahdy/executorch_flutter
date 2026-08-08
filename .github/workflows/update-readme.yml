@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'lib/src/build/run_build.dart'
-      - 'lib/src/version.dart'
-      - 'pubspec.yaml'
+      - 'packages/executorch_dart/lib/src/build/run_build.dart'
+      - 'packages/executorch_dart/lib/src/version.dart'
+      - 'packages/executorch_flutter/pubspec.yaml'
   workflow_dispatch:
 
 jobs:
@@ -25,12 +25,12 @@ jobs:
         id: versions
         run: |
           # Extract executorchVersion from version.dart
-          EXECUTORCH_VERSION=$(grep "const String executorchVersion" lib/src/version.dart | sed "s/.*= '\([^']*\)'.*/\1/")
+          EXECUTORCH_VERSION=$(grep "const String executorchVersion" packages/executorch_dart/lib/src/version.dart | sed "s/.*= '\([^']*\)'.*/\1/")
           echo "ExecuTorch version: $EXECUTORCH_VERSION"
 
           # Extract build suffix from run_build.dart
           # Pattern: const String _defaultPrebuiltVersion = '$executorchVersion.X';
-          BUILD_SUFFIX=$(grep "^const String _defaultPrebuiltVersion" lib/src/build/run_build.dart | sed "s/.*\$executorchVersion\.\([0-9]*\)'.*/\1/")
+          BUILD_SUFFIX=$(grep "^const String _defaultPrebuiltVersion" packages/executorch_dart/lib/src/build/run_build.dart | sed "s/.*\$executorchVersion\.\([0-9]*\)'.*/\1/")
           echo "Build suffix: $BUILD_SUFFIX"
 
           NATIVE_VERSION="${EXECUTORCH_VERSION}.${BUILD_SUFFIX}"
@@ -38,7 +38,7 @@ jobs:
           echo "native_version=$NATIVE_VERSION" >> $GITHUB_OUTPUT
 
           # Extract package version from pubspec.yaml
-          PACKAGE_VERSION=$(grep "^version:" pubspec.yaml | sed "s/version: //")
+          PACKAGE_VERSION=$(grep "^version:" packages/executorch_flutter/pubspec.yaml | sed "s/version: //")
           echo "Package version: $PACKAGE_VERSION"
           echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
 
@@ -55,7 +55,7 @@ jobs:
           sed -i "/<!-- NATIVE_VERSION_START -->/,/<!-- NATIVE_VERSION_END -->/c\\
           <!-- NATIVE_VERSION_START -->\\
           📊 **[Download Release Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v${NATIVE_VERSION}/size-report-release.svg)** | **[Download Debug Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v${NATIVE_VERSION}/size-report-debug.svg)** | **[JSON Report](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v${NATIVE_VERSION}/size-report.json)**\\
-          <!-- NATIVE_VERSION_END -->" README.md
+          <!-- NATIVE_VERSION_END -->" packages/executorch_flutter/README.md
 
           # Update package version between PACKAGE_VERSION markers (HTML comments outside code block)
           sed -i "/<!-- PACKAGE_VERSION_START -->/,/<!-- PACKAGE_VERSION_END -->/c\\
@@ -64,23 +64,23 @@ jobs:
           dependencies:\\
             executorch_flutter: ^${PACKAGE_VERSION}\\
           \\\`\\\`\\\`\\
-          <!-- PACKAGE_VERSION_END -->" README.md
+          <!-- PACKAGE_VERSION_END -->" packages/executorch_flutter/README.md
 
           echo "README.md updated:"
           echo "--- Native version section ---"
-          grep -A2 "NATIVE_VERSION_START" README.md || true
+          grep -A2 "NATIVE_VERSION_START" packages/executorch_flutter/README.md || true
           echo "--- Package version section ---"
-          grep -A5 "PACKAGE_VERSION_START" README.md || true
+          grep -A5 "PACKAGE_VERSION_START" packages/executorch_flutter/README.md || true
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet README.md; then
+          if git diff --quiet packages/executorch_flutter/README.md; then
             echo "No changes to README.md"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "README.md has been updated"
-            git diff README.md
+            git diff packages/executorch_flutter/README.md
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
 
@@ -89,6 +89,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
+          git add packages/executorch_flutter/README.md
           git commit -m "chore: Update README versions (native: v${{ steps.versions.outputs.native_version }}, package: ^${{ steps.versions.outputs.package_version }})"
           git push

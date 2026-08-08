@@ -63,7 +63,7 @@ jobs:
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
           # Extract changelog section for this version
-          CHANGELOG=$(awk "/^## $VERSION/,/^## [0-9]/" CHANGELOG.md | head -n -1 | tail -n +2)
+          CHANGELOG=$(awk "/^## $VERSION/,/^## [0-9]/" packages/executorch_flutter/CHANGELOG.md | head -n -1 | tail -n +2)
           if [ -z "$CHANGELOG" ]; then
             CHANGELOG="Release version $VERSION"
           fi
@@ -193,18 +193,44 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Verify package
+      - name: Verify packages
         run: |
           set +e
-          dart pub publish --dry-run
-          exit_code=$?
-          if [ $exit_code -eq 65 ]; then
-            echo "⚠️ Package has warnings but can still be published (exit code 65)"
-            exit 0
-          elif [ $exit_code -ne 0 ]; then
-            echo "❌ Package validation failed (exit code $exit_code)"
-            exit $exit_code
+          for pkg in packages/executorch_dart packages/executorch_flutter; do
+            echo "=== $pkg ==="
+            dart pub publish --dry-run --directory="$pkg"
+            exit_code=$?
+            if [ $exit_code -eq 65 ]; then
+              echo "⚠️ $pkg has warnings but can still be published"
+            elif [ $exit_code -ne 0 ]; then
+              echo "❌ $pkg validation failed (exit code $exit_code)"
+              exit $exit_code
+            fi
+          done
+
+      # Guarded so a re-run after a partial failure (core published, wrapper
+      # not — the only failure state this order enforcement can produce)
+      # recovers instead of aborting: pub.dev rejects re-publishing a
+      # version that already exists, so check first and skip rather than
+      # let that rejection fail the job before the wrapper gets a turn.
+      - name: Publish executorch_dart
+        run: |
+          version=$(grep '^version:' packages/executorch_dart/pubspec.yaml | sed 's/^version: *//')
+          http_status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+            "https://pub.dev/api/packages/executorch_dart/versions/$version" || echo "000")
+          if [ "$http_status" = "200" ]; then
+            echo "executorch_dart $version is already on pub.dev — skipping (partial-publish recovery)."
+          else
+            dart pub publish --force --directory=packages/executorch_dart
           fi
 
-      - name: Publish to pub.dev
-        run: dart pub publish --force
+      - name: Publish executorch_flutter
+        run: |
+          version=$(grep '^version:' packages/executorch_flutter/pubspec.yaml | sed 's/^version: *//')
+          http_status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+            "https://pub.dev/api/packages/executorch_flutter/versions/$version" || echo "000")
+          if [ "$http_status" = "200" ]; then
+            echo "executorch_flutter $version is already on pub.dev — skipping (partial-publish recovery)."
+          else
+            dart pub publish --force --directory=packages/executorch_flutter
+          fi

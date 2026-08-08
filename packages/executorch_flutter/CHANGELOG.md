@@ -1,0 +1,304 @@
+# Changelog
+
+## 0.6.0
+
+### Breaking
+
+- The native build configuration key moved from `executorch_flutter` to
+  `executorch_dart`. Rename it under `hooks: user_defines:` in your
+  `pubspec.yaml` — the package fails the build with rename instructions if it
+  finds the old key there, rather than silently falling back to defaults.
+- `ExecuTorchModel.loadFromAsset(...)` is now the top-level
+  `loadModelFromAsset(...)`. Run `dart fix --apply` to migrate.
+  `manager.loadModelFromAssets(...)` is unchanged.
+
+### Added
+
+- A pure-Dart core, `executorch_dart`, so Dart servers and command-line
+  programs can run ExecuTorch models without a Flutter SDK
+  ([#42](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/42)).
+  `executorch_flutter` is now a thin wrapper over it and keeps asset loading,
+  web, and every platform it supported before.
+
+## 0.5.0
+
+First stable release of the 0.5.x line (supersedes 0.5.0-rc.1 … rc.4).
+
+### Added
+- **All 13 tensor dtypes supported end-to-end** — thanks @kuldeepdhaka
+  ([#38](https://github.com/abdelaziz-mahdy/executorch_flutter/pull/38)):
+  adds `float64`, `int64`, `int16`, `bool_`, `uint16`, `uint32`, `uint64`,
+  `float16`, `bfloat16`, wired through the native layer (prebuilts v1.3.1.9).
+  `float16`/`bfloat16` round to nearest even (numpy/PyTorch behavior), and
+  unknown dtypes now error instead of silently becoming `float32`.
+- **On-device LLM (experimental) — Gemma 4 E2B.** Streaming, multi-turn text
+  generation via ExecuTorch's `extension/llm/runner`, with a new `ExecuTorchLLM`
+  API (`load` / `generate` `Stream<String>` / `stop` / `reset` / `dispose`) and
+  `GenConfig` (temperature-only sampling). Backends: **XNNPACK** (CPU, all
+  platforms) and **MLX** (Apple-Silicon GPU, macOS 14+). The runner auto-detects
+  the model's prefill mode (sequential for static/decode-only exports, parallel
+  for dynamic). The example app gains a streaming Gemma 4 chat screen and a
+  category home screen.
+
+  > **Setup required — see [docs/LLM.md](docs/LLM.md).** You provide the model +
+  > tokenizer (export with `models/python/export_gemma4_*.py`); MLX additionally
+  > requires shipping `mlx.metallib` and passing it via
+  > `ExecuTorchLLM.load(mlxMetallibPath:)`, plus a macOS 14 deployment target.
+  > Distributed as the `xnnpack-llm` / `xnnpack-mlx-llm` prebuilt variants.
+
+### Fixed
+- `int8` tensor encoding applied a +128 bias instead of two's complement,
+  corrupting negative values.
+
+### Breaking
+- `TensorType` values reordered to match native `ETDType` — don't rely on
+  `.index`/`.values` order. `ExtendedTensorType` merged into `TensorType`
+  (deprecated typedef kept; its helper methods removed).
+
+## 0.4.1
+
+### Added
+- **Metal backend (macOS)**: `Backend.metal` and the AOTI-based Metal backend
+  are now built into the macOS (arm64) prebuilts, replacing the deprecated MPS
+  backend.
+
+  > **Note — no bundled Metal models yet.** ExecuTorch 1.3.1's Metal backend is
+  > still experimental and currently lacks kernels for some ops our reference
+  > models use (`addmm`, `split_copy`), so MobileNet/YOLO do **not** yet export
+  > to Metal. The runtime + API are in place; Metal models will be added once
+  > upstream op coverage lands. You can still target Metal with your own models
+  > whose ops the backend supports. Tracking upstream:
+  > https://github.com/pytorch/executorch/issues/19907
+
+### Removed
+- **MPS backend**: dropped (deprecated upstream). On iOS, GPU acceleration is
+  via CoreML; on macOS, via the new Metal backend.
+
+## 0.4.0
+
+### Added
+- **Swift Package Manager support** for iOS and macOS (Flutter is phasing out
+  CocoaPods-only plugins). The native library is still provided via native
+  assets; CocoaPods remains supported.
+
+### Fixed
+- **Use-after-free when disposing during inference**: disposing a model while an
+  async `forward()` was still running (e.g. turning off a live camera
+  mid-inference) could free the model out from under the running kernel and
+  crash. `dispose()` now awaits in-flight forwards, and the native layer waits
+  for any running forward before freeing.
+
+### Changed
+- **ExecuTorch 1.3.1**: Upgraded from ExecuTorch 1.1.0 to 1.3.1 (skipping 1.2.0).
+  Full release notes: https://github.com/pytorch/executorch/releases/tag/v1.3.1
+  - Backend improvements across XNNPACK (weight-cache/workspace sharing, transposed
+    conv output padding), Vulkan (cooperative-matrix dispatch, safer memory handling),
+    and CoreML (profiler crash fix, shared-library install support).
+- Updated native prebuilt binaries to v1.3.1.2.
+
+### Deprecated
+- **MPS backend**: Deprecated upstream in ExecuTorch; removal is expected in a future
+  release. MPS remains enabled and functional on Apple platforms (iOS 15.4+, macOS) in
+  this version. A new upstream Metal backend is the planned replacement — migration is
+  tracked for a future release.
+
+## 0.3.3
+
+### Added
+- **MPS backend on iOS**: Metal Performance Shaders now enabled for iOS (15.4+),
+  previously macOS-only. MPS is enabled by default on all Apple platforms.
+
+### Changed
+- Updated native prebuilt binaries to v1.1.0.9
+
+## 0.3.2
+
+### Added
+- **Non-blocking async FFI**: Model loading and inference now run on a background
+  thread via `std::thread` in C and `NativeCallable.listener` in Dart, keeping the
+  Flutter UI thread responsive during heavy operations
+
+### Changed
+- Updated native prebuilt binaries to v1.1.0.8
+- Enabled Vulkan backend in example app alongside XNNPACK, CoreML, and MPS
+- Added `compile-local.sh` script to native submodule for local source builds
+- Updated README with current Vulkan status and build configuration docs
+
+## 0.3.1
+
+### Fixed
+- **Vulkan backend crash on macOS/iOS**: Added try-catch blocks in FFI layer to
+  gracefully handle C++ backend initialization exceptions instead of crashing
+- **Vulkan Metal texture size limit**: Models re-exported with conservative
+  texture limits (2048x2048x2048) for Apple Metal compatibility
+- **Runtime dependency discovery**: Added sibling library rpath (`@loader_path`
+  on Apple, `$ORIGIN` on Linux/Android) so dlopen() finds co-located libraries
+
+### Added
+- **Runtime dependency bundling**: Build hook now scans for and bundles
+  additional shared libraries (e.g., MoltenVK for Vulkan on macOS) as code
+  assets automatically on all platforms
+
+### Changed
+- Updated native prebuilt binaries to v1.1.0.7
+- Updated example app `dartcv4` to ^2.2.1+1 (fixes iOS OpenCL build failure)
+- Increased integration test timeout to 30 minutes for CI reliability
+
+## 0.3.0
+
+### Changed
+- **ExecuTorch 1.1.0**: Upgraded from ExecuTorch 1.0.1 to 1.1.0
+  - Updated native prebuilt binaries version to 1.1.0.4
+  - Rebuilt WebAssembly binaries with ExecuTorch 1.1.0
+  - Updated Dockerfile.wasm to use v1.1.0 tag
+- **CI/CD Improvements**: Unified release workflow for native binaries
+  - All platform builds now orchestrated by single release workflow
+  - Size comparison reports auto-generated after all builds complete
+  - README version links auto-updated when prebuilt version changes
+
+### Added
+- **Version-aware model loading**: Models are now loaded from version-specific directories
+  - Model index URLs now include version path segment (e.g., `/1.1.0/index.json`)
+  - Supports multiple ExecuTorch versions in the models repository
+- **Single source of truth for version**: `executorchVersion` constant in `lib/src/version.dart`
+  - Used by native build system, web platform, and model loading
+  - Eliminates duplicate version constants across the codebase
+- **New models support**: YOLO-Pose and YOLO-Face models available in 1.1.0
+- **Example app version selector**: UI to load models from different ExecuTorch versions
+  - Test compatibility of old/new models with the current runtime
+  - Decorator pattern architecture for ModelIndexService (clean separation of HTTP and caching)
+- **Version-aware model caching**: Models cached by ExecuTorch version
+  - Cache structure: `models/{version}/{modelName}.pte`
+  - SHA-256 hash verification ensures cached models match expected content
+  - Automatic re-download on hash mismatch (stale cache detection)
+  - Decorator pattern architecture for ModelDownloadService
+
+### Removed
+- **User-overridable ExecuTorch version**: The `executorch_version` option in
+  `pubspec.yaml` user_defines has been removed
+  - Package version is now tied to ExecuTorch version (1:1 mapping)
+  - Users who need older ExecuTorch versions should use older package versions
+  - Simplifies build system and ensures runtime/model version consistency
+
+### Fixed
+- **iOS Simulator detection**: Build now fails early with clear error when iOS Simulator
+  prebuilts are unavailable, instead of failing at runtime with cryptic library load errors
+  - Added proper platform detection to distinguish iOS device vs simulator builds
+  - Shows helpful error message with available options (use device or build from source)
+- **CoreML compilation**: Fixed CoreML backend compilation issues on iOS/macOS
+- Fixed WASM build script triggering unnecessary native builds
+  - `build_wasm.sh` now copies files directly instead of using `dart run`
+- Fixed model dropdown being empty when switching to versions without `platforms`
+  field in index.json (backward compatibility with 1.0.1 models)
+- Fixed model download hash verification failing when hash is empty or null
+
+### Known Issues
+- **Example app web build**: The example app fails to build for web due to an upstream issue
+  in `opencv_dart` (used for OpenCV-based preprocessing). A fix has been submitted
+  ([opencv_dart#418](https://github.com/rainyl/opencv_dart/pull/418)) and will be resolved
+  in a future release. The main `executorch_flutter` package web support is unaffected.
+
+## 0.2.2
+
+### Fixed
+- Fixed `.pubignore` pattern `build/` excluding `lib/src/build/run_build.dart` from published package
+  - This caused "No such file or directory" errors when using the package from pub.dev
+  - Changed to `/build/` to only match root-level build directory
+
+## 0.2.1
+
+### Fixed
+- Updated README with correct version references and prebuilt version (1.0.1.21)
+- Fixed library size report links (now clearly labeled as downloads)
+
+## 0.2.0
+
+### Added
+- Native Assets build system with prebuilt binary support
+- Build configuration via `pubspec.yaml` (debug mode, backends, versions)
+- `BackendQuery` API for runtime backend availability checks
+  - `BackendQuery.isAvailable(Backend)` - Check if a specific backend is compiled in
+  - `BackendQuery.available` - Get list of all available backends
+- Backend filtering in example app - only shows models for available backends
+- Vulkan backend available as opt-in experimental feature on all native platforms
+  - macOS: MoltenVK bundled with prebuilt binaries (Vulkan-to-Metal translation)
+  - Known issues documented in README (Android UBO limits, experimental status)
+- Integration tests for backend query functionality
+- Windows x64 platform support
+- Linux x64 and arm64 platform support
+- iOS Simulator support (arm64 and x86_64)
+- macOS x86_64 (Intel Mac) support
+- Android x86_64 architecture for emulator testing
+- Windows and Linux CI workflows
+
+### Changed
+- Migrate from Pigeon to FFI for native communication
+- Reduce memory copying during tensor operations with direct FFI access
+- Prebuilt binaries now download automatically (faster builds)
+- Default build mode is now "prebuilt" for faster development
+
+### Removed
+- Swift Package Manager dependency (replaced by Native Assets)
+- Pigeon-based method channels
+
+## 0.1.1
+
+### Example App Improvements
+- Models are now downloaded from remote GitHub repository instead of bundled in assets
+- Significantly reduces app size by loading models on-demand
+- Added cache-busting for GitHub model requests to ensure fresh downloads
+- Updated integration tests to download models from remote URL
+
+### Bug Fixes
+- Fixed camera provider defaulting to OpenCV on all platforms for better compatibility
+- Fixed broken pipe errors in integration test script
+
+### Dependencies
+- Fixed `plugin_platform_interface` version constraint
+
+## 0.1.0
+
+- **Web Platform Support**: WebAssembly with XNNPACK backend
+- Added Docker-based Wasm build system
+- Added `setup_web` CLI tool for web project setup
+
+## 0.0.6
+- **Android** fix Crash on model reuse
+
+## 0.0.5
+
+### Bug Fixes
+- **Android**: Added ProGuard rules to prevent crashes in release builds when loading models
+- **iOS**: Fixed camera initialization by using `bgra8888` image format instead of `yuv420`
+
+## 0.0.4
+
+### Improvements
+- Converted internal Pigeon API to async for better thread safety on iOS/macOS
+- Fixed race conditions in example app when disposing models during camera mode
+- Fixed UI getting stuck in camera mode when model loading fails
+
+### Code Quality
+- Fixed 100+ static analysis issues
+- Removed 9 deprecated lint rules (Dart 3.0-3.7)
+- Migrated to Flutter 3.32+ `RadioGroup` API
+- Added documentation for `ProcessorException` classes
+- Removed dead code in example app renderers and controllers
+
+## 0.0.3
+
+- Upgraded ExecuTorch to 1.0.1 on all platforms
+- No API changes from 0.0.2
+
+## 0.0.2
+
+- Fixed Swift 6 compilation errors for Xcode 16+
+
+## 0.0.1
+
+Initial release with Android, iOS, and macOS support.
+
+- Type-safe Pigeon API
+- Async model loading and inference
+- XNNPACK, CoreML, MPS backends
+- Example app with classification and detection demos

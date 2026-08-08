@@ -1,0 +1,6 @@
+.gitignore
+/build/
+.dart_tool/
+CLAUDE.md
+native/CLAUDE.md
+tmp/

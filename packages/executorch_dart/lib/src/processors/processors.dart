@@ -1,0 +1,95 @@
+/// ExecuTorch Flutter Base Processors
+///
+/// This library provides the base classes and utilities for building
+/// preprocessing and postprocessing components for ExecuTorch models.
+/// These abstract classes define the interface for converting domain-specific
+/// input into tensors and model outputs back into meaningful results.
+///
+/// ## Core Architecture
+///
+/// The processor architecture is based on three main abstract classes:
+///
+/// - [ExecuTorchPreprocessor]: Converts input data to tensors
+/// - [ExecuTorchPostprocessor]: Converts output tensors to results
+/// - [ExecuTorchProcessor]: Combines preprocessing and postprocessing
+///
+/// ## Utilities
+/// - [ProcessorTensorUtils]: Tensor creation and manipulation utilities
+/// - [ProcessorException]: Base exception class for processor errors
+/// - [PreprocessingException]: Preprocessing-specific exceptions
+/// - [PostprocessingException]: Postprocessing-specific exceptions
+/// - [InvalidInputException]: Invalid input exceptions
+/// - [InvalidOutputException]: Invalid output exceptions
+///
+/// ## Usage Examples
+///
+/// ### Creating a Custom Preprocessor
+/// ```dart
+/// class MyImagePreprocessor extends ExecuTorchPreprocessor<Uint8List> {
+///   @override
+///   String get inputTypeName => 'Image';
+///
+///   @override
+///   bool validateInput(Uint8List input) => input.isNotEmpty;
+///
+///   @override
+///   Future<List<TensorData>> preprocess(
+///     Uint8List input, {ModelMetadata? metadata}
+///   ) async {
+///     // Convert image to tensor
+///     final tensorData = ProcessorTensorUtils.createTensor(
+///       shape: [1, 3, 224, 224],
+///       dataType: TensorType.float32,
+///       data: processedImageData,
+///       name: 'input',
+///     );
+///     return [tensorData];
+///   }
+/// }
+/// ```
+///
+/// ### Creating a Custom Postprocessor
+/// ```dart
+/// class MyClassificationPostprocessor
+///     extends ExecuTorchPostprocessor<MyResult> {
+///   @override
+///   String get outputTypeName => 'Classification';
+///
+///   @override
+///   bool validateOutputs(List<TensorData> outputs) => outputs.isNotEmpty;
+///
+///   @override
+///   Future<MyResult> postprocess(
+///     List<TensorData> outputs, {ModelMetadata? metadata}
+///   ) async {
+///     // Process model outputs
+///     return MyResult(/* ... */);
+///   }
+/// }
+/// ```
+///
+/// For complete processor implementations, see the example app which contains
+/// reference implementations for image classification, object detection,
+/// text processing, and audio processing.
+library;
+
+// Imported solely so the doc comment above can link to these names. This was
+// previously three imports with identical `show` lists — of this package's own
+// public library, of `base_processor.dart`, and of this file itself. The
+// self-import of `executorch_dart.dart` pulled dart:ffi in behind every
+// consumer of the processors, which broke web builds of
+// `package:executorch_flutter`; the other two were redundant with this one.
+import 'base_processor.dart'
+    show
+        ExecuTorchPostprocessor,
+        ExecuTorchPreprocessor,
+        ExecuTorchProcessor,
+        InvalidInputException,
+        InvalidOutputException,
+        PostprocessingException,
+        PreprocessingException,
+        ProcessorException,
+        ProcessorTensorUtils;
+
+// Base processor classes and utilities only
+export 'base_processor.dart';

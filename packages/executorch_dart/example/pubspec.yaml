@@ -1,0 +1,11 @@
+name: executorch_dart_example
+description: Pure-Dart command-line example for executorch_dart.
+publish_to: none
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+resolution: workspace
+
+dependencies:
+  executorch_dart: ^0.6.0

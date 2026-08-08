@@ -39,17 +39,17 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Build Android APK (Release)
         run: flutter build apk --release
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: android-release-apk
-          path: example/build/app/outputs/flutter-apk/app-release.apk
+          path: packages/executorch_flutter/example/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
 
   # iOS Release Build
@@ -78,17 +78,17 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Build iOS (Release, no codesign)
         run: flutter build ios --release --no-codesign
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Upload iOS Build
         uses: actions/upload-artifact@v4
         with:
           name: ios-release-build
-          path: example/build/ios/iphoneos/Runner.app
+          path: packages/executorch_flutter/example/build/ios/iphoneos/Runner.app
           retention-days: 7
 
   # macOS Release Build
@@ -117,27 +117,27 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Build macOS (Release)
         run: flutter build macos --release
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Run integration tests
         run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/models_integration_test.dart -d macos
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         timeout-minutes: 45
 
       - name: Run all models compatibility tests
         run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d macos --dart-define=CI=true
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         timeout-minutes: 60
 
       - name: Upload macOS Build
         uses: actions/upload-artifact@v4
         with:
           name: macos-release-build
-          path: example/build/macos/Build/Products/Release/executorch_flutter_example.app
+          path: packages/executorch_flutter/example/build/macos/Build/Products/Release/executorch_flutter_example.app
           retention-days: 7
 
   # Windows Build
@@ -160,27 +160,27 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Build Windows (Release)
         run: flutter build windows --release -v
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Run integration tests
         run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/models_integration_test.dart -d windows
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         timeout-minutes: 45
 
       - name: Run all models compatibility tests
         run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d windows --dart-define=CI=true
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         timeout-minutes: 60
 
       - name: Upload Windows Build
         uses: actions/upload-artifact@v4
         with:
           name: windows-release-build
-          path: example/build/windows/x64/runner/Release/
+          path: packages/executorch_flutter/example/build/windows/x64/runner/Release/
           retention-days: 7
 
   # Linux Build
@@ -208,27 +208,27 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Build Linux (Release)
         run: flutter build linux --release
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Run integration tests
         run: xvfb-run flutter drive --driver=test_driver/integration_test.dart --target=integration_test/models_integration_test.dart -d linux
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         timeout-minutes: 45
 
       - name: Run all models compatibility tests
         run: xvfb-run flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_models_test.dart -d linux --dart-define=CI=true
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
         timeout-minutes: 60
 
       - name: Upload Linux Build
         uses: actions/upload-artifact@v4
         with:
           name: linux-release-build
-          path: example/build/linux/x64/release/bundle/
+          path: packages/executorch_flutter/example/build/linux/x64/release/bundle/
           retention-days: 7
 
   # Web Build
@@ -248,24 +248,25 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Setup web assets
         run: dart run executorch_flutter:setup_web
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Build Web (Release)
         run: flutter build web --release
-        working-directory: example
+        working-directory: packages/executorch_flutter/example
 
       - name: Upload Web Build
         uses: actions/upload-artifact@v4
         with:
           name: web-release-build
-          path: example/build/web/
+          path: packages/executorch_flutter/example/build/web/
           retention-days: 7
 
-  # Analyze and Format Check (package only, not example app)
+  # Analyze and Format Check for executorch_flutter (package only, not example
+  # app). executorch_dart is analyzed by the pure-dart job below, without Flutter.
   analyze:
     name: Analyze & Format
     runs-on: macos-latest
@@ -285,8 +286,148 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Analyze package
-        run: flutter analyze lib
+      - name: Analyze workspace
+        run: flutter analyze
 
+      # Covers both packages in full — lib, bin, hook, test, and the examples.
+      # Scoping this to lib/ let 44 files drift out of format unnoticed.
       - name: Check formatting
-        run: dart format --set-exit-if-changed lib
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            packages/executorch_dart packages/executorch_flutter
+
+      - name: Test package
+        run: flutter test
+        working-directory: packages/executorch_flutter
+
+  # Pure Dart (no Flutter) — regression guard for the core/wrapper split.
+  # Installs Dart only. If this job ever needs Flutter to pass, the split
+  # has regressed.
+  #
+  # `dart pub get` resolves a pub workspace JOINTLY across every member (see
+  # the root pubspec.yaml `workspace:` list): packages/executorch_flutter and
+  # its example declare `sdk: flutter` dependencies that a Dart-only SDK can
+  # never satisfy, so `dart pub get` fails here even scoped with
+  # `--directory=packages/executorch_dart` — pub still walks up to the
+  # workspace root to resolve jointly. There is no `--no-workspace` escape.
+  # Instead, stage a copy of the core (+ its example) outside the workspace
+  # and resolve it there with a plain path dependency. This is also exactly
+  # what a real Dart-only consumer — a server, a CLI — does: resolve
+  # executorch_dart with no Flutter workspace in sight.
+  pure-dart:
+    name: Pure Dart (no Flutter)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Stage an isolated copy outside the pub workspace
+        run: |
+          set -euo pipefail
+          STAGE="$RUNNER_TEMP/executorch_dart_isolated"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          cp -R packages/executorch_dart "$STAGE/executorch_dart"
+          # Drop any locally-cached resolution so this always resolves fresh,
+          # whether run on a clean CI checkout or a dirty local one.
+          rm -rf "$STAGE/executorch_dart/.dart_tool" \
+                 "$STAGE/executorch_dart/example/.dart_tool" \
+                 "$STAGE/executorch_dart/build" \
+                 "$STAGE/executorch_dart/example/build"
+          echo "STAGE=$STAGE" >> "$GITHUB_ENV"
+
+      - name: Rewrite isolated pubspecs (drop workspace resolution, path-depend the example on the core, pin lean release-mode defines)
+        run: |
+          python3 - <<'PY'
+          import re, sys, pathlib, os
+
+          stage = pathlib.Path(os.environ["STAGE"])
+
+          # The core: only `resolution: workspace` needs to go — pub refuses
+          # that field with no ancestor `workspace:` pubspec to satisfy it.
+          # Its existing hooks: user_defines: block (debug: false,
+          # build_mode: "prebuilt") is already lean; leave it alone.
+          core_pubspec = stage / "executorch_dart" / "pubspec.yaml"
+          text = core_pubspec.read_text()
+          text, n = re.subn(r"(?m)^resolution:\s*workspace\n", "", text)
+          if n != 1:
+              sys.exit(
+                  f"expected exactly one 'resolution: workspace' line in "
+                  f"{core_pubspec}, found {n} — pubspec shape changed, fix "
+                  f"this rewrite"
+              )
+          core_pubspec.write_text(text)
+
+          # The example: drop workspace resolution, switch the version-pinned
+          # dependency to a path dependency on the staged core sibling, and
+          # add an explicit lean hooks block — it inherited the real repo's
+          # heavy debug/llm/mlx defines from the workspace root before, which
+          # this staged tree has no equivalent of, so it must set its own.
+          example_pubspec = stage / "executorch_dart" / "example" / "pubspec.yaml"
+          text = example_pubspec.read_text()
+          text, n = re.subn(r"(?m)^resolution:\s*workspace\n", "", text)
+          if n != 1:
+              sys.exit(
+                  f"expected exactly one 'resolution: workspace' line in "
+                  f"{example_pubspec}, found {n} — pubspec shape changed, "
+                  f"fix this rewrite"
+              )
+          text, n = re.subn(
+              r"(?m)^(\s*)executorch_dart:\s*\^0\.6\.0\s*$",
+              r"\1executorch_dart:\n\1  path: ../",
+              text,
+          )
+          if n != 1:
+              sys.exit(
+                  f"expected exactly one 'executorch_dart: ^0.6.0' "
+                  f"dependency line in {example_pubspec}, found {n} — "
+                  f"pubspec shape changed, fix this rewrite"
+              )
+          text += (
+              "\nhooks:\n"
+              "  user_defines:\n"
+              "    executorch_dart:\n"
+              "      debug: false\n"
+              '      build_mode: "prebuilt"\n'
+              "      llm: false\n"
+              "      backends:\n"
+              "        - xnnpack\n"
+          )
+          example_pubspec.write_text(text)
+          print("Isolated pubspecs rewritten OK")
+          PY
+
+      - name: Resolve core (isolated, no Flutter workspace)
+        run: dart pub get
+        working-directory: ${{ env.STAGE }}/executorch_dart
+
+      - name: Analyze core
+        run: dart analyze .
+        working-directory: ${{ env.STAGE }}/executorch_dart
+
+      - name: Check core formatting
+        run: dart format --output=none --set-exit-if-changed lib
+        working-directory: ${{ env.STAGE }}/executorch_dart
+
+      - name: Test core
+        run: dart test
+        working-directory: ${{ env.STAGE }}/executorch_dart
+
+      - name: Resolve CLI example (isolated, path dependency on the core)
+        run: dart pub get
+        working-directory: ${{ env.STAGE }}/executorch_dart/example
+
+      - name: Build CLI example
+        run: dart build cli
+        working-directory: ${{ env.STAGE }}/executorch_dart/example

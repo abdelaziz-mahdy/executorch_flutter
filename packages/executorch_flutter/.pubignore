@@ -1,0 +1,34 @@
+# Files to exclude from pub.dev publishing
+# Keep package size small and exclude development/example files
+
+# Gitignore files (suppress pub.dev warning about checked-in gitignored files)
+.gitignore
+android/.gitignore
+example/.gitignore
+example/android/.gitignore
+example/ios/.gitignore
+example/macos/.gitignore
+ios/.gitignore
+
+# Build artifacts and generated files (root level only, not
+# packages/executorch_dart/lib/src/build/run_build.dart, which is source)
+/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+example/build/
+example/.dart_tool/
+example/.flutter-plugins
+example/.flutter-plugins-dependencies
+
+# Internal development documentation
+CLAUDE.md
+example/CLAUDE.md
+
+# Temporary directories
+tmp/
+
+# Large example assets - users should generate their own
+example/assets/models/*.pte
+example/assets/images/*.jpg

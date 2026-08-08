@@ -25,32 +25,47 @@ migrate_working_dir/
 
 # Flutter/Dart/Pub related
 # Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
+# This is a pub workspace: pub keeps exactly one shared lockfile at the
+# workspace root (member packages under packages/ never get their own), so
+# this root-anchored pattern is correct as-is.
 /pubspec.lock
 **/doc/api/
 .dart_tool/
 .flutter-plugins-dependencies
+# Build/coverage output lands at the workspace root (rare), inside each
+# package under packages/<name>/ (the common case), and inside package
+# examples under packages/<name>/example/ (e.g. `dart build cli` for
+# executorch_dart's pure-Dart example). Deliberately NOT a blanket "build/",
+# since packages/executorch_dart/lib/src/build/run_build.dart is a real,
+# tracked source file (the native-assets build hook), not output.
 /build/
+packages/*/build/
+packages/*/example/build/
 /coverage/
+packages/*/coverage/
 
 # Python virtual environment and cache
 python/executorch_env/
 python/__pycache__/
 python/*.pyc
-example/assets/models/audio_class_labels.json
+**/example/assets/models/audio_class_labels.json
 
 # Internal development documentation
-specs/
+/specs/
 **/docs/plans/
 
 # Temporary Wasm build artifacts and examples
-web/wasm/tmp/
-example/example/assets/models/gemma-3-270m_xnnpack.pte
-example/example/assets/models/gemma-3-270m_tokenizer_config.json
-example/example/assets/models/gemma-3-270m_vocab.json
-example/assets/models/gemma-3-270m_xnnpack.pte
-example/assets/models/gemma-3-270m_tokenizer_config.json
-example/assets/models/gemma-3-270m_vocab.json
-example/android/.kotlin/sessions/kotlin-compiler-17735043791835568195.salive
+# `**/` prefixes below: these paths now live under packages/executorch_flutter/
+# rather than the repo root, and are written depth-agnostic so they keep
+# matching if a package gets relocated or renamed again later. The old
+# doubled "example/example/assets/models/..." lines are gone on purpose —
+# `**/example/assets/models/<file>` already matches that legacy nested case
+# too (verified empirically), so they were redundant.
+**/web/wasm/tmp/
+**/example/assets/models/gemma-3-270m_xnnpack.pte
+**/example/assets/models/gemma-3-270m_tokenizer_config.json
+**/example/assets/models/gemma-3-270m_vocab.json
+**/example/android/.kotlin/sessions/kotlin-compiler-17735043791835568195.salive
 
 # Git submodules - explicitly tracked (not ignored)
 # These are required for the package to work:

@@ -1,0 +1,14 @@
+version: 1
+transforms:
+  - title: "Use the top-level loadModelFromAsset"
+    date: 2026-08-05
+    bulkApply: true
+    element:
+      uris: ['package:executorch_flutter/executorch_flutter.dart']
+      method: 'loadFromAsset'
+      inClass: 'ExecuTorchModel'
+    changes:
+      - kind: 'replacedBy'
+        newElement:
+          uris: ['package:executorch_flutter/executorch_flutter.dart']
+          function: 'loadModelFromAsset'
