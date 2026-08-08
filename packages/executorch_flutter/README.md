@@ -436,6 +436,35 @@ Web runs via WebAssembly with XNNPACK backend.
 
 3. Use XNNPACK models (same as native).
 
+### Serving models on web
+
+**Host your models on an origin you control, or bundle them as Flutter assets.**
+
+On native you can download a `.pte` from anywhere. On web the browser enforces
+CORS, and a cross-origin fetch only succeeds if the server sends
+`Access-Control-Allow-Origin`. GitHub release assets do not send it, so
+fetching a model straight from a GitHub release fails in every browser:
+
+```
+Access to fetch at 'https://github.com/.../releases/download/...pte'
+blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present
+```
+
+Three approaches that work:
+
+- **Bundle the model as an asset** and load it with `loadModelFromAsset` — the
+  simplest option, and the right one when the model ships with the app.
+- **Serve it from your own origin**, same host as the app, so CORS never
+  applies.
+- **Use a CDN or object store that sends `Access-Control-Allow-Origin`** if the
+  model must be fetched cross-origin.
+
+Remember that label files and any other side-car assets go through the same
+check — it is easy to fix the model download and still fail on labels.
+
+This repo's own web demo takes the second approach: its deploy workflow copies
+the models into the published site so they are served from the app's origin.
+
 ---
 
 ## Example Application
