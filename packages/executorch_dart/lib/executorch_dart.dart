@@ -25,3 +25,4 @@ export 'src/executorch_llm.dart' show ExecuTorchLLM, GenConfig;
 export 'src/ffi/backend_query.dart' show BackendQuery;
 export 'src/ffi/native_logging.dart' show setNativeDebugLogging;
 export 'src/ffi/version.dart' show ExecuTorchVersion;
+export 'src/tokenizer.dart' show Tokenizer, TokenizerFormat;
