@@ -46,9 +46,7 @@ class BlazeFaceModelDefinition
   InputProcessor<ModelInput> createInputProcessor(ModelSettings settings) {
     final faceSettings = settings as FaceModelSettings;
     return BlazeFaceInputProcessor(
-      config: BlazeFacePreprocessConfig(
-        targetSize: inputSize,
-      ),
+      config: BlazeFacePreprocessConfig(targetSize: inputSize),
       preprocessingProvider: faceSettings.preprocessingProvider,
     );
   }
@@ -151,8 +149,9 @@ class BlazeFaceModelDefinition
     required ModelSettings settings,
     required Function(ModelSettings) onSettingsChanged,
   }) {
-    final faceSettings =
-        settings is FaceModelSettings ? settings : BlazeFaceModelSettings();
+    final faceSettings = settings is FaceModelSettings
+        ? settings
+        : BlazeFaceModelSettings();
 
     final isMobile = UniversalPlatform.isAndroid || UniversalPlatform.isIOS;
 

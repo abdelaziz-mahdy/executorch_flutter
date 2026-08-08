@@ -282,8 +282,8 @@ class ModelController extends ChangeNotifier {
       final inputProcessor = definition.createInputProcessor(_settings);
       final tensors = await inputProcessor.process(liveCameraInput);
       preprocessStopwatch.stop();
-      final preprocessingTime =
-          preprocessStopwatch.elapsedMilliseconds.toDouble();
+      final preprocessingTime = preprocessStopwatch.elapsedMilliseconds
+          .toDouble();
 
       if (_isDisposed) return;
 
@@ -300,8 +300,8 @@ class ModelController extends ChangeNotifier {
       final outputProcessor = definition.createOutputProcessor(_settings);
       final result = await outputProcessor.process(outputs);
       postprocessStopwatch.stop();
-      final postprocessingTime =
-          postprocessStopwatch.elapsedMilliseconds.toDouble();
+      final postprocessingTime = postprocessStopwatch.elapsedMilliseconds
+          .toDouble();
 
       totalStopwatch.stop();
       final totalTime = totalStopwatch.elapsedMilliseconds.toDouble();

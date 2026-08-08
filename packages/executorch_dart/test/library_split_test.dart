@@ -12,8 +12,7 @@ import 'package:test/test.dart';
 /// appears on native and silently vanishes on web — a failure no VM test and
 /// no `dart analyze` run can see. Reading the file as text catches it here.
 void main() {
-  test('executorch_dart.dart exports only the shared library and ffi lines',
-      () {
+  test('executorch_dart.dart exports only shared plus ffi lines', () {
     final source = File('lib/executorch_dart.dart').readAsStringSync();
     final exports = source
         .split('\n')
@@ -30,7 +29,8 @@ void main() {
         "export 'src/ffi/native_logging.dart' show setNativeDebugLogging;",
         "export 'src/ffi/version.dart' show ExecuTorchVersion;",
       ]),
-      reason: 'Add ffi-free exports to lib/executorch_dart_shared.dart, not '
+      reason:
+          'Add ffi-free exports to lib/executorch_dart_shared.dart, not '
           'lib/executorch_dart.dart — the latter is not reachable on web. If '
           'you added a genuinely ffi-backed export, add it to this list and to '
           "the Flutter wrapper's hide/route block, which must stay in lockstep.",

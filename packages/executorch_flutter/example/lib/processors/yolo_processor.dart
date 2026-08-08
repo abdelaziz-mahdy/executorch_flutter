@@ -343,7 +343,9 @@ class YoloPostprocessor extends ExecuTorchPostprocessor<ObjectDetectionResult> {
 
     // Validate shape has at least 2 dimensions
     if (shape.length < 2) {
-      debugPrint('❌ Unexpected shape: $shape, expected at least [batch, features, predictions]');
+      debugPrint(
+        '❌ Unexpected shape: $shape, expected at least [batch, features, predictions]',
+      );
       return [];
     }
 

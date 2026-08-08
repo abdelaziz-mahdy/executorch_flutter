@@ -90,12 +90,7 @@ extension YoloFaceLandmarkTypeExtension on YoloFaceLandmarkType {
 }
 
 /// Generic face landmark type for unified handling
-enum FaceLandmarkCategory {
-  eye,
-  nose,
-  mouth,
-  ear,
-}
+enum FaceLandmarkCategory { eye, nose, mouth, ear }
 
 /// Get color for a landmark category
 Color getLandmarkCategoryColor(FaceLandmarkCategory category) {

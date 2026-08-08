@@ -156,8 +156,9 @@ class YoloFaceModelDefinition
     required ModelSettings settings,
     required Function(ModelSettings) onSettingsChanged,
   }) {
-    final faceSettings =
-        settings is YoloFaceModelSettings ? settings : YoloFaceModelSettings();
+    final faceSettings = settings is YoloFaceModelSettings
+        ? settings
+        : YoloFaceModelSettings();
 
     final isMobile = UniversalPlatform.isAndroid || UniversalPlatform.isIOS;
 

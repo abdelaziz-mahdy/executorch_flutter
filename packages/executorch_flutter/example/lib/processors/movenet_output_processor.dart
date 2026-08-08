@@ -77,12 +77,14 @@ class MoveNetOutputProcessor extends OutputProcessor<PoseDetectionResult> {
       final confidence = outputs[i * 3 + 2];
 
       final type = PoseKeypointType.values[i];
-      keypoints.add(PoseKeypoint(
-        type: type,
-        x: x.clamp(0.0, 1.0),
-        y: y.clamp(0.0, 1.0),
-        confidence: confidence.clamp(0.0, 1.0),
-      ));
+      keypoints.add(
+        PoseKeypoint(
+          type: type,
+          x: x.clamp(0.0, 1.0),
+          y: y.clamp(0.0, 1.0),
+          confidence: confidence.clamp(0.0, 1.0),
+        ),
+      );
 
       if (confidence >= confidenceThreshold) {
         totalConfidence += confidence;
@@ -90,18 +92,14 @@ class MoveNetOutputProcessor extends OutputProcessor<PoseDetectionResult> {
       }
     }
 
-    final avgConfidence =
-        validKeypoints > 0 ? totalConfidence / validKeypoints : 0.0;
+    final avgConfidence = validKeypoints > 0
+        ? totalConfidence / validKeypoints
+        : 0.0;
 
     // Only return pose if enough keypoints are visible
     if (validKeypoints >= 5) {
       return PoseDetectionResult(
-        poses: [
-          DetectedPose(
-            keypoints: keypoints,
-            confidence: avgConfidence,
-          ),
-        ],
+        poses: [DetectedPose(keypoints: keypoints, confidence: avgConfidence)],
       );
     }
 
@@ -128,12 +126,14 @@ class MoveNetOutputProcessor extends OutputProcessor<PoseDetectionResult> {
         final confidence = outputs[offset + i * 3 + 2];
 
         final type = PoseKeypointType.values[i];
-        keypoints.add(PoseKeypoint(
-          type: type,
-          x: x.clamp(0.0, 1.0),
-          y: y.clamp(0.0, 1.0),
-          confidence: confidence.clamp(0.0, 1.0),
-        ));
+        keypoints.add(
+          PoseKeypoint(
+            type: type,
+            x: x.clamp(0.0, 1.0),
+            y: y.clamp(0.0, 1.0),
+            confidence: confidence.clamp(0.0, 1.0),
+          ),
+        );
 
         if (confidence >= confidenceThreshold) {
           totalConfidence += confidence;
@@ -144,15 +144,18 @@ class MoveNetOutputProcessor extends OutputProcessor<PoseDetectionResult> {
       // Detection score is at index 51 (after 17*3 keypoints)
       final detectionScore = outputs[offset + 51];
 
-      final avgConfidence =
-          validKeypoints > 0 ? totalConfidence / validKeypoints : 0.0;
+      final avgConfidence = validKeypoints > 0
+          ? totalConfidence / validKeypoints
+          : 0.0;
 
       // Only add pose if detection score is high enough and enough keypoints visible
       if (detectionScore >= confidenceThreshold && validKeypoints >= 5) {
-        poses.add(DetectedPose(
-          keypoints: keypoints,
-          confidence: avgConfidence * detectionScore,
-        ));
+        poses.add(
+          DetectedPose(
+            keypoints: keypoints,
+            confidence: avgConfidence * detectionScore,
+          ),
+        );
       }
     }
 

@@ -141,7 +141,8 @@ class ModelRegistry {
           inputSize: entry.inputSize ?? 224,
           hash: entry.hash,
           fileSizeMB: entry.sizeMB,
-          labelsRemoteUrl: entry.labelsRemoteUrl ??
+          labelsRemoteUrl:
+              entry.labelsRemoteUrl ??
               index.getLabelsUrl('mobilenet') ??
               _imagenetLabelsUrl,
         );
@@ -155,7 +156,8 @@ class ModelRegistry {
           inputSize: entry.inputSize ?? 640,
           hash: entry.hash,
           fileSizeMB: entry.sizeMB,
-          labelsRemoteUrl: entry.labelsRemoteUrl ??
+          labelsRemoteUrl:
+              entry.labelsRemoteUrl ??
               index.getLabelsUrl('yolo') ??
               _cocoLabelsUrl,
         );
@@ -234,8 +236,10 @@ class ModelRegistry {
       MobileNetModelDefinition(
         name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (Web)',
-        description: 'Web-optimized image classification - XNNPACK with WASM SIMD',
-        remoteUrl: '$_releaseBaseUrl/v$_fallbackVersion/mobilenet_v3_small_xnnpack.pte',
+        description:
+            'Web-optimized image classification - XNNPACK with WASM SIMD',
+        remoteUrl:
+            '$_releaseBaseUrl/v$_fallbackVersion/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
         fileSizeMB: 9.73,
         labelsRemoteUrl: _imagenetLabelsUrl,
@@ -259,8 +263,10 @@ class ModelRegistry {
       MobileNetModelDefinition(
         name: 'mobilenet_v3_small_xnnpack',
         displayName: 'MobileNet V3 Small (XNNPACK)',
-        description: 'CPU-optimized image classification - works on all platforms',
-        remoteUrl: '$_releaseBaseUrl/v$_fallbackVersion/mobilenet_v3_small_xnnpack.pte',
+        description:
+            'CPU-optimized image classification - works on all platforms',
+        remoteUrl:
+            '$_releaseBaseUrl/v$_fallbackVersion/mobilenet_v3_small_xnnpack.pte',
         inputSize: 224,
         fileSizeMB: 9.73,
         labelsRemoteUrl: _imagenetLabelsUrl,

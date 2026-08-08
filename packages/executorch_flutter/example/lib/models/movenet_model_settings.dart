@@ -78,7 +78,8 @@ class MoveNetModelSettings extends PoseModelSettings {
       showPerformanceOverlay:
           showPerformanceOverlay ?? this.showPerformanceOverlay,
       cameraProvider: cameraProvider ?? this.cameraProvider,
-      preprocessingProvider: preprocessingProvider ?? this.preprocessingProvider,
+      preprocessingProvider:
+          preprocessingProvider ?? this.preprocessingProvider,
       confidenceThreshold: confidenceThreshold ?? this.confidenceThreshold,
       multiPersonMode: multiPersonMode ?? this.multiPersonMode,
       showSkeleton: showSkeleton ?? this.showSkeleton,

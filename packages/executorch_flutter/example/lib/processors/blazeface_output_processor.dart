@@ -114,19 +114,23 @@ class BlazeFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
             final lmX = floatData[lmOffset].clamp(0.0, 1.0);
             final lmY = floatData[lmOffset + 1].clamp(0.0, 1.0);
 
-            landmarks.add(FaceLandmark.fromBlazeFace(
-              type: BlazeFaceLandmarkType.values[j],
-              x: lmX,
-              y: lmY,
-            ));
+            landmarks.add(
+              FaceLandmark.fromBlazeFace(
+                type: BlazeFaceLandmarkType.values[j],
+                x: lmX,
+                y: lmY,
+              ),
+            );
           }
         }
 
-        faces.add(DetectedFace(
-          boundingBox: box,
-          landmarks: landmarks,
-          confidence: confidence,
-        ));
+        faces.add(
+          DetectedFace(
+            boundingBox: box,
+            landmarks: landmarks,
+            confidence: confidence,
+          ),
+        );
       }
     }
 
@@ -191,19 +195,23 @@ class BlazeFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
         for (int j = 0; j < 6; j++) {
           final lmOffset = regOffset + 4 + j * 2;
           if (lmOffset + 1 < regFloatData.length) {
-            landmarks.add(FaceLandmark.fromBlazeFace(
-              type: BlazeFaceLandmarkType.values[j],
-              x: regFloatData[lmOffset].clamp(0.0, 1.0),
-              y: regFloatData[lmOffset + 1].clamp(0.0, 1.0),
-            ));
+            landmarks.add(
+              FaceLandmark.fromBlazeFace(
+                type: BlazeFaceLandmarkType.values[j],
+                x: regFloatData[lmOffset].clamp(0.0, 1.0),
+                y: regFloatData[lmOffset + 1].clamp(0.0, 1.0),
+              ),
+            );
           }
         }
 
-        faces.add(DetectedFace(
-          boundingBox: box,
-          landmarks: landmarks,
-          confidence: confidence,
-        ));
+        faces.add(
+          DetectedFace(
+            boundingBox: box,
+            landmarks: landmarks,
+            confidence: confidence,
+          ),
+        );
       }
     }
 
@@ -252,7 +260,8 @@ class BlazeFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
     final intersectRight = math.min(a.x + a.width, b.x + b.width);
     final intersectBottom = math.min(a.y + a.height, b.y + b.height);
 
-    final intersectArea = math.max(0.0, intersectRight - intersectLeft) *
+    final intersectArea =
+        math.max(0.0, intersectRight - intersectLeft) *
         math.max(0.0, intersectBottom - intersectTop);
 
     return intersectArea / (areaA + areaB - intersectArea);

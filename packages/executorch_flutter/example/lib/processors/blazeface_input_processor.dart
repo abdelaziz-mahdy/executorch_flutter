@@ -11,9 +11,7 @@ import 'shaders/gpu_blazeface_preprocessor.dart';
 
 /// Preprocessing configuration for BlazeFace
 class BlazeFacePreprocessConfig {
-  const BlazeFacePreprocessConfig({
-    this.targetSize = 128,
-  });
+  const BlazeFacePreprocessConfig({this.targetSize = 128});
 
   /// Target input size (128x128 for BlazeFace)
   final int targetSize;

@@ -11,9 +11,7 @@ import 'shaders/gpu_movenet_preprocessor.dart';
 
 /// Preprocessing configuration for MoveNet
 class MoveNetPreprocessConfig {
-  const MoveNetPreprocessConfig({
-    this.targetSize = 192,
-  });
+  const MoveNetPreprocessConfig({this.targetSize = 192});
 
   /// Target input size (192 for Lightning, 256 for Thunder)
   final int targetSize;

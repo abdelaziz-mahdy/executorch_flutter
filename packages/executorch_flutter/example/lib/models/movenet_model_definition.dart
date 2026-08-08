@@ -46,9 +46,7 @@ class MoveNetModelDefinition
   InputProcessor<ModelInput> createInputProcessor(ModelSettings settings) {
     final poseSettings = settings as PoseModelSettings;
     return MoveNetInputProcessor(
-      config: MoveNetPreprocessConfig(
-        targetSize: inputSize,
-      ),
+      config: MoveNetPreprocessConfig(targetSize: inputSize),
       preprocessingProvider: poseSettings.preprocessingProvider,
     );
   }
@@ -100,8 +98,9 @@ class MoveNetModelDefinition
         ...result.poses.asMap().entries.map((entry) {
           final index = entry.key;
           final pose = entry.value;
-          final visibleKeypoints =
-              pose.keypoints.where((k) => k.confidence >= 0.3).length;
+          final visibleKeypoints = pose.keypoints
+              .where((k) => k.confidence >= 0.3)
+              .length;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -154,8 +153,9 @@ class MoveNetModelDefinition
     required ModelSettings settings,
     required Function(ModelSettings) onSettingsChanged,
   }) {
-    final poseSettings =
-        settings is PoseModelSettings ? settings : MoveNetModelSettings();
+    final poseSettings = settings is PoseModelSettings
+        ? settings
+        : MoveNetModelSettings();
 
     final isMobile = UniversalPlatform.isAndroid || UniversalPlatform.isIOS;
 

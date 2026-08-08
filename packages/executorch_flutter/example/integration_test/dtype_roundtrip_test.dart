@@ -30,19 +30,21 @@ void main() {
         );
 
         final tensor = NativeTensor.fromTensorData(
-          TensorData(
-            shape: const [2, 3],
-            dataType: type,
-            data: data,
-          ),
+          TensorData(shape: const [2, 3], dataType: type, data: data),
         );
         try {
           final back = tensor.toTensorData();
-          expect(back.dataType, type,
-              reason: 'dtype must survive the native round-trip');
+          expect(
+            back.dataType,
+            type,
+            reason: 'dtype must survive the native round-trip',
+          );
           expect(back.shape, [2, 3]);
-          expect(back.data, data,
-              reason: 'raw bytes must survive the native round-trip');
+          expect(
+            back.data,
+            data,
+            reason: 'raw bytes must survive the native round-trip',
+          );
         } finally {
           tensor.dispose();
         }

@@ -444,8 +444,7 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
       info['Computer Name'] = windows.computerName;
       info['Product Name'] = windows.productName;
       info['Build Number'] = '${windows.buildNumber}';
-      info['Physical RAM'] =
-          '${windows.systemMemoryInMegabytes} MB';
+      info['Physical RAM'] = '${windows.systemMemoryInMegabytes} MB';
       info['CPU Cores'] = '${windows.numberOfCores}';
     }
     return info;
@@ -533,9 +532,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               // Version section
               Text(
                 'Version',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               _buildInfoRow('ExecuTorch', etVersion),
@@ -546,9 +545,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               // Backends section
               Text(
                 'Backends',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               ...allBackends.map((backend) {
@@ -581,14 +580,12 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
               // Device section
               Text(
                 'Device',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              ...deviceInfo.entries.map(
-                (e) => _buildInfoRow(e.key, e.value),
-              ),
+              ...deviceInfo.entries.map((e) => _buildInfoRow(e.key, e.value)),
               const Divider(height: 24),
 
               _buildInfoRow('Selected Version', _selectedVersion),
@@ -799,8 +796,9 @@ class _UnifiedModelPlaygroundState extends State<UnifiedModelPlayground> {
                       child: Text(
                         isCurrentPlugin ? '$version ✓' : version,
                         style: TextStyle(
-                          fontWeight:
-                              isCurrentPlugin ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isCurrentPlugin
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     );

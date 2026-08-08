@@ -76,7 +76,14 @@ class FacePainter extends CustomPainter {
   ) {
     // Draw bounding box
     if (showBoundingBox) {
-      _drawBoundingBox(canvas, face.boundingBox, face.confidence, scale, offsetX, offsetY);
+      _drawBoundingBox(
+        canvas,
+        face.boundingBox,
+        face.confidence,
+        scale,
+        offsetX,
+        offsetY,
+      );
     }
 
     // Draw landmarks

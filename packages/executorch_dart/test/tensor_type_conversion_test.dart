@@ -12,32 +12,71 @@ void main() {
   group('TensorType executorchValue', () {
     test('all types have correct ExecuTorch enum values', () {
       // Verify the enum indices match ExecuTorch's ETDType values.
-      expect(TensorType.float32.executorchValue, 0,
-          reason: 'float32 should map to ET_DTYPE_FLOAT32 (0)');
-      expect(TensorType.float64.executorchValue, 1,
-          reason: 'float64 should map to ET_DTYPE_FLOAT64 (1)');
-      expect(TensorType.int64.executorchValue, 2,
-          reason: 'int64 should map to ET_DTYPE_INT64 (2)');
-      expect(TensorType.int32.executorchValue, 3,
-          reason: 'int32 should map to ET_DTYPE_INT32 (3)');
-      expect(TensorType.int16.executorchValue, 4,
-          reason: 'int16 should map to ET_DTYPE_INT16 (4)');
-      expect(TensorType.int8.executorchValue, 5,
-          reason: 'int8 should map to ET_DTYPE_INT8 (5)');
-      expect(TensorType.uint8.executorchValue, 6,
-          reason: 'uint8 should map to ET_DTYPE_UINT8 (6)');
-      expect(TensorType.bool_.executorchValue, 7,
-          reason: 'bool_ should map to ET_DTYPE_BOOL (7)');
-      expect(TensorType.uint16.executorchValue, 8,
-          reason: 'uint16 should map to ET_DTYPE_UINT16 (8)');
-      expect(TensorType.uint32.executorchValue, 9,
-          reason: 'uint32 should map to ET_DTYPE_UINT32 (9)');
-      expect(TensorType.uint64.executorchValue, 10,
-          reason: 'uint64 should map to ET_DTYPE_UINT64 (10)');
-      expect(TensorType.float16.executorchValue, 11,
-          reason: 'float16 should map to ET_DTYPE_FLOAT16 (11)');
-      expect(TensorType.bfloat16.executorchValue, 12,
-          reason: 'bfloat16 should map to ET_DTYPE_BFLOAT16 (12)');
+      expect(
+        TensorType.float32.executorchValue,
+        0,
+        reason: 'float32 should map to ET_DTYPE_FLOAT32 (0)',
+      );
+      expect(
+        TensorType.float64.executorchValue,
+        1,
+        reason: 'float64 should map to ET_DTYPE_FLOAT64 (1)',
+      );
+      expect(
+        TensorType.int64.executorchValue,
+        2,
+        reason: 'int64 should map to ET_DTYPE_INT64 (2)',
+      );
+      expect(
+        TensorType.int32.executorchValue,
+        3,
+        reason: 'int32 should map to ET_DTYPE_INT32 (3)',
+      );
+      expect(
+        TensorType.int16.executorchValue,
+        4,
+        reason: 'int16 should map to ET_DTYPE_INT16 (4)',
+      );
+      expect(
+        TensorType.int8.executorchValue,
+        5,
+        reason: 'int8 should map to ET_DTYPE_INT8 (5)',
+      );
+      expect(
+        TensorType.uint8.executorchValue,
+        6,
+        reason: 'uint8 should map to ET_DTYPE_UINT8 (6)',
+      );
+      expect(
+        TensorType.bool_.executorchValue,
+        7,
+        reason: 'bool_ should map to ET_DTYPE_BOOL (7)',
+      );
+      expect(
+        TensorType.uint16.executorchValue,
+        8,
+        reason: 'uint16 should map to ET_DTYPE_UINT16 (8)',
+      );
+      expect(
+        TensorType.uint32.executorchValue,
+        9,
+        reason: 'uint32 should map to ET_DTYPE_UINT32 (9)',
+      );
+      expect(
+        TensorType.uint64.executorchValue,
+        10,
+        reason: 'uint64 should map to ET_DTYPE_UINT64 (10)',
+      );
+      expect(
+        TensorType.float16.executorchValue,
+        11,
+        reason: 'float16 should map to ET_DTYPE_FLOAT16 (11)',
+      );
+      expect(
+        TensorType.bfloat16.executorchValue,
+        12,
+        reason: 'bfloat16 should map to ET_DTYPE_BFLOAT16 (12)',
+      );
     });
 
     test('executorchValue equals index for all types', () {
@@ -52,10 +91,14 @@ void main() {
     test('round-trips all types without loss', () {
       // The critical test: TensorType -> int -> TensorType must be identical.
       for (final original in TensorType.values) {
-        final converted =
-            TensorType.fromExecuTorchValue(original.executorchValue);
-        expect(converted, original,
-            reason: '$original should round-trip losslessly');
+        final converted = TensorType.fromExecuTorchValue(
+          original.executorchValue,
+        );
+        expect(
+          converted,
+          original,
+          reason: '$original should round-trip losslessly',
+        );
       }
     });
 
@@ -93,9 +136,13 @@ void main() {
 
   group('TensorType completeness', () {
     test('has exactly 13 types (no fallbacks needed)', () {
-      expect(TensorType.values.length, 13,
-          reason: 'TensorType must support all 13 ExecuTorch types '
-              'without fallback');
+      expect(
+        TensorType.values.length,
+        13,
+        reason:
+            'TensorType must support all 13 ExecuTorch types '
+            'without fallback',
+      );
     });
 
     test('all types are directly supported', () {
@@ -118,10 +165,14 @@ void main() {
       ];
 
       for (final type in types) {
-        final roundTripped =
-            TensorType.fromExecuTorchValue(type.executorchValue);
-        expect(roundTripped, equals(type),
-            reason: '$type must map directly, not via fallback');
+        final roundTripped = TensorType.fromExecuTorchValue(
+          type.executorchValue,
+        );
+        expect(
+          roundTripped,
+          equals(type),
+          reason: '$type must map directly, not via fallback',
+        );
       }
     });
   });
@@ -147,8 +198,11 @@ void main() {
   group('TensorType displayName', () {
     test('all types have a non-empty display name', () {
       for (final type in TensorType.values) {
-        expect(type.displayName, isNotEmpty,
-            reason: '$type should have a display name');
+        expect(
+          type.displayName,
+          isNotEmpty,
+          reason: '$type should have a display name',
+        );
       }
     });
   });
@@ -160,10 +214,13 @@ void main() {
 
   group('convertNumericDataToBytes integer encoding', () {
     test("int8 uses two's complement (no bias)", () {
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [-128, -1, 0, 1, 127],
-        TensorType.int8,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        -128,
+        -1,
+        0,
+        1,
+        127,
+      ], TensorType.int8);
       expect(bytes, [0x80, 0xFF, 0x00, 0x01, 0x7F]);
       // Round-trip back through a signed view.
       expect(bytes.buffer.asInt8List(), [-128, -1, 0, 1, 127]);
@@ -200,32 +257,38 @@ void main() {
     });
 
     test('uint8 clamps and round-trips', () {
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [-5, 0, 1, 255, 300],
-        TensorType.uint8,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        -5,
+        0,
+        1,
+        255,
+        300,
+      ], TensorType.uint8);
       expect(bytes, [0, 0, 1, 255, 255]);
     });
 
     test('uint16 clamps and round-trips', () {
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [-5, 0, 1, 65535, 70000],
-        TensorType.uint16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        -5,
+        0,
+        1,
+        65535,
+        70000,
+      ], TensorType.uint16);
       expect(bytes, hasLength(10));
       expect(bytes.buffer.asUint16List(), [0, 0, 1, 65535, 65535]);
     });
 
     test('uint32 clamps and round-trips', () {
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [-5, 0, 1, 0xFFFFFFFF, 0x100000000],
-        TensorType.uint32,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        -5,
+        0,
+        1,
+        0xFFFFFFFF,
+        0x100000000,
+      ], TensorType.uint32);
       expect(bytes, hasLength(20));
-      expect(
-        bytes.buffer.asUint32List(),
-        [0, 0, 1, 0xFFFFFFFF, 0xFFFFFFFF],
-      );
+      expect(bytes.buffer.asUint32List(), [0, 0, 1, 0xFFFFFFFF, 0xFFFFFFFF]);
     });
 
     test('uint64 encodes without crashing and clamps negatives to zero', () {
@@ -238,17 +301,16 @@ void main() {
         TensorType.uint64,
       );
       expect(bytes, hasLength(values.length * 8));
-      expect(
-        bytes.buffer.asUint64List(),
-        [0, 0, 1, 9223372036854775807],
-      );
+      expect(bytes.buffer.asUint64List(), [0, 0, 1, 9223372036854775807]);
     });
 
     test('bool encodes non-zero as 1 and zero as 0', () {
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [0, 1, -3, 2.5],
-        TensorType.bool_,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        0,
+        1,
+        -3,
+        2.5,
+      ], TensorType.bool_);
       expect(bytes, [0, 1, 1, 1]);
     });
   });

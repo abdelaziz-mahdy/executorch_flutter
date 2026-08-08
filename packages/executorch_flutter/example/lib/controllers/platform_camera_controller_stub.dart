@@ -93,7 +93,9 @@ class PlatformCameraController implements CameraController {
       debugPrint('📸 WebCameraController: Taking picture');
       final xFile = await _cameraController!.takePicture();
       final bytes = await xFile.readAsBytes();
-      debugPrint('✅ WebCameraController: Picture taken (${bytes.length} bytes)');
+      debugPrint(
+        '✅ WebCameraController: Picture taken (${bytes.length} bytes)',
+      );
       return bytes;
     } catch (e) {
       debugPrint('❌ WebCameraController: Failed to take picture: $e');
@@ -104,9 +106,7 @@ class PlatformCameraController implements CameraController {
   @override
   Widget buildPreview() {
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     return camera_pkg.CameraPreview(_cameraController!);

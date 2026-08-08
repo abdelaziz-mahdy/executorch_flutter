@@ -57,7 +57,9 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
 
     // Validate shape has at least 2 dimensions (excluding batch)
     if (shape.length < 2) {
-      debugPrint('❌ Unexpected shape: $shape, expected at least [batch, features, predictions]');
+      debugPrint(
+        '❌ Unexpected shape: $shape, expected at least [batch, features, predictions]',
+      );
       return const FaceDetectionResult(faces: []);
     }
 
@@ -98,7 +100,9 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
 
   /// Parse transposed format [1, N, 8400] or [N, 8400] where N is features
   List<DetectedFace> _parseTransposedOutput(
-      Float32List floatData, List<int> shape) {
+    Float32List floatData,
+    List<int> shape,
+  ) {
     // Handle both 3D [1, N, 8400] and 2D [N, 8400] shapes
     final numFeatures = shape.length >= 3 ? shape[1] : shape[0];
     final numPredictions = shape.length >= 3 ? shape[2] : shape[1];
@@ -111,7 +115,9 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
       return faces;
     }
 
-    debugPrint('📊 Parsing transposed face: features=$numFeatures, predictions=$numPredictions');
+    debugPrint(
+      '📊 Parsing transposed face: features=$numFeatures, predictions=$numPredictions',
+    );
 
     // Detect format based on number of features
     // Common formats:
@@ -125,7 +131,9 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
     final hasLandmarks = numFeatures >= 15;
 
     if (!hasLandmarks) {
-      debugPrint('⚠️ Model has no landmarks (features=$numFeatures < 15), returning faces without landmarks');
+      debugPrint(
+        '⚠️ Model has no landmarks (features=$numFeatures < 15), returning faces without landmarks',
+      );
     }
 
     for (int i = 0; i < numPredictions; i++) {
@@ -147,25 +155,30 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
         final landmarks = <FaceLandmark>[];
         if (hasLandmarks) {
           for (int k = 0; k < 5; k++) {
-            final lmX = floatData[(landmarkOffset + k * 2) * numPredictions + i] /
+            final lmX =
+                floatData[(landmarkOffset + k * 2) * numPredictions + i] /
                 inputWidth;
             final lmY =
                 floatData[(landmarkOffset + k * 2 + 1) * numPredictions + i] /
-                    inputHeight;
+                inputHeight;
 
-            landmarks.add(FaceLandmark.fromYoloFace(
-              type: YoloFaceLandmarkType.values[k],
-              x: lmX.clamp(0.0, 1.0),
-              y: lmY.clamp(0.0, 1.0),
-            ));
+            landmarks.add(
+              FaceLandmark.fromYoloFace(
+                type: YoloFaceLandmarkType.values[k],
+                x: lmX.clamp(0.0, 1.0),
+                y: lmY.clamp(0.0, 1.0),
+              ),
+            );
           }
         }
 
-        faces.add(DetectedFace(
-          boundingBox: box,
-          landmarks: landmarks,
-          confidence: conf,
-        ));
+        faces.add(
+          DetectedFace(
+            boundingBox: box,
+            landmarks: landmarks,
+            confidence: conf,
+          ),
+        );
       }
     }
 
@@ -174,7 +187,9 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
 
   /// Parse normal format [1, 8400, N] or [8400, N]
   List<DetectedFace> _parseNormalOutput(
-      Float32List floatData, List<int> shape) {
+    Float32List floatData,
+    List<int> shape,
+  ) {
     // Handle both 3D [1, 8400, N] and 2D [8400, N] shapes
     final numPredictions = shape.length >= 3 ? shape[1] : shape[0];
     final numFeatures = shape.length >= 3 ? shape[2] : shape[1];
@@ -187,7 +202,9 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
       return faces;
     }
 
-    debugPrint('📊 Parsing normal face: predictions=$numPredictions, features=$numFeatures');
+    debugPrint(
+      '📊 Parsing normal face: predictions=$numPredictions, features=$numFeatures',
+    );
 
     final hasClass = numFeatures >= 16;
     final landmarkOffset = hasClass ? 6 : 5;
@@ -195,7 +212,9 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
     final hasLandmarks = numFeatures >= 15;
 
     if (!hasLandmarks) {
-      debugPrint('⚠️ Model has no landmarks (features=$numFeatures < 15), returning faces without landmarks');
+      debugPrint(
+        '⚠️ Model has no landmarks (features=$numFeatures < 15), returning faces without landmarks',
+      );
     }
 
     for (int i = 0; i < numPredictions; i++) {
@@ -223,19 +242,23 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
             final lmX = floatData[lmOffset] / inputWidth;
             final lmY = floatData[lmOffset + 1] / inputHeight;
 
-            landmarks.add(FaceLandmark.fromYoloFace(
-              type: YoloFaceLandmarkType.values[k],
-              x: lmX.clamp(0.0, 1.0),
-              y: lmY.clamp(0.0, 1.0),
-            ));
+            landmarks.add(
+              FaceLandmark.fromYoloFace(
+                type: YoloFaceLandmarkType.values[k],
+                x: lmX.clamp(0.0, 1.0),
+                y: lmY.clamp(0.0, 1.0),
+              ),
+            );
           }
         }
 
-        faces.add(DetectedFace(
-          boundingBox: box,
-          landmarks: landmarks,
-          confidence: conf,
-        ));
+        faces.add(
+          DetectedFace(
+            boundingBox: box,
+            landmarks: landmarks,
+            confidence: conf,
+          ),
+        );
       }
     }
 
@@ -280,7 +303,8 @@ class YoloFaceOutputProcessor extends OutputProcessor<FaceDetectionResult> {
     final intersectRight = math.min(a.x + a.width, b.x + b.width);
     final intersectBottom = math.min(a.y + a.height, b.y + b.height);
 
-    final intersectArea = math.max(0.0, intersectRight - intersectLeft) *
+    final intersectArea =
+        math.max(0.0, intersectRight - intersectLeft) *
         math.max(0.0, intersectBottom - intersectTop);
 
     return intersectArea / (areaA + areaB - intersectArea);

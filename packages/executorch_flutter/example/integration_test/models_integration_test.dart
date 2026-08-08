@@ -38,7 +38,9 @@ void main() {
       );
 
       if (info.state != ModelDownloadState.downloaded) {
-        throw Exception('Failed to download ${entry.name}: ${info.errorMessage}');
+        throw Exception(
+          'Failed to download ${entry.name}: ${info.errorMessage}',
+        );
       }
 
       // For native platforms, return the local path
@@ -79,7 +81,8 @@ void main() {
       for (final entry in requiredModels.entries) {
         final modelEntry = index.models.firstWhere(
           (m) => m.name == entry.value,
-          orElse: () => throw Exception('Model ${entry.value} not found in index'),
+          orElse: () =>
+              throw Exception('Model ${entry.value} not found in index'),
         );
         modelEntries[entry.key] = modelEntry;
         modelPaths[entry.key] = await downloadAndCacheModel(modelEntry);
@@ -475,7 +478,9 @@ void main() {
           reason: 'At least one backend should be available',
         );
 
-        print('Available backends: ${availableBackends.map((b) => b.name).join(", ")}');
+        print(
+          'Available backends: ${availableBackends.map((b) => b.name).join(", ")}',
+        );
       });
 
       testWidgets('XNNPACK backend should be available on all platforms', (
@@ -560,25 +565,24 @@ void main() {
         }
       });
 
-      testWidgets(
-        'isAvailable should match available list for all backends',
-        (WidgetTester tester) async {
-          final availableBackends = BackendQuery.available;
+      testWidgets('isAvailable should match available list for all backends', (
+        WidgetTester tester,
+      ) async {
+        final availableBackends = BackendQuery.available;
 
-          for (final backend in Backend.values) {
-            final isAvailable = BackendQuery.isAvailable(backend);
-            final isInList = availableBackends.contains(backend);
+        for (final backend in Backend.values) {
+          final isAvailable = BackendQuery.isAvailable(backend);
+          final isInList = availableBackends.contains(backend);
 
-            expect(
-              isAvailable,
-              equals(isInList),
-              reason:
-                  '${backend.name}: isAvailable($isAvailable) should match '
-                  'presence in available list($isInList)',
-            );
-          }
-        },
-      );
+          expect(
+            isAvailable,
+            equals(isInList),
+            reason:
+                '${backend.name}: isAvailable($isAvailable) should match '
+                'presence in available list($isInList)',
+          );
+        }
+      });
     });
 
     // Tensor shape and data type tests

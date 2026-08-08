@@ -29,10 +29,9 @@ void main() {
       //   sign=0, exp=0x7F (bias 127 → exponent 0), mantissa=0
       // bfloat16 = upper 16 bits = 0x3F80
       // little-endian bytes: [0x80, 0x3F]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [1.0],
-        TensorType.bfloat16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        1.0,
+      ], TensorType.bfloat16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x80);
       expect(bytes[1], 0x3F);
@@ -43,10 +42,9 @@ void main() {
       //   sign=0, exp=0x80 (bias 127 → exponent 1), mantissa=0
       // bfloat16 = upper 16 bits = 0x4000
       // little-endian bytes: [0x00, 0x40]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [2.0],
-        TensorType.bfloat16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        2.0,
+      ], TensorType.bfloat16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x40);
@@ -57,10 +55,9 @@ void main() {
       //   sign=1, exp=0x7F, mantissa=0
       // bfloat16 = upper 16 bits = 0xBF80
       // little-endian bytes: [0x80, 0xBF]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [-1.0],
-        TensorType.bfloat16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        -1.0,
+      ], TensorType.bfloat16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x80);
       expect(bytes[1], 0xBF);
@@ -71,10 +68,9 @@ void main() {
       //   sign=0, exp=0x7E (bias 127 → exponent -1), mantissa=0
       // bfloat16 = upper 16 bits = 0x3F00
       // little-endian bytes: [0x00, 0x3F]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [0.5],
-        TensorType.bfloat16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        0.5,
+      ], TensorType.bfloat16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x3F);
@@ -83,10 +79,9 @@ void main() {
     test('encodes 0.0 as correct bfloat16 bytes', () {
       // IEEE 754 binary32(+0.0) = 0x00000000
       // bfloat16 = 0x0000
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [0.0],
-        TensorType.bfloat16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        0.0,
+      ], TensorType.bfloat16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x00);
@@ -97,20 +92,20 @@ void main() {
       //   sign=1, exp=0, mantissa=0
       // bfloat16 = 0x8000
       // little-endian bytes: [0x00, 0x80]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [-0.0],
-        TensorType.bfloat16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        -0.0,
+      ], TensorType.bfloat16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x80);
     });
 
     test('encodes multiple values with correct byte length', () {
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [1.0, 2.0, 3.0],
-        TensorType.bfloat16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        1.0,
+        2.0,
+        3.0,
+      ], TensorType.bfloat16);
       expect(bytes, hasLength(6)); // 3 values * 2 bytes each
     });
 
@@ -119,10 +114,9 @@ void main() {
       //   sign=0, exp=0xFF (all 1s = infinity), mantissa=0
       // bfloat16 = 0x7F80
       // little-endian bytes: [0x80, 0x7F]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [double.infinity],
-        TensorType.bfloat16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        double.infinity,
+      ], TensorType.bfloat16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x80);
       expect(bytes[1], 0x7F);
@@ -150,10 +144,9 @@ void main() {
       // binary16(1.0): sign=0, exp=15-15=0→0x0F, mantissa=0
       // Layout: 0 01111 0000000000 = 0x3C00
       // little-endian bytes: [0x00, 0x3C]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [1.0],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        1.0,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x3C);
@@ -163,10 +156,9 @@ void main() {
       // binary16(2.0): sign=0, exp=16-15=1→0x10, mantissa=0
       // Layout: 0 10000 0000000000 = 0x4000
       // little-endian bytes: [0x00, 0x40]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [2.0],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        2.0,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x40);
@@ -176,10 +168,9 @@ void main() {
       // binary16(-1.0): sign=1, exp=0x0F, mantissa=0
       // Layout: 1 01111 0000000000 = 0xBC00
       // little-endian bytes: [0x00, 0xBC]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [-1.0],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        -1.0,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0xBC);
@@ -189,10 +180,9 @@ void main() {
       // binary16(0.5): sign=0, exp=14-15=-1→0x0E, mantissa=0
       // Layout: 0 01110 0000000000 = 0x3800
       // little-endian bytes: [0x00, 0x38]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [0.5],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        0.5,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x38);
@@ -200,10 +190,9 @@ void main() {
 
     test('encodes 0.0 as correct float16 bytes', () {
       // binary16(+0.0): sign=0, exp=0, mantissa=0 → 0x0000
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [0.0],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        0.0,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x00);
@@ -212,10 +201,9 @@ void main() {
     test('encodes -0.0 as correct float16 bytes', () {
       // binary16(-0.0): sign=1, exp=0, mantissa=0 → 0x8000
       // little-endian bytes: [0x00, 0x80]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [-0.0],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        -0.0,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x80);
@@ -224,10 +212,9 @@ void main() {
     test('encodes infinity as correct float16 bytes', () {
       // binary16(+∞): sign=0, exp=0x1F (all 1s), mantissa=0 → 0x7C00
       // little-endian bytes: [0x00, 0x7C]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [double.infinity],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        double.infinity,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0x7C);
@@ -236,10 +223,9 @@ void main() {
     test('encodes -infinity as correct float16 bytes', () {
       // binary16(-∞): sign=1, exp=0x1F, mantissa=0 → 0xFC00
       // little-endian bytes: [0x00, 0xFC]
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [double.negativeInfinity],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        double.negativeInfinity,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       expect(bytes[0], 0x00);
       expect(bytes[1], 0xFC);
@@ -248,10 +234,9 @@ void main() {
     test('encodes NaN as float16 with NaN indicator', () {
       // IEEE 754 §3.4: NaN has exp=all-1s and mantissa≠0
       // binary16 NaN: exp=0x1F, mant≠0 → high bit pattern 0x7C01+
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [double.nan],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        double.nan,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       // Reconstruct the uint16 to check it's a NaN pattern
       final asUint16 = bytes[0] | (bytes[1] << 8);
@@ -259,25 +244,28 @@ void main() {
       final exp = (asUint16 >> 10) & 0x1F;
       final mant = asUint16 & 0x3FF;
       expect(exp, 0x1F, reason: 'NaN should have all exponent bits set');
-      expect(mant, isNot(equals(0)),
-          reason: 'NaN should have non-zero mantissa');
+      expect(
+        mant,
+        isNot(equals(0)),
+        reason: 'NaN should have non-zero mantissa',
+      );
     });
 
     test('encodes multiple values with correct byte length', () {
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [1.0, 2.0, 3.0],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        1.0,
+        2.0,
+        3.0,
+      ], TensorType.float16);
       expect(bytes, hasLength(6)); // 3 values * 2 bytes each
     });
 
     test('encodes small denormal value as zero (underflow)', () {
       // 1e-20 is far below binary16 min denormal (2^-24 ≈ 5.96e-8)
       // Underflows to zero per IEEE 754 §5.2.4 (round toward zero)
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [1e-20],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        1e-20,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       // Should underflow to zero
       expect(bytes[0], 0x00);
@@ -287,10 +275,9 @@ void main() {
     test('encodes large value as infinity (overflow)', () {
       // binary16 max finite = 65504 (0x7BFF). 1e10 exceeds this.
       // Overflows to infinity (0x7C00) per IEEE 754 §5.2.4
-      final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-        [1e10],
-        TensorType.float16,
-      );
+      final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+        1e10,
+      ], TensorType.float16);
       expect(bytes, hasLength(2));
       // Should overflow to infinity: 0x7C00
       expect(bytes[0], 0x00);
@@ -308,15 +295,18 @@ void main() {
         -6e-5: 0x83EF,
       };
       for (final entry in denormals.entries) {
-        final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-          [entry.key],
-          TensorType.float16,
-        );
+        final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+          entry.key,
+        ], TensorType.float16);
         final actual = bytes[0] | (bytes[1] << 8);
-        expect(actual, entry.value,
-            reason: 'float16 denormal mismatch for ${entry.key}: '
-                'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
-                'got 0x${actual.toRadixString(16).padLeft(4, '0')}');
+        expect(
+          actual,
+          entry.value,
+          reason:
+              'float16 denormal mismatch for ${entry.key}: '
+              'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
+              'got 0x${actual.toRadixString(16).padLeft(4, '0')}',
+        );
       }
     });
 
@@ -332,15 +322,18 @@ void main() {
         1.00146484375: 0x3C02,
       };
       for (final entry in rounded.entries) {
-        final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-          [entry.key],
-          TensorType.float16,
-        );
+        final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+          entry.key,
+        ], TensorType.float16);
         final actual = bytes[0] | (bytes[1] << 8);
-        expect(actual, entry.value,
-            reason: 'float16 rounding mismatch for ${entry.key}: '
-                'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
-                'got 0x${actual.toRadixString(16).padLeft(4, '0')}');
+        expect(
+          actual,
+          entry.value,
+          reason:
+              'float16 rounding mismatch for ${entry.key}: '
+              'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
+              'got 0x${actual.toRadixString(16).padLeft(4, '0')}',
+        );
       }
     });
   });
@@ -373,15 +366,18 @@ void main() {
         1.01171875: 0x3F82,
       };
       for (final entry in referenceValues.entries) {
-        final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-          [entry.key],
-          TensorType.bfloat16,
-        );
+        final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+          entry.key,
+        ], TensorType.bfloat16);
         final actual = bytes[0] | (bytes[1] << 8);
-        expect(actual, entry.value,
-            reason: 'bfloat16 encoding mismatch for ${entry.key}: '
-                'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
-                'got 0x${actual.toRadixString(16).padLeft(4, '0')}');
+        expect(
+          actual,
+          entry.value,
+          reason:
+              'bfloat16 encoding mismatch for ${entry.key}: '
+              'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
+              'got 0x${actual.toRadixString(16).padLeft(4, '0')}',
+        );
       }
     });
 
@@ -417,15 +413,18 @@ void main() {
       };
 
       for (final entry in referenceValues.entries) {
-        final bytes = ExecutorchManagerBase.convertNumericDataToBytes(
-          [entry.key],
-          TensorType.float16,
-        );
+        final bytes = ExecutorchManagerBase.convertNumericDataToBytes([
+          entry.key,
+        ], TensorType.float16);
         final actual = bytes[0] | (bytes[1] << 8);
-        expect(actual, entry.value,
-            reason: 'float16 encoding mismatch for ${entry.key}: '
-                'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
-                'got 0x${actual.toRadixString(16).padLeft(4, '0')}');
+        expect(
+          actual,
+          entry.value,
+          reason:
+              'float16 encoding mismatch for ${entry.key}: '
+              'expected 0x${entry.value.toRadixString(16).padLeft(4, '0')}, '
+              'got 0x${actual.toRadixString(16).padLeft(4, '0')}',
+        );
       }
     });
   });

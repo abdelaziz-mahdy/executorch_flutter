@@ -54,8 +54,10 @@ String _resolveModelFile(String name, String override) {
 }
 
 final _modelPath = _resolveModelFile('gemma-4-E2B-it_mlx.pte', _modelOverride);
-final _tokenizerPath =
-    _resolveModelFile('gemma-4-E2B-it_tokenizer.json', _tokenizerOverride);
+final _tokenizerPath = _resolveModelFile(
+  'gemma-4-E2B-it_tokenizer.json',
+  _tokenizerOverride,
+);
 final _metallibPath = _resolveModelFile('mlx.metallib', _metallibOverride);
 
 /// Gemma 4 chat template. Turn markers are the literal special tokens `<|turn>`
@@ -76,7 +78,9 @@ void main() {
         print('Model: $_modelPath');
         print('Tokenizer: $_tokenizerPath');
 
-        final metallib = File(_metallibPath).existsSync() ? _metallibPath : null;
+        final metallib = File(_metallibPath).existsSync()
+            ? _metallibPath
+            : null;
         print('Metallib: ${metallib ?? "(none)"}');
         final llm = await ExecuTorchLLM.load(
           modelPath: _modelPath,
@@ -99,10 +103,12 @@ void main() {
 
         // Reaching here without an ExecuTorchException means MLX initialized
         // (metallib found) — i.e. the 0x23 bundling bug is fixed.
-        expect(output.trim(), isNotEmpty,
-            reason: 'model produced no output');
-        expect(output.toLowerCase(), contains('paris'),
-            reason: 'expected the capital of France in the answer');
+        expect(output.trim(), isNotEmpty, reason: 'model produced no output');
+        expect(
+          output.toLowerCase(),
+          contains('paris'),
+          reason: 'expected the capital of France in the answer',
+        );
       },
       // Skipped when the (large, unbundled) model isn't present. Pass
       // --dart-define=MLX_MODEL=... and MLX_TOKENIZER=... to run it.

@@ -6,10 +6,7 @@ import 'package:flutter/material.dart';
 /// A widget that provides camera capture functionality for web platform.
 /// Uses the camera package's takePicture() method which is fully supported on web.
 class WebCameraCapture extends StatefulWidget {
-  const WebCameraCapture({
-    super.key,
-    required this.onImageCaptured,
-  });
+  const WebCameraCapture({super.key, required this.onImageCaptured});
 
   final Function(Uint8List) onImageCaptured;
 
@@ -109,9 +106,9 @@ class _WebCameraCaptureState extends State<WebCameraCapture> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to capture image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to capture image: $e')));
       }
     } finally {
       if (mounted) {
@@ -133,10 +130,7 @@ class _WebCameraCaptureState extends State<WebCameraCapture> {
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
       child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 600,
-          maxHeight: 700,
-        ),
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -170,9 +164,7 @@ class _WebCameraCaptureState extends State<WebCameraCapture> {
             ),
 
             // Camera preview
-            Expanded(
-              child: _buildCameraPreview(),
-            ),
+            Expanded(child: _buildCameraPreview()),
 
             // Controls
             Container(
@@ -206,8 +198,9 @@ class _WebCameraCaptureState extends State<WebCameraCapture> {
                         shape: const CircleBorder(),
                         padding: EdgeInsets.zero,
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onPrimary,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary,
                       ),
                       child: _isCapturing
                           ? SizedBox(
@@ -251,9 +244,7 @@ class _WebCameraCaptureState extends State<WebCameraCapture> {
               Text(
                 _errorMessage!,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -280,9 +271,7 @@ class _WebCameraCaptureState extends State<WebCameraCapture> {
     }
 
     if (_controller == null || !_controller!.value.isInitialized) {
-      return const Center(
-        child: Text('Camera not available'),
-      );
+      return const Center(child: Text('Camera not available'));
     }
 
     return ClipRRect(

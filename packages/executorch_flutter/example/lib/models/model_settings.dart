@@ -20,7 +20,9 @@ enum CameraProvider {
       // Web: No camera support currently
       return [];
     }
-    if (UniversalPlatform.isMacOS || UniversalPlatform.isLinux || UniversalPlatform.isWindows) {
+    if (UniversalPlatform.isMacOS ||
+        UniversalPlatform.isLinux ||
+        UniversalPlatform.isWindows) {
       // Desktop: Only OpenCV camera works
       return [CameraProvider.opencv];
     }

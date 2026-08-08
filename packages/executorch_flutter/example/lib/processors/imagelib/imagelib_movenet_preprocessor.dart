@@ -51,9 +51,7 @@ class ImageLibMoveNetPreprocessor extends ExecuTorchPreprocessor<Uint8List> {
 
       // Convert to tensor in NHWC format with normalization to [0, 1]
       // MoveNet uses NHWC format (batch, height, width, channels)
-      final floats = Float32List(
-        1 * config.targetSize * config.targetSize * 3,
-      );
+      final floats = Float32List(1 * config.targetSize * config.targetSize * 3);
 
       int index = 0;
       for (int y = 0; y < config.targetSize; y++) {

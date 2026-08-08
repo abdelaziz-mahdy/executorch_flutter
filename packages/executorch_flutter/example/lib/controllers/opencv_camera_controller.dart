@@ -55,11 +55,15 @@ class OpenCVCameraController implements CameraController {
     _mode = mode;
 
     try {
-      debugPrint('🎥 OpenCVCameraController: Initializing camera (mode: $mode)');
+      debugPrint(
+        '🎥 OpenCVCameraController: Initializing camera (mode: $mode)',
+      );
 
       // Request camera permission on mobile platforms
       if (UniversalPlatform.isAndroid || UniversalPlatform.isIOS) {
-        debugPrint('🔐 OpenCVCameraController: Requesting camera permission...');
+        debugPrint(
+          '🔐 OpenCVCameraController: Requesting camera permission...',
+        );
         final status = await Permission.camera.request();
         if (!status.isGranted) {
           throw Exception(
@@ -71,7 +75,9 @@ class OpenCVCameraController implements CameraController {
 
       // Initialize VideoCapture with platform-appropriate API
       final int apiPreference = _getPlatformApiPreference();
-      debugPrint('🎥 OpenCVCameraController: Using API preference: $apiPreference');
+      debugPrint(
+        '🎥 OpenCVCameraController: Using API preference: $apiPreference',
+      );
 
       _capture = cv.VideoCapture.fromDevice(
         deviceId,
@@ -94,7 +100,10 @@ class OpenCVCameraController implements CameraController {
         debugPrint(
           '⏰ OpenCVCameraController: Starting timer (${processingInterval.inMilliseconds}ms)',
         );
-        _frameTimer = Timer.periodic(processingInterval, (_) => _captureFrame());
+        _frameTimer = Timer.periodic(
+          processingInterval,
+          (_) => _captureFrame(),
+        );
       }
 
       _isActive = true;
@@ -167,7 +176,9 @@ class OpenCVCameraController implements CameraController {
       frame.dispose();
 
       if (encodeSuccess && jpegBytes.isNotEmpty) {
-        debugPrint('✅ OpenCVCameraController: Picture taken (${jpegBytes.length} bytes)');
+        debugPrint(
+          '✅ OpenCVCameraController: Picture taken (${jpegBytes.length} bytes)',
+        );
         return jpegBytes;
       }
 

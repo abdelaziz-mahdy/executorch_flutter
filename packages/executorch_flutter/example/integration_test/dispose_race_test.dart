@@ -47,7 +47,9 @@ void main() {
     );
   }
 
-  testWidgets('dispose during in-flight forward does not crash', (tester) async {
+  testWidgets('dispose during in-flight forward does not crash', (
+    tester,
+  ) async {
     final index = await ModelIndexService.fetchIndex(forceRefresh: true);
 
     // Prefer the exact model from the crash report (partially-delegated MPS,
@@ -71,9 +73,7 @@ void main() {
 
       final pending = <Future<void>>[];
       for (var i = 0; i < 4; i++) {
-        pending.add(
-          model.forward([input]).then((_) {}).catchError((_) {}),
-        );
+        pending.add(model.forward([input]).then((_) {}).catchError((_) {}));
       }
       // Give the worker threads a moment to actually enter forward().
       await Future<void>.delayed(const Duration(milliseconds: 3));

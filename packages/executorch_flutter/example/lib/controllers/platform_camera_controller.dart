@@ -47,7 +47,9 @@ class PlatformCameraController implements CameraController {
     _mode = mode;
 
     try {
-      debugPrint('📱 PlatformCameraController: Initializing camera (mode: $mode)');
+      debugPrint(
+        '📱 PlatformCameraController: Initializing camera (mode: $mode)',
+      );
 
       // Get available cameras
       final cameras = await camera_pkg.availableCameras();
@@ -57,7 +59,9 @@ class PlatformCameraController implements CameraController {
 
       // Get sensor orientation for Android (iOS is always 0)
       final camera = cameras.first;
-      _sensorOrientation = !kIsWeb && Platform.isAndroid ? camera.sensorOrientation : 0;
+      _sensorOrientation = !kIsWeb && Platform.isAndroid
+          ? camera.sensorOrientation
+          : 0;
       debugPrint('📱 Camera sensor orientation: $_sensorOrientation');
 
       // Determine image format based on platform
@@ -134,7 +138,9 @@ class PlatformCameraController implements CameraController {
       debugPrint('📸 PlatformCameraController: Taking picture');
       final xFile = await _cameraController!.takePicture();
       final bytes = await xFile.readAsBytes();
-      debugPrint('✅ PlatformCameraController: Picture taken (${bytes.length} bytes)');
+      debugPrint(
+        '✅ PlatformCameraController: Picture taken (${bytes.length} bytes)',
+      );
       return bytes;
     } catch (e) {
       debugPrint('❌ PlatformCameraController: Failed to take picture: $e');
@@ -145,9 +151,7 @@ class PlatformCameraController implements CameraController {
   @override
   Widget buildPreview() {
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     return camera_pkg.CameraPreview(_cameraController!);

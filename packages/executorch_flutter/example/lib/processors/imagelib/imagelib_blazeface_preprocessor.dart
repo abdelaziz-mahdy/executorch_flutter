@@ -51,9 +51,7 @@ class ImageLibBlazeFacePreprocessor extends ExecuTorchPreprocessor<Uint8List> {
 
       // Convert to tensor in NHWC format with normalization to [-1, 1]
       // BlazeFace uses NHWC format and expects values in [-1, 1] range
-      final floats = Float32List(
-        1 * config.targetSize * config.targetSize * 3,
-      );
+      final floats = Float32List(1 * config.targetSize * config.targetSize * 3);
 
       int index = 0;
       for (int y = 0; y < config.targetSize; y++) {

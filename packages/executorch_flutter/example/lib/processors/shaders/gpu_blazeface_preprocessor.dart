@@ -69,10 +69,7 @@ class GpuBlazeFacePreprocessor extends ExecuTorchPreprocessor<Uint8List> {
       return [tensorData];
     } catch (e) {
       if (e is ProcessorException) rethrow;
-      throw PreprocessingException(
-        'GPU BlazeFace preprocessing failed: $e',
-        e,
-      );
+      throw PreprocessingException('GPU BlazeFace preprocessing failed: $e', e);
     }
   }
 

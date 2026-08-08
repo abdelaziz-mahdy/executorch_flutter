@@ -79,13 +79,15 @@ class _ImageWithFacesState extends State<ImageWithFaces>
   }
 
   void _resolveImage() {
-    widget.image.image.resolve(const ImageConfiguration()).addListener(
-      ImageStreamListener((ImageInfo info, bool _) {
-        if (!completer.isCompleted) {
-          completer.complete(info.image);
-        }
-      }),
-    );
+    widget.image.image
+        .resolve(const ImageConfiguration())
+        .addListener(
+          ImageStreamListener((ImageInfo info, bool _) {
+            if (!completer.isCompleted) {
+              completer.complete(info.image);
+            }
+          }),
+        );
     Future.microtask(
       () => completer.future.then((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) => measureSize());

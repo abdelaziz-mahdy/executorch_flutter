@@ -21,7 +21,8 @@ void main(List<String> args) async {
         .toList(growable: false);
     if (stale.isEmpty) return;
     throw BuildError(
-      message: 'executorch_flutter no longer owns the native build.\n'
+      message:
+          'executorch_flutter no longer owns the native build.\n'
           'Rename this key in your pubspec.yaml:\n'
           '  hooks: user_defines: executorch_flutter:  ->  executorch_dart:\n'
           'Found stale keys: ${stale.join(', ')}',

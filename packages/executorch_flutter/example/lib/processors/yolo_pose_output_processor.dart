@@ -57,7 +57,9 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
 
     // Validate shape has at least 2 dimensions (excluding batch)
     if (shape.length < 2) {
-      debugPrint('❌ Unexpected shape: $shape, expected at least [batch, features, predictions]');
+      debugPrint(
+        '❌ Unexpected shape: $shape, expected at least [batch, features, predictions]',
+      );
       return const PoseDetectionResult(poses: []);
     }
 
@@ -98,7 +100,9 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
 
   /// Parse transposed format [1, 56, 8400] or [56, 8400]
   List<DetectedPose> _parseTransposedOutput(
-      Float32List floatData, List<int> shape) {
+    Float32List floatData,
+    List<int> shape,
+  ) {
     // Handle both 3D [1, 56, 8400] and 2D [56, 8400] shapes
     final numFeatures = shape.length >= 3 ? shape[1] : shape[0]; // 56
     final numPredictions = shape.length >= 3 ? shape[2] : shape[1]; // 8400
@@ -111,7 +115,9 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
       return poses;
     }
 
-    debugPrint('📊 Parsing transposed pose: features=$numFeatures, predictions=$numPredictions');
+    debugPrint(
+      '📊 Parsing transposed pose: features=$numFeatures, predictions=$numPredictions',
+    );
 
     for (int i = 0; i < numPredictions; i++) {
       // bbox: x, y, w, h
@@ -141,19 +147,23 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
               floatData[(kpOffset + 1) * numPredictions + i] / inputHeight;
           final kpConf = floatData[(kpOffset + 2) * numPredictions + i];
 
-          keypoints.add(PoseKeypoint(
-            type: PoseKeypointType.values[k],
-            x: kpX.clamp(0.0, 1.0),
-            y: kpY.clamp(0.0, 1.0),
-            confidence: kpConf.clamp(0.0, 1.0),
-          ));
+          keypoints.add(
+            PoseKeypoint(
+              type: PoseKeypointType.values[k],
+              x: kpX.clamp(0.0, 1.0),
+              y: kpY.clamp(0.0, 1.0),
+              confidence: kpConf.clamp(0.0, 1.0),
+            ),
+          );
         }
 
-        poses.add(DetectedPose(
-          keypoints: keypoints,
-          confidence: conf,
-          boundingBox: box,
-        ));
+        poses.add(
+          DetectedPose(
+            keypoints: keypoints,
+            confidence: conf,
+            boundingBox: box,
+          ),
+        );
       }
     }
 
@@ -162,7 +172,9 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
 
   /// Parse normal format [1, 8400, 56] or [8400, 56]
   List<DetectedPose> _parseNormalOutput(
-      Float32List floatData, List<int> shape) {
+    Float32List floatData,
+    List<int> shape,
+  ) {
     // Handle both 3D [1, 8400, 56] and 2D [8400, 56] shapes
     final numPredictions = shape.length >= 3 ? shape[1] : shape[0]; // 8400
     final stride = shape.length >= 3 ? shape[2] : shape[1]; // 56
@@ -175,7 +187,9 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
       return poses;
     }
 
-    debugPrint('📊 Parsing normal pose: predictions=$numPredictions, stride=$stride');
+    debugPrint(
+      '📊 Parsing normal pose: predictions=$numPredictions, stride=$stride',
+    );
 
     for (int i = 0; i < numPredictions; i++) {
       final offset = i * stride;
@@ -201,19 +215,23 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
           final kpY = floatData[kpOffset + 1] / inputHeight;
           final kpConf = floatData[kpOffset + 2];
 
-          keypoints.add(PoseKeypoint(
-            type: PoseKeypointType.values[k],
-            x: kpX.clamp(0.0, 1.0),
-            y: kpY.clamp(0.0, 1.0),
-            confidence: kpConf.clamp(0.0, 1.0),
-          ));
+          keypoints.add(
+            PoseKeypoint(
+              type: PoseKeypointType.values[k],
+              x: kpX.clamp(0.0, 1.0),
+              y: kpY.clamp(0.0, 1.0),
+              confidence: kpConf.clamp(0.0, 1.0),
+            ),
+          );
         }
 
-        poses.add(DetectedPose(
-          keypoints: keypoints,
-          confidence: conf,
-          boundingBox: box,
-        ));
+        poses.add(
+          DetectedPose(
+            keypoints: keypoints,
+            confidence: conf,
+            boundingBox: box,
+          ),
+        );
       }
     }
 
@@ -260,7 +278,8 @@ class YoloPoseOutputProcessor extends OutputProcessor<PoseDetectionResult> {
     final intersectRight = math.min(a.x + a.width, b.x + b.width);
     final intersectBottom = math.min(a.y + a.height, b.y + b.height);
 
-    final intersectArea = math.max(0.0, intersectRight - intersectLeft) *
+    final intersectArea =
+        math.max(0.0, intersectRight - intersectLeft) *
         math.max(0.0, intersectBottom - intersectTop);
 
     return intersectArea / (areaA + areaB - intersectArea);

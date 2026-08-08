@@ -189,11 +189,15 @@ void main() {
           final stopwatch = Stopwatch()..start();
           final outputs = await model.forward([inputTensor]);
           stopwatch.stop();
-          print('   ✓ Inference: ${outputs.length} outputs in ${stopwatch.elapsedMilliseconds}ms');
+          print(
+            '   ✓ Inference: ${outputs.length} outputs in ${stopwatch.elapsedMilliseconds}ms',
+          );
 
           // Log output shapes
           for (int i = 0; i < outputs.length; i++) {
-            print('     Output[$i]: shape=${outputs[i].shape}, dtype=${outputs[i].dataType}');
+            print(
+              '     Output[$i]: shape=${outputs[i].shape}, dtype=${outputs[i].dataType}',
+            );
           }
 
           // Phase 5: Validate outputs
@@ -230,8 +234,9 @@ void main() {
       }
 
       // Fail the test if any model failed (non-skipped)
-      final failedModels =
-          testResults.where((r) => !r.passed && !r.skipped).toList();
+      final failedModels = testResults
+          .where((r) => !r.passed && !r.skipped)
+          .toList();
       expect(
         failedModels,
         isEmpty,

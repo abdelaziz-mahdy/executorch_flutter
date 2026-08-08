@@ -286,11 +286,15 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Analyze package
-        run: flutter analyze packages/executorch_flutter/lib
+      - name: Analyze workspace
+        run: flutter analyze
 
+      # Covers both packages in full — lib, bin, hook, test, and the examples.
+      # Scoping this to lib/ let 44 files drift out of format unnoticed.
       - name: Check formatting
-        run: dart format --set-exit-if-changed packages/executorch_flutter/lib
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            packages/executorch_dart packages/executorch_flutter
 
       - name: Test package
         run: flutter test

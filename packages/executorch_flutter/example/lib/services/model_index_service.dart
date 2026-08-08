@@ -138,9 +138,11 @@ class ModelIndex {
       models: (json['models'] as List<dynamic>)
           .map((e) => ModelIndexEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
-      labels: (json['labels'] as List<dynamic>?)
-          ?.map((e) => LabelsIndexEntry.fromJson(e as Map<String, dynamic>))
-          .toList() ?? [],
+      labels:
+          (json['labels'] as List<dynamic>?)
+              ?.map((e) => LabelsIndexEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       backends: json['backends'] as Map<String, dynamic>? ?? {},
     );
   }
@@ -151,7 +153,9 @@ class ModelIndex {
 
   List<ModelIndexEntry> getModelsForPlatform(String platform) {
     // If platforms list is empty, assume model works on all platforms (backward compatibility)
-    return models.where((m) => m.platforms.isEmpty || m.platforms.contains(platform)).toList();
+    return models
+        .where((m) => m.platforms.isEmpty || m.platforms.contains(platform))
+        .toList();
   }
 
   String? getLabelsUrl(String category) {

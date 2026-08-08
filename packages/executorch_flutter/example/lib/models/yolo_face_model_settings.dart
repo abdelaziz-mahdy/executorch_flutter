@@ -39,7 +39,8 @@ class YoloFaceModelSettings extends FaceModelSettings {
       showPerformanceOverlay:
           showPerformanceOverlay ?? this.showPerformanceOverlay,
       cameraProvider: cameraProvider ?? this.cameraProvider,
-      preprocessingProvider: preprocessingProvider ?? this.preprocessingProvider,
+      preprocessingProvider:
+          preprocessingProvider ?? this.preprocessingProvider,
       confidenceThreshold: confidenceThreshold ?? this.confidenceThreshold,
       multiFaceMode: multiFaceMode ?? this.multiFaceMode,
       showBoundingBox: showBoundingBox ?? this.showBoundingBox,
