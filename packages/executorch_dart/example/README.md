@@ -124,7 +124,7 @@ The first run compiles the native library, so expect a delay; later runs are
 fast. Compile to a self-contained bundle — native library included — with:
 
 ```bash
-dart build cli
+dart build cli --target bin/infer.dart
 ./build/cli/*/bundle/bin/infer /path/to/model.pte
 ```
 

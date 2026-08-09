@@ -332,7 +332,7 @@ dart run bin/infer.dart /path/to/model.pte
 Or compile it to a self-contained bundle with the native library included:
 
 ```bash
-dart build cli
+dart build cli --target bin/infer.dart
 ./build/cli/*/bundle/bin/infer /path/to/model.pte
 ```
 
