@@ -19,33 +19,33 @@ import 'package:test/test.dart';
 /// Shaped like the real thing: field names and values are copied from
 /// `sentence-transformers/all-MiniLM-L6-v2`, minus the 30k-entry vocabulary.
 String _bertTokenizerJson() => json.encode({
-      'version': '1.0',
-      'normalizer': {
-        'type': 'BertNormalizer',
-        'clean_text': true,
-        'handle_chinese_chars': true,
-        'strip_accents': null,
-        'lowercase': true,
-      },
-      'pre_tokenizer': {'type': 'BertPreTokenizer'},
-      'model': {
-        'type': 'WordPiece',
-        'unk_token': '[UNK]',
-        'continuing_subword_prefix': '##',
-        'max_input_chars_per_word': 100,
-        'vocab': {'[PAD]': 0, '[UNK]': 100, 'hello': 7592},
-      },
-    });
+  'version': '1.0',
+  'normalizer': {
+    'type': 'BertNormalizer',
+    'clean_text': true,
+    'handle_chinese_chars': true,
+    'strip_accents': null,
+    'lowercase': true,
+  },
+  'pre_tokenizer': {'type': 'BertPreTokenizer'},
+  'model': {
+    'type': 'WordPiece',
+    'unk_token': '[UNK]',
+    'continuing_subword_prefix': '##',
+    'max_input_chars_per_word': 100,
+    'vocab': {'[PAD]': 0, '[UNK]': 100, 'hello': 7592},
+  },
+});
 
 String _bpeTokenizerJson() => json.encode({
-      'version': '1.0',
-      'pre_tokenizer': {'type': 'ByteLevel'},
-      'model': {
-        'type': 'BPE',
-        'vocab': {'hello': 31373},
-        'merges': <String>[],
-      },
-    });
+  'version': '1.0',
+  'pre_tokenizer': {'type': 'ByteLevel'},
+  'model': {
+    'type': 'BPE',
+    'vocab': {'hello': 31373},
+    'merges': <String>[],
+  },
+});
 
 void main() {
   group('diagnoseTokenizerJson', () {
@@ -75,18 +75,22 @@ void main() {
     });
 
     test('flags a Unigram model even without a BERT normalizer', () {
-      final message = diagnoseTokenizerJson(json.encode({
-        'model': {'type': 'Unigram', 'vocab': <String, int>{}},
-      }));
+      final message = diagnoseTokenizerJson(
+        json.encode({
+          'model': {'type': 'Unigram', 'vocab': <String, int>{}},
+        }),
+      );
       expect(message, isNotNull);
       expect(message, contains('Unigram'));
     });
 
     test('flags an unimplemented normalizer on an otherwise fine model', () {
-      final message = diagnoseTokenizerJson(json.encode({
-        'normalizer': {'type': 'Precompiled'},
-        'model': {'type': 'BPE', 'vocab': <String, int>{}},
-      }));
+      final message = diagnoseTokenizerJson(
+        json.encode({
+          'normalizer': {'type': 'Precompiled'},
+          'model': {'type': 'BPE', 'vocab': <String, int>{}},
+        }),
+      );
       expect(message, isNotNull);
       expect(message, contains('Precompiled'));
       expect(message, contains('Replace'));
@@ -94,10 +98,12 @@ void main() {
 
     test('accepts every normalizer ExecuTorch implements', () {
       for (final type in ['Replace', 'Prepend', 'Sequence', 'NFC']) {
-        final message = diagnoseTokenizerJson(json.encode({
-          'normalizer': {'type': type},
-          'model': {'type': 'BPE', 'vocab': <String, int>{}},
-        }));
+        final message = diagnoseTokenizerJson(
+          json.encode({
+            'normalizer': {'type': type},
+            'model': {'type': 'BPE', 'vocab': <String, int>{}},
+          }),
+        );
         expect(message, isNull, reason: '$type should be accepted');
       }
     });
@@ -127,19 +133,25 @@ void main() {
 
   group('TokenizerFormat', () {
     test('maps every native identifier', () {
-      expect(TokenizerFormat.fromNative('hf_json'),
-          TokenizerFormat.huggingFace);
+      expect(
+        TokenizerFormat.fromNative('hf_json'),
+        TokenizerFormat.huggingFace,
+      );
       expect(TokenizerFormat.fromNative('tiktoken'), TokenizerFormat.tikToken);
-      expect(TokenizerFormat.fromNative('sentencepiece'),
-          TokenizerFormat.sentencePiece);
+      expect(
+        TokenizerFormat.fromNative('sentencepiece'),
+        TokenizerFormat.sentencePiece,
+      );
       expect(TokenizerFormat.fromNative('llama2c'), TokenizerFormat.llama2c);
     });
 
     test('falls back to unknown rather than throwing', () {
       // A newer native library may report a format this enum predates; that
       // must not crash a caller who only wanted vocabSize.
-      expect(TokenizerFormat.fromNative('some_future_format'),
-          TokenizerFormat.unknown);
+      expect(
+        TokenizerFormat.fromNative('some_future_format'),
+        TokenizerFormat.unknown,
+      );
       expect(TokenizerFormat.fromNative(''), TokenizerFormat.unknown);
     });
   });
@@ -161,8 +173,7 @@ void main() {
       }
     });
 
-    test('a directory is rejected rather than treated as a tokenizer',
-        () async {
+    test('a directory is rejected, not treated as a tokenizer', () async {
       final dir = Directory.systemTemp.createTempSync('tokenizer_test');
       addTearDown(() => dir.deleteSync(recursive: true));
       // File.existsSync() is false for a directory, so this takes the IO path.
