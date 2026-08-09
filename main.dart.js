@@ -9348,7 +9348,7 @@ ID:function ID(a){this.a=a},
 MF:function MF(a){var _=this
 _.e=_.d=null
 _.f=a
-_.r="1.3.1"
+_.r="1.4.0"
 _.w=!0
 _.x=!1
 _.y=0
@@ -9521,8 +9521,8 @@ s=6
 break
 case 4:p=3
 l=o.pop()
-n=A.b(["1.3.1"],t.s)
-q=new A.xR(n,"1.3.1")
+n=A.b(["1.4.0"],t.s)
+q=new A.xR(n,"1.4.0")
 s=1
 break
 s=6
@@ -54587,7 +54587,7 @@ return A.t(null,r)}})
 return A.u($async$$0,r)},
 $S:12}
 A.ID.prototype={
-ap(){return new A.MF(A.b(["1.3.1"],t.s))}}
+ap(){return new A.MF(A.b(["1.4.0"],t.s))}}
 A.MF.prototype={
 aJ(){this.aY()
 this.xA()},
@@ -54736,7 +54736,7 @@ s=1
 break
 case 1:return A.t(q,r)}})
 return A.u($async$Kr,r)},
-Ux(a){var s,r,q,p,o,n=A.b([B.ff],t.jv),m="## ExecuTorch Runtime Info\n\n### Version\n- ExecuTorch: 1.3.1\n- FFI Library: 1.3.1-web\n- Plugin: 1.3.1\n"+("- Selected Version: "+this.r+"\n\n")+"### Backends\n"
+Ux(a){var s,r,q,p,o,n=A.b([B.ff],t.jv),m="## ExecuTorch Runtime Info\n\n### Version\n- ExecuTorch: 1.4.0\n- FFI Library: 1.4.0-web\n- Plugin: 1.4.0\n"+("- Selected Version: "+this.r+"\n\n")+"### Backends\n"
 for(s=0;s<6;++s,m=o){r=B.mA[s]
 q=B.d.n(n,r)
 p=r.gnH()
@@ -54760,7 +54760,7 @@ break}A.eM(l,!1).eq()
 m=A.b([B.ff],t.jv)
 l=p.c
 if(l==null){s=1
-break}A.O2(!0,new A.aIk(p,"1.3.1","1.3.1-web",B.mA,m,n),l,o)
+break}A.O2(!0,new A.aIk(p,"1.4.0","1.4.0-web",B.mA,m,n),l,o)
 case 1:return A.t(q,r)}})
 return A.u($async$Du,r)},
 wR(a,b){var s=null
@@ -54788,7 +54788,7 @@ else{m=J.ij(m,new A.aHW(),t.IS)
 m=A.Q(m,m.$ti.h("al.E"))}s=q.x?p:new A.aHX(q)
 r=t.p
 s=A.b([A.cv(A.b([l,B.eT,A.e0(A.aRw(n,o,m,s,t.RD),1)],r),B.v,B.m,B.p,0)],r)
-if(q.r!=="1.3.1"){o=q.c
+if(q.r!=="1.4.0"){o=q.c
 o.toString
 o=A.ep(B.iU,A.p(o).ax.b,p,16)
 n=q.r
@@ -54799,7 +54799,7 @@ if(m==null)m=p
 else{l=q.c
 l.toString
 l=m.bQ(A.p(l).ax.b)
-m=l}s.push(new A.aV(B.M_,A.cv(A.b([o,B.aX,A.e0(A.ai("Using models for ExecuTorch "+n+" (plugin built with 1.3.1)",p,p,p,m,p,p),1)],r),B.v,B.m,B.p,0),p))}return A.bS(A.br(s,B.v,B.m,B.p),B.o,p,p,p,p,p,B.bS,p)},
+m=l}s.push(new A.aV(B.M_,A.cv(A.b([o,B.aX,A.e0(A.ai("Using models for ExecuTorch "+n+" (plugin built with 1.4.0)",p,p,p,m,p,p),1)],r),B.v,B.m,B.p,0),p))}return A.bS(A.br(s,B.v,B.m,B.p),B.o,p,p,p,p,p,B.bS,p)},
 ag8(){var s,r,q,p,o,n,m,l,k,j=this,i=null,h="Models are downloaded from GitHub on first use"
 if(j.x){s=t.p
 r=A.b([],s)
@@ -55104,7 +55104,7 @@ k=A.ai("Version",l,l,l,k==null?l:k.hD(B.R),l,l)
 s=m.a
 r=s.wR("ExecuTorch",m.b)
 q=s.wR("FFI Library",m.c)
-p=s.wR("Plugin","1.3.1")
+p=s.wR("Plugin","1.4.0")
 o=A.p(a).ok.w
 n=t.p
 o=A.b([k,B.b3,r,q,p,B.ly,A.ai("Backends",l,l,l,o==null?l:o.hD(B.R),l,l),B.b3],n)
@@ -55171,7 +55171,7 @@ A.aIo.prototype={
 $0(){this.a.Q=!0},
 $S:0}
 A.aHU.prototype={
-$1(a){var s=null,r=a==="1.3.1",q=r?a+" \u2713":a
+$1(a){var s=null,r=a==="1.4.0",q=r?a+" \u2713":a
 return A.aRx(A.ai(q,s,s,s,A.ej(s,s,s,s,s,s,s,s,s,s,s,s,s,s,r?B.R:B.x,s,s,!0,s,s,s,s,s,s,s,s),s,s),a,t.N)},
 $S:324}
 A.aHV.prototype={
@@ -123450,7 +123450,7 @@ $.Xx=null
 $.Tf=A.x(t.N,t.yp)
 $.XN=A.x(t.N,t.yp)
 $.aJW=A.x(t.N,t.E)
-$.b4p="1.3.1"
+$.b4p="1.4.0"
 $.b2F=A.b([],A.an("z<~(B)>"))
 $.ds=A.bc9()
 $.aM9=0
