@@ -83,7 +83,7 @@ dev_dependencies:
 
   # Pure-Dart core. integration_test/dtype_roundtrip_test.dart reaches into it
   # directly to exercise the native tensor layer.
-  executorch_dart: ^0.6.0
+  executorch_dart: ^0.7.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

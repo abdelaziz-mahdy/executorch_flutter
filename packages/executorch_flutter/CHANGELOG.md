@@ -1,3 +1,18 @@
+## 0.7.0
+
+### Added
+
+- `Tokenizer` is re-exported from the core: text to token ids and back for
+  encoder models that build their own input tensors. Native platforms only —
+  it is `dart:ffi` throughout, so Web code referencing it fails to compile
+  rather than at runtime. See the core package's changelog for supported
+  formats and the WordPiece limitation.
+  Thanks @dariyooo ([#45](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/45)).
+
+### Changed
+
+- Upgraded to ExecuTorch 1.4.0.
+
 # Changelog
 
 ## 0.6.2
