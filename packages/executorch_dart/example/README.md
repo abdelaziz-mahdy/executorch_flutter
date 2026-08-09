@@ -56,6 +56,49 @@ try {
 }
 ```
 
+## Tokenizing text
+
+Encoder models — embeddings, classification, retrieval — take token ids as an
+input tensor rather than pixels. `Tokenizer` handles that half, with no model
+attached:
+
+```dart
+final tokenizer = await Tokenizer.load('tokenizer.json');
+
+final ids = tokenizer.encode('some text');
+final input = TensorData(
+  shape: [1, ids.length],
+  dataType: TensorType.int64,
+  data: Int64List.fromList(ids).buffer.asUint8List(),
+);
+final outputs = await model.forward([input]);
+
+print(tokenizer.decode(ids));
+tokenizer.dispose();
+```
+
+Reads HuggingFace `tokenizer.json` built on BPE, SentencePiece, TikToken and
+llama2.c, detected automatically. WordPiece/BERT-family tokenizers are not
+supported — that covers BERT, DistilBERT, MiniLM and most
+sentence-transformers models — and loading one reports exactly that rather
+than a generic parse error.
+
+Run it against any supported tokenizer file:
+
+```bash
+dart run bin/tokenize.dart /path/to/tokenizer.json "hello world"
+```
+
+```
+format     : hf_json
+vocab size : 50257
+bos / eos  : 50256 / 50256
+
+text   : hello world
+ids    : [31373, 995]
+decoded: hello world
+```
+
 Building a Flutter app instead? Use
 [`executorch_flutter`](https://pub.dev/packages/executorch_flutter), which
 wraps this package and adds asset-bundle loading and Web support.
@@ -81,7 +124,7 @@ The first run compiles the native library, so expect a delay; later runs are
 fast. Compile to a self-contained bundle — native library included — with:
 
 ```bash
-dart build cli
+dart build cli --target bin/infer.dart
 ./build/cli/*/bundle/bin/infer /path/to/model.pte
 ```
 

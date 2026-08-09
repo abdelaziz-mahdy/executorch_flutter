@@ -429,5 +429,7 @@ jobs:
         working-directory: ${{ env.STAGE }}/executorch_dart/example
 
       - name: Build CLI example
-        run: dart build cli
+        # bin/ has more than one entry (infer, tokenize), so the target
+        # must be named or `dart build cli` refuses to pick one.
+        run: dart build cli --target bin/infer.dart
         working-directory: ${{ env.STAGE }}/executorch_dart/example
