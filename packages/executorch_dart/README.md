@@ -197,6 +197,49 @@ final backends = BackendQuery.available;
 print('Available: ${backends.map((b) => b.displayName).join(", ")}');
 ```
 
+### Tokenizer
+
+Text to token ids and back, with no model attached. This is what encoder
+models need — embeddings, classification, retrieval — because they take token
+ids as an input tensor and produce a vector in a single `forward()`, with no
+generation loop to borrow a tokenizer from.
+
+```dart
+final tokenizer = await Tokenizer.load('/path/to/tokenizer.json');
+
+final ids = tokenizer.encode('some text');
+final input = TensorData(
+  shape: [1, ids.length],
+  dataType: TensorType.int64,
+  data: Int64List.fromList(ids).buffer.asUint8List(),
+);
+final outputs = await model.forward([input]);
+
+print(tokenizer.decode(ids));   // back to text
+tokenizer.dispose();
+```
+
+| Member | Purpose |
+|--------|---------|
+| `Tokenizer.load(path)` | Load a tokenizer file, format auto-detected |
+| `encode(text, {bosCount, eosCount})` | Text to token ids |
+| `decode(ids, {skipSpecialTokens})` | Token ids back to text |
+| `vocabSize` / `bosId` / `eosId` | Vocabulary metadata |
+| `format` | Which reader claimed the file |
+| `dispose()` | Free the native tokenizer |
+
+**Supported formats:** HuggingFace `tokenizer.json` built on **BPE** (GPT-2,
+Llama, Gemma, Qwen, Mistral), SentencePiece `.model`, TikToken, and the
+llama2.c binary format.
+
+**Not supported:** WordPiece / BERT-family tokenizers. The reader derives from
+a BPE base and implements no `BertNormalizer`, which rules out BERT,
+DistilBERT, MiniLM and most sentence-transformers models. Passing one raises
+an error naming the specific reason rather than a generic parse failure.
+
+Not available on Web — this is `dart:ffi` throughout. For generative models
+use `ExecuTorchLLM` below, which owns its tokenizer internally.
+
 ### ExecuTorchLLM (experimental)
 
 On-device generative text — **Google Gemma 4 E2B** — with token-by-token

@@ -307,6 +307,40 @@ print('Available: ${backends.map((b) => b.displayName).join(", ")}');
 | `Backend.qnn` | Qualcomm QNN | Android |
 | `Backend.mps` | *(deprecated — use `metal`)* | macOS |
 
+### Tokenizer
+
+Text to token ids and back, independent of any model. Encoder models —
+embeddings, classification, retrieval — take token ids as an input tensor and
+produce a vector in a single `forward()`, so they have no generation loop to
+borrow a tokenizer from.
+
+```dart
+final tokenizer = await Tokenizer.load('/path/to/tokenizer.json');
+
+final ids = tokenizer.encode('some text');
+final input = TensorData(
+  shape: [1, ids.length],
+  dataType: TensorType.int64,
+  data: Int64List.fromList(ids).buffer.asUint8List(),
+);
+final outputs = await model.forward([input]);
+
+print(tokenizer.decode(ids));
+tokenizer.dispose();
+```
+
+**Supported:** HuggingFace `tokenizer.json` built on **BPE** (GPT-2, Llama,
+Gemma, Qwen, Mistral), SentencePiece `.model`, TikToken, llama2.c.
+
+**Not supported:** WordPiece / BERT-family — that rules out BERT, DistilBERT,
+MiniLM and most sentence-transformers models. The error names the specific
+reason rather than reporting a generic parse failure.
+
+**Native platforms only.** It is `dart:ffi` throughout with no WebAssembly
+equivalent, so Web code referencing `Tokenizer` fails to compile rather than
+failing at runtime. For generative models use `ExecuTorchLLM`, which owns its
+tokenizer internally.
+
 ### Exception Hierarchy
 
 ```
