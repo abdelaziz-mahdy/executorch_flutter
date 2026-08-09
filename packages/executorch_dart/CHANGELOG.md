@@ -1,3 +1,24 @@
+## 0.7.0
+
+### Added
+
+- `Tokenizer` turns text into token ids and back, without a model attached.
+  Encoder models — embeddings, classification, retrieval — feed token ids to
+  `forward()` and have no generation loop to borrow one from, so until now
+  there was no way to tokenize for them. Supports HuggingFace `tokenizer.json`
+  built on BPE, SentencePiece, TikToken and llama2.c, detected automatically.
+  Thanks @dariyooo ([#45](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/45)).
+  - WordPiece/BERT-family tokenizers are **not** supported: the ExecuTorch
+    reader is BPE-only and implements no `BertNormalizer`, which rules out
+    BERT, DistilBERT, MiniLM and most sentence-transformers models. Passing one
+    raises an error naming the specific reason rather than a generic parse
+    failure.
+  - Not available on Web, which has no `dart:ffi`.
+
+### Changed
+
+- Upgraded to ExecuTorch 1.4.0.
+
 ## 0.6.2
 
 ### Fixed

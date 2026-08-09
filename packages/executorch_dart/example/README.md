@@ -8,7 +8,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  executorch_dart: ^0.6.2
+  executorch_dart: ^0.7.0
 ```
 
 Load a model, run it, dispose it:

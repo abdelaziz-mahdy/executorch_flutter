@@ -8,4 +8,4 @@ environment:
 resolution: workspace
 
 dependencies:
-  executorch_dart: ^0.6.0
+  executorch_dart: ^0.7.0
