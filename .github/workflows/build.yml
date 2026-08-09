@@ -384,13 +384,13 @@ jobs:
                   f"fix this rewrite"
               )
           text, n = re.subn(
-              r"(?m)^(\s*)executorch_dart:\s*\^0\.6\.0\s*$",
+              r"(?m)^(\s*)executorch_dart:\s*\^\d+\.\d+\.\d+\s*$",
               r"\1executorch_dart:\n\1  path: ../",
               text,
           )
           if n != 1:
               sys.exit(
-                  f"expected exactly one 'executorch_dart: ^0.6.0' "
+                  f"expected exactly one pinned 'executorch_dart: ^X.Y.Z' "
                   f"dependency line in {example_pubspec}, found {n} — "
                   f"pubspec shape changed, fix this rewrite"
               )
