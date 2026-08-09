@@ -11,6 +11,30 @@
 /// `tokenizer.json` is ~500 KB to 5 MB and would make the test suite depend on
 /// the network; a synthetic BPE vocabulary is a few hundred bytes, is
 /// deterministic, and exercises the same reader.
+///
+/// ## Both build configurations matter here
+///
+/// The tokenizer ships in the base library, so it must work with **`llm:
+/// false`** — that is the entire point of the feature, since encoder models
+/// have no use for the generation runner.
+///
+/// It is easy to test only the wrong one. With `llm: true` the LLM runner
+/// pulls in `regex_lookahead` transitively, so lookahead pre-tokenizer
+/// patterns load that would fail on the base variant. A tokenizer bug
+/// reported against the base build was invisible under `llm: true` for
+/// exactly this reason (executorch_flutter#45).
+///
+/// Both are covered today, but by two different jobs rather than by anything
+/// in this file:
+///
+/// - **`llm: false`** — the pure-Dart CI job, which stages this package
+///   outside the workspace. `packages/executorch_dart/pubspec.yaml` sets no
+///   `llm` key, so it defaults off.
+/// - **`llm: true`** — the Flutter jobs, which inherit the workspace root
+///   pubspec.
+///
+/// Adding `llm: true` to this package's own pubspec would silently delete the
+/// base-variant coverage.
 library;
 
 import 'dart:convert';
