@@ -130,6 +130,43 @@ String _syntheticBpeTokenizer() {
   });
 }
 
+/// The real GPT-4 / cl100k `Split` pattern.
+///
+/// `\s+(?!\S)` is a lookahead, which RE2 cannot compile. Loading a tokenizer
+/// that uses it requires the PCRE2 fallback, which only exists when the native
+/// library links `regex_lookahead` **whole-archive** — nothing references its
+/// symbols directly, so a plain archive link silently drops it and leaves the
+/// stub that raises "RE2 doesn't support lookahead patterns".
+///
+/// This exact pattern is what broke `granite-embedding-97m-multilingual-r2`
+/// in executorch_flutter#45, and it is common rather than exotic.
+const _cl100kSplitPattern =
+    r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}"
+    r'| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+';
+
+/// The same BPE fixture, but pre-tokenized by a lookahead regex.
+String _lookaheadBpeTokenizer() {
+  final base = json.decode(_syntheticBpeTokenizer()) as Map<String, dynamic>;
+  base['pre_tokenizer'] = {
+    'type': 'Sequence',
+    'pretokenizers': [
+      {
+        'type': 'Split',
+        'pattern': {'Regex': _cl100kSplitPattern},
+        'behavior': 'Isolated',
+        'invert': false,
+      },
+      {
+        'type': 'ByteLevel',
+        'add_prefix_space': false,
+        'trim_offsets': true,
+        'use_regex': false,
+      },
+    ],
+  };
+  return json.encode(base);
+}
+
 void main() {
   late Directory tempDir;
   late String tokenizerPath;
@@ -236,6 +273,32 @@ void main() {
         throwsA(isA<ExecuTorchException>()),
       );
       expect(() => tokenizer.vocabSize, throwsA(isA<ExecuTorchException>()));
+    });
+
+    test('loads a tokenizer whose pre-tokenizer uses a lookahead', () async {
+      // Regression test for executorch_flutter#45.
+      //
+      // Every other test here uses a plain ByteLevel pre-tokenizer, so none of
+      // them touch the regex engine at all — they passed both before and after
+      // the fix, which is exactly why the reported failure went uncovered.
+      //
+      // Verified against the shipped v1.4.0.3 artifacts: linking
+      // regex_lookahead as a plain archive fails to load this file, and
+      // linking it whole-archive loads and tokenizes it. So this test fails on
+      // a library built without the fix, which is the point of it.
+      final path = '${tempDir.path}/lookahead.json';
+      File(path).writeAsStringSync(_lookaheadBpeTokenizer());
+      addTearDown(() => File(path).deleteSync());
+
+      final tokenizer = await Tokenizer.load(path);
+      addTearDown(tokenizer.dispose);
+
+      expect(tokenizer.format, TokenizerFormat.huggingFace);
+      // Loading is the regression; tokenizing proves the PCRE2 fallback is
+      // actually driving the pre-tokenizer rather than merely registering.
+      final ids = tokenizer.encode('hello world');
+      expect(ids, isNotEmpty);
+      expect(tokenizer.decode(ids), contains('hello'));
     });
 
     test('a malformed tokenizer file is rejected, not loaded', () async {
