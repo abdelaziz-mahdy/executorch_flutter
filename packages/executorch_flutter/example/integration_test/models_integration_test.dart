@@ -393,9 +393,11 @@ void main() {
     ) async {
       final invalidPath = '/non/existent/model.pte';
 
-      // Attempt to load non-existent model
-      expect(
-        () async => await ExecuTorchModel.load(invalidPath),
+      // Attempt to load non-existent model. expectLater must be awaited:
+      // a bare expect() on an async callback returns before the future
+      // settles, so the assertion would never actually run.
+      await expectLater(
+        () => ExecuTorchModel.load(invalidPath),
         throwsA(isA<ExecuTorchException>()),
         reason: 'Loading non-existent model should throw exception',
       );
@@ -419,8 +421,8 @@ void main() {
         );
 
         // Attempt to run inference on disposed model
-        expect(
-          () async => await model.forward([inputTensor]),
+        await expectLater(
+          () => model.forward([inputTensor]),
           throwsA(isA<ExecuTorchException>()),
           reason: 'Running inference on disposed model should throw exception',
         );
@@ -435,15 +437,23 @@ void main() {
       final invalidFile = File('${directory.path}/invalid_model.pte');
       await invalidFile.writeAsString('This is not a valid model file');
 
-      // Attempt to load invalid model
-      expect(
-        () async => await ExecuTorchModel.load(invalidFile.path),
+      // Attempt to load invalid model. Awaiting matters twice over here:
+      // besides making the assertion real, it lets the failed load release
+      // the file before cleanup runs.
+      await expectLater(
+        () => ExecuTorchModel.load(invalidFile.path),
         throwsA(isA<ExecuTorchException>()),
         reason: 'Loading invalid model file should throw exception',
       );
 
-      // Cleanup
-      await invalidFile.delete();
+      // Cleanup. Windows refuses to delete a file while the native loader
+      // still holds its mmap; POSIX allows it. The file lives in the app
+      // cache directory, so leaving it behind is harmless.
+      try {
+        await invalidFile.delete();
+      } on FileSystemException {
+        // Ignore — see above.
+      }
     });
 
     testWidgets('Should handle multiple dispose calls gracefully', (
