@@ -56,9 +56,9 @@ List<double> _softmax(List<double> logits) {
 }
 
 Float32List _asFloat32(TensorData tensor) => tensor.data.buffer.asFloat32List(
-      tensor.data.offsetInBytes,
-      tensor.data.lengthInBytes ~/ 4,
-    );
+  tensor.data.offsetInBytes,
+  tensor.data.lengthInBytes ~/ 4,
+);
 
 class _TopK {
   _TopK(this.indices, this.probabilities);
@@ -71,7 +71,9 @@ class _TopK {
   String describe() {
     final parts = <String>[];
     for (var i = 0; i < math.min(3, indices.length); i++) {
-      parts.add('${indices[i]}@${(probabilities[i] * 100).toStringAsFixed(1)}%');
+      parts.add(
+        '${indices[i]}@${(probabilities[i] * 100).toStringAsFixed(1)}%',
+      );
     }
     return parts.join(', ');
   }
@@ -109,7 +111,9 @@ void main() {
         expectedHash: entry.hash,
       );
       if (info.state != ModelDownloadState.downloaded) {
-        throw Exception('Failed to download ${entry.name}: ${info.errorMessage}');
+        throw Exception(
+          'Failed to download ${entry.name}: ${info.errorMessage}',
+        );
       }
       if (info.localPath != null) return info.localPath!;
       if (info.bytes != null) {
@@ -152,8 +156,10 @@ void main() {
             break;
           } catch (e) {
             final last = attempt == attempts;
-            print('  ${last ? "UNAVAILABLE" : "retry"}: $name '
-                'attempt $attempt/$attempts: $e');
+            print(
+              '  ${last ? "UNAVAILABLE" : "retry"}: $name '
+              'attempt $attempt/$attempts: $e',
+            );
             if (last) break;
             await Future<void>.delayed(Duration(seconds: 3 * attempt));
           }
@@ -178,20 +184,21 @@ void main() {
       try {
         final outputs = await model.forward(inputs);
         return outputs
-            .map((o) => TensorData(
-                  shape: o.shape,
-                  dataType: o.dataType,
-                  data: Uint8List.fromList(o.data),
-                  name: o.name,
-                ))
+            .map(
+              (o) => TensorData(
+                shape: o.shape,
+                dataType: o.dataType,
+                data: Uint8List.fromList(o.data),
+                name: o.name,
+              ),
+            )
             .toList();
       } finally {
         await model.dispose();
       }
     }
 
-    testWidgets('MobileNet classifies real photos on both backends',
-        (_) async {
+    testWidgets('MobileNet classifies real photos on both backends', (_) async {
       final preprocessor = ImageLibMobileNetPreprocessor(
         config: const ImagePreprocessConfig(),
       );
@@ -201,19 +208,21 @@ void main() {
         ('dog.jpg', _dogClasses, 'dog'),
       ]) {
         final (asset, expectedClasses, label) = probe;
-        final bytes = (await rootBundle.load('assets/images/$asset'))
-            .buffer
-            .asUint8List();
+        final bytes = (await rootBundle.load(
+          'assets/images/$asset',
+        )).buffer.asUint8List();
         final inputs = await preprocessor.preprocess(bytes);
 
         final xnnpack = _topK(
-          _asFloat32((await runModel('mobilenet_v3_small_xnnpack.pte', inputs))
-              .first),
+          _asFloat32(
+            (await runModel('mobilenet_v3_small_xnnpack.pte', inputs)).first,
+          ),
           5,
         );
         final vulkan = _topK(
           _asFloat32(
-              (await runModel('mobilenet_v3_small_vulkan.pte', inputs)).first),
+            (await runModel('mobilenet_v3_small_vulkan.pte', inputs)).first,
+          ),
           5,
         );
 
@@ -224,20 +233,23 @@ void main() {
         expect(
           expectedClasses.contains(xnnpack.top1),
           isTrue,
-          reason: 'XNNPACK reference is itself wrong on $asset — top-1 class '
+          reason:
+              'XNNPACK reference is itself wrong on $asset — top-1 class '
               '${xnnpack.top1} is not a $label. The Vulkan comparison below '
               'would be meaningless.',
         );
         expect(
           expectedClasses.contains(vulkan.top1),
           isTrue,
-          reason: 'Vulkan classified $asset as class ${vulkan.top1}, not a '
+          reason:
+              'Vulkan classified $asset as class ${vulkan.top1}, not a '
               '$label',
         );
         expect(
           vulkan.top1,
           xnnpack.top1,
-          reason: 'Backends disagree on $asset: Vulkan says ${vulkan.top1}, '
+          reason:
+              'Backends disagree on $asset: Vulkan says ${vulkan.top1}, '
               'XNNPACK says ${xnnpack.top1}',
         );
         // FP16 shifts confidence a little; a large gap would mean the class
@@ -245,7 +257,8 @@ void main() {
         expect(
           (vulkan.top1Probability - xnnpack.top1Probability).abs(),
           lessThan(0.05),
-          reason: 'Confidence differs sharply on $asset: Vulkan '
+          reason:
+              'Confidence differs sharply on $asset: Vulkan '
               '${vulkan.top1Probability} vs XNNPACK ${xnnpack.top1Probability}',
         );
         print('  PASS: both backends say class ${vulkan.top1} ($label)');
@@ -268,15 +281,17 @@ void main() {
         iouThreshold: 0.45,
       );
 
-      final bytes = (await rootBundle.load('assets/images/person.jpg'))
-          .buffer
-          .asUint8List();
+      final bytes = (await rootBundle.load(
+        'assets/images/person.jpg',
+      )).buffer.asUint8List();
       final inputs = await preprocessor.preprocess(bytes);
 
-      final xnnpackResult = await postprocessor
-          .process(await runModel('yolo11n_xnnpack.pte', inputs));
-      final vulkanResult = await postprocessor
-          .process(await runModel('yolo11n_vulkan.pte', inputs));
+      final xnnpackResult = await postprocessor.process(
+        await runModel('yolo11n_xnnpack.pte', inputs),
+      );
+      final vulkanResult = await postprocessor.process(
+        await runModel('yolo11n_vulkan.pte', inputs),
+      );
 
       final refDets = xnnpackResult.detectedObjects;
       final vkDets = vulkanResult.detectedObjects;
@@ -284,33 +299,39 @@ void main() {
       print('--- person.jpg ---');
       print('  XNNPACK: ${refDets.length} detections');
       for (final d in refDets.take(3)) {
-        print('    class ${d.classIndex} @ '
-            '${(d.confidence * 100).toStringAsFixed(1)}% '
-            'box=(${d.boundingBox.x.toStringAsFixed(1)}, '
-            '${d.boundingBox.y.toStringAsFixed(1)}, '
-            '${d.boundingBox.width.toStringAsFixed(1)}, '
-            '${d.boundingBox.height.toStringAsFixed(1)})');
+        print(
+          '    class ${d.classIndex} @ '
+          '${(d.confidence * 100).toStringAsFixed(1)}% '
+          'box=(${d.boundingBox.x.toStringAsFixed(1)}, '
+          '${d.boundingBox.y.toStringAsFixed(1)}, '
+          '${d.boundingBox.width.toStringAsFixed(1)}, '
+          '${d.boundingBox.height.toStringAsFixed(1)})',
+        );
       }
       print('  Vulkan : ${vkDets.length} detections');
       for (final d in vkDets.take(3)) {
-        print('    class ${d.classIndex} @ '
-            '${(d.confidence * 100).toStringAsFixed(1)}% '
-            'box=(${d.boundingBox.x.toStringAsFixed(1)}, '
-            '${d.boundingBox.y.toStringAsFixed(1)}, '
-            '${d.boundingBox.width.toStringAsFixed(1)}, '
-            '${d.boundingBox.height.toStringAsFixed(1)})');
+        print(
+          '    class ${d.classIndex} @ '
+          '${(d.confidence * 100).toStringAsFixed(1)}% '
+          'box=(${d.boundingBox.x.toStringAsFixed(1)}, '
+          '${d.boundingBox.y.toStringAsFixed(1)}, '
+          '${d.boundingBox.width.toStringAsFixed(1)}, '
+          '${d.boundingBox.height.toStringAsFixed(1)})',
+        );
       }
 
       expect(
         refDets,
         isNotEmpty,
-        reason: 'XNNPACK reference found nothing in person.jpg — the Vulkan '
+        reason:
+            'XNNPACK reference found nothing in person.jpg — the Vulkan '
             'comparison below would be meaningless',
       );
       expect(
         vkDets,
         isNotEmpty,
-        reason: 'Vulkan found no objects in person.jpg while XNNPACK found '
+        reason:
+            'Vulkan found no objects in person.jpg while XNNPACK found '
             '${refDets.length}',
       );
 
@@ -320,7 +341,8 @@ void main() {
       expect(
         refTop.classIndex,
         _cocoPerson,
-        reason: 'XNNPACK top detection is class ${refTop.classIndex}, not '
+        reason:
+            'XNNPACK top detection is class ${refTop.classIndex}, not '
             'person — the reference itself is wrong',
       );
       expect(
@@ -334,13 +356,15 @@ void main() {
       expect(
         overlap,
         greaterThan(0.9),
-        reason: 'Top boxes barely overlap (IoU $overlap) — the backends are '
+        reason:
+            'Top boxes barely overlap (IoU $overlap) — the backends are '
             'localising the same object differently',
       );
       expect(
         (vkTop.confidence - refTop.confidence).abs(),
         lessThan(0.05),
-        reason: 'Top-detection confidence differs sharply: Vulkan '
+        reason:
+            'Top-detection confidence differs sharply: Vulkan '
             '${vkTop.confidence} vs XNNPACK ${refTop.confidence}',
       );
 
@@ -349,11 +373,14 @@ void main() {
       expect(
         (vkDets.length - refDets.length).abs(),
         lessThanOrEqualTo(1),
-        reason: 'Detection counts diverge: Vulkan ${vkDets.length} vs XNNPACK '
+        reason:
+            'Detection counts diverge: Vulkan ${vkDets.length} vs XNNPACK '
             '${refDets.length}',
       );
-      print('  PASS: both backends detect person with IoU '
-          '${overlap.toStringAsFixed(4)}');
+      print(
+        '  PASS: both backends detect person with IoU '
+        '${overlap.toStringAsFixed(4)}',
+      );
     });
   });
 }

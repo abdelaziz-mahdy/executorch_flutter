@@ -224,7 +224,8 @@ void _assertOutputsMatch(
     expect(
       cmp.argmaxValueGap,
       lessThan(0.02),
-      reason: '$label load $load output[$i]: Vulkan peaked at index '
+      reason:
+          '$label load $load output[$i]: Vulkan peaked at index '
           '${cmp.testArgmax}, where the reference holds '
           '${cmp.refValueAtTestArgmax} — far below its own peak '
           '${cmp.refValueAtRefArgmax} at index ${cmp.refArgmax}',
@@ -232,13 +233,15 @@ void _assertOutputsMatch(
     expect(
       cmp.cosine,
       greaterThan(0.999),
-      reason: '$label load $load output[$i]: cosine similarity ${cmp.cosine} — '
+      reason:
+          '$label load $load output[$i]: cosine similarity ${cmp.cosine} — '
           'the tensors disagree in shape, not just precision',
     );
     expect(
       cmp.relativeDiff,
       lessThan(0.05),
-      reason: '$label load $load output[$i]: worst element differs by '
+      reason:
+          '$label load $load output[$i]: worst element differs by '
           '${(cmp.relativeDiff * 100).toStringAsFixed(1)}% of the tensor scale '
           '(${cmp.worstRefValue} vs ${cmp.worstTestValue})',
     );
@@ -260,7 +263,9 @@ void main() {
       );
 
       if (info.state != ModelDownloadState.downloaded) {
-        throw Exception('Failed to download ${entry.name}: ${info.errorMessage}');
+        throw Exception(
+          'Failed to download ${entry.name}: ${info.errorMessage}',
+        );
       }
       if (info.localPath != null) return info.localPath!;
       if (info.bytes != null) {
@@ -319,8 +324,10 @@ void main() {
             break;
           } catch (e) {
             final last = attempt == attempts;
-            print('  ${last ? "UNAVAILABLE" : "retry"}: $name '
-                'attempt $attempt/$attempts failed: $e');
+            print(
+              '  ${last ? "UNAVAILABLE" : "retry"}: $name '
+              'attempt $attempt/$attempts failed: $e',
+            );
             if (last) break;
             // A dropped connection tends to take the next few DNS lookups with
             // it, so back off rather than retrying straight into the failure.
@@ -412,8 +419,10 @@ void main() {
               if (d > crossRunDiff) crossRunDiff = d;
             }
           }
-          print('  load $load vs load 1: maxDiff='
-              '${crossRunDiff.toStringAsExponential(3)}');
+          print(
+            '  load $load vs load 1: maxDiff='
+            '${crossRunDiff.toStringAsExponential(3)}',
+          );
           expect(
             crossRunDiff,
             0.0,

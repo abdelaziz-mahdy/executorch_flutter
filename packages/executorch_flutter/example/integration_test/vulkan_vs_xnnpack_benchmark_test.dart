@@ -34,7 +34,9 @@ void main() {
       );
 
       if (info.state != ModelDownloadState.downloaded) {
-        throw Exception('Failed to download ${entry.name}: ${info.errorMessage}');
+        throw Exception(
+          'Failed to download ${entry.name}: ${info.errorMessage}',
+        );
       }
 
       if (info.localPath != null) return info.localPath!;
@@ -191,7 +193,9 @@ void main() {
       if (xnnpackTimes.isNotEmpty && vulkanTimes.isNotEmpty) {
         final xAvg = xnnpackTimes.reduce((a, b) => a + b) / xnnpackTimes.length;
         final vAvg = vulkanTimes.reduce((a, b) => a + b) / vulkanTimes.length;
-        print('  Ratio: Vulkan is ${(vAvg / xAvg).toStringAsFixed(1)}x XNNPACK load time');
+        print(
+          '  Ratio: Vulkan is ${(vAvg / xAvg).toStringAsFixed(1)}x XNNPACK load time',
+        );
       }
 
       print('');
@@ -212,7 +216,9 @@ void main() {
       if (xnnpackTimes.isNotEmpty && vulkanTimes.isNotEmpty) {
         final xAvg = xnnpackTimes.reduce((a, b) => a + b) / xnnpackTimes.length;
         final vAvg = vulkanTimes.reduce((a, b) => a + b) / vulkanTimes.length;
-        print('  Ratio: Vulkan is ${(vAvg / xAvg).toStringAsFixed(1)}x XNNPACK load time');
+        print(
+          '  Ratio: Vulkan is ${(vAvg / xAvg).toStringAsFixed(1)}x XNNPACK load time',
+        );
       }
 
       print('');
@@ -239,7 +245,9 @@ void main() {
       if (xnnpackTimes.isNotEmpty && vulkanTimes.isNotEmpty) {
         final xAvg = xnnpackTimes.reduce((a, b) => a + b) / xnnpackTimes.length;
         final vAvg = vulkanTimes.reduce((a, b) => a + b) / vulkanTimes.length;
-        print('  Ratio: Vulkan is ${(vAvg / xAvg).toStringAsFixed(1)}x XNNPACK load time');
+        print(
+          '  Ratio: Vulkan is ${(vAvg / xAvg).toStringAsFixed(1)}x XNNPACK load time',
+        );
       }
 
       print('');
@@ -251,18 +259,20 @@ void main() {
       print('');
       print('--- YOLO11n Inference Time (5 runs after warmup) ---');
 
-      final xnnpackTimes = await benchmarkInference(
-        'yolo11n_xnnpack.pte',
-        [1, 3, 640, 640],
-        5,
-      );
+      final xnnpackTimes = await benchmarkInference('yolo11n_xnnpack.pte', [
+        1,
+        3,
+        640,
+        640,
+      ], 5);
       printBenchmarkResult('XNNPACK', xnnpackTimes);
 
-      final vulkanTimes = await benchmarkInference(
-        'yolo11n_vulkan.pte',
-        [1, 3, 640, 640],
-        5,
-      );
+      final vulkanTimes = await benchmarkInference('yolo11n_vulkan.pte', [
+        1,
+        3,
+        640,
+        640,
+      ], 5);
       printBenchmarkResult('Vulkan ', vulkanTimes);
 
       if (xnnpackTimes.isNotEmpty && vulkanTimes.isNotEmpty) {
@@ -284,18 +294,20 @@ void main() {
       print('');
       print('--- YOLOv8n Inference Time (5 runs after warmup) ---');
 
-      final xnnpackTimes = await benchmarkInference(
-        'yolov8n_xnnpack.pte',
-        [1, 3, 640, 640],
-        5,
-      );
+      final xnnpackTimes = await benchmarkInference('yolov8n_xnnpack.pte', [
+        1,
+        3,
+        640,
+        640,
+      ], 5);
       printBenchmarkResult('XNNPACK', xnnpackTimes);
 
-      final vulkanTimes = await benchmarkInference(
-        'yolov8n_vulkan.pte',
-        [1, 3, 640, 640],
-        5,
-      );
+      final vulkanTimes = await benchmarkInference('yolov8n_vulkan.pte', [
+        1,
+        3,
+        640,
+        640,
+      ], 5);
       printBenchmarkResult('Vulkan ', vulkanTimes);
 
       if (xnnpackTimes.isNotEmpty && vulkanTimes.isNotEmpty) {
@@ -350,7 +362,9 @@ void main() {
       print('  Benchmark Complete');
       print('========================================');
       print('');
-      print('Available backends: ${BackendQuery.available.map((b) => b.name).join(", ")}');
+      print(
+        'Available backends: ${BackendQuery.available.map((b) => b.name).join(", ")}',
+      );
       print('Models tested: ${modelPaths.keys.join(", ")}');
       print('');
       print('NOTE: Vulkan load time includes shader compilation');
