@@ -53,7 +53,7 @@ automatically — there's nothing to compile by hand.
      packages/executorch_flutter/README.md) — bump this by hand on release. -->
 ```yaml
 dependencies:
-  executorch_dart: ^0.7.0
+  executorch_dart: ^0.7.1
 ```
 
 ## Quick Start
@@ -279,7 +279,7 @@ hooks:
     executorch_dart:
       debug: false                  # Debug logging + debug binaries
       build_mode: "prebuilt"        # "prebuilt", "local", or "source"
-      # prebuilt_version: "1.4.0.5" # Optional: pin a specific native release
+      # prebuilt_version: "1.4.0.6" # Optional: pin a specific native release
       llm: false                    # Opt in to the LLM runner (ExecuTorchLLM)
       # For source mode: build from local ExecuTorch checkout
       # build_mode: "source"
@@ -302,7 +302,7 @@ hooks:
 | `debug` | `false` | Enable native debug logging and use debug binaries |
 | `local_lib_dir` | - | Path to precompiled `lib/` + `include/` (`build_mode: "local"` only) |
 | `executorch_source` | - | Path to a local ExecuTorch checkout (`build_mode: "source"` only) |
-| `prebuilt_version` | Current release (e.g. `1.4.0.5`) | Pin a specific prebuilt native release instead of this package version's default |
+| `prebuilt_version` | Current release (e.g. `1.4.0.6`) | Pin a specific prebuilt native release instead of this package version's default |
 
 ### Default backends by platform
 
