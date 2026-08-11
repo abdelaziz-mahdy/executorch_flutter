@@ -38,7 +38,7 @@ cd packages/executorch_dart && dart run ffigen
 - **Status**: `executorch_flutter` is published on pub.dev; `executorch_dart` is new and has not been published yet (0.6.0 is its first release). Once tagged, both release together — CI publishes `executorch_dart` before `executorch_flutter`; see "Version Sources of Truth" below
 - **API**: vision inference via `ExecuTorchModel` (`load`/`forward`/`dispose`) plus experimental
   streaming LLM via `ExecuTorchLLM` (see `packages/executorch_flutter/docs/LLM.md`)
-- **Code Quality**: `flutter analyze` and `dart format --set-exit-if-changed` (both packages' `lib/`) must be clean
+- **Code Quality**: `flutter analyze` and `dart format --set-exit-if-changed` (both package trees in full, not just `lib/` — CI checks `example/` and `test/` too) must be clean
 - **Build Status**: ✅ Android, ✅ iOS, ✅ macOS, ✅ Windows, ✅ Linux, ✅ Web
 
 ## Core Architecture
@@ -662,9 +662,12 @@ covers both packages with equivalent effect:
 # 1. Analyzer — must report 0 issues, for both packages
 flutter analyze
 
-# 2. Formatter — verify there is nothing left to format
-dart format --set-exit-if-changed packages/executorch_dart/lib \
-  packages/executorch_flutter/lib
+# 2. Formatter — verify there is nothing left to format.
+#    Whole package trees, NOT just lib/: CI runs exactly this, so test and
+#    example sources are checked too. Formatting only lib/ passes locally and
+#    still fails CI the moment you touch example/ or test/.
+dart format --set-exit-if-changed packages/executorch_dart \
+  packages/executorch_flutter
 
 # 3. Tests — each package has its own test runner
 (cd packages/executorch_flutter && flutter test)
