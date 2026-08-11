@@ -67,7 +67,7 @@ and Web support.
 <!-- PACKAGE_VERSION_START -->
 ```yaml
 dependencies:
-  executorch_flutter: ^0.7.0
+  executorch_flutter: ^0.7.1
 ```
 <!-- PACKAGE_VERSION_END -->
 
