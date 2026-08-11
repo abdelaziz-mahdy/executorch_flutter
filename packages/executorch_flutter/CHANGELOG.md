@@ -1,3 +1,12 @@
+## 0.7.1
+
+### Fixed
+
+- macOS Vulkan builds no longer fail while relocating the bundled MoltenVK
+  library into the app. See the core package's changelog for the cause and the
+  new macOS 12+ requirement for Vulkan variants.
+  Thanks @dariyooo ([#51](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/51)).
+
 ## 0.7.0
 
 ### Added

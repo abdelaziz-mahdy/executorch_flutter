@@ -1,3 +1,17 @@
+## 0.7.1
+
+### Fixed
+
+- macOS Vulkan builds no longer fail with `install_name_tool: ... larger
+  updated load commands do not fit`. The bundled `libMoltenVK.dylib` was
+  copied from Homebrew, which links it without room to grow its install name,
+  so relocating it into an app was impossible. It is now linked from
+  MoltenVK's own static library with that headroom reserved, and the build
+  refuses to package any bundled library lacking it.
+  Thanks @dariyooo ([#51](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/51)).
+  - macOS Vulkan variants now require **macOS 12+**, the floor MoltenVK 1.4.x
+    is compiled against. Other variants keep their macOS 11 target.
+
 ## 0.7.0
 
 ### Added
