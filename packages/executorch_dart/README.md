@@ -53,7 +53,7 @@ automatically — there's nothing to compile by hand.
      packages/executorch_flutter/README.md) — bump this by hand on release. -->
 ```yaml
 dependencies:
-  executorch_dart: ^0.7.1
+  executorch_dart: ^0.7.2
 ```
 
 ## Quick Start
