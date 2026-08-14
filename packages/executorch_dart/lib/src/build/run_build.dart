@@ -268,6 +268,25 @@ Please verify the path to your local ExecuTorch checkout.
   final backendDefines = _getBackendDefines(input, targetOS);
   _logBackendConfiguration(logger, backendDefines);
 
+  // Metal is Apple-Silicon only. Dropping it on x86_64 is what keeps universal
+  // builds working at all, but a user who asked for it by name should be told
+  // it went away rather than having to spot it in the Disabled list.
+  final requestedBackends = input.userDefines['backends'] as List?;
+  final askedForMetal =
+      requestedBackends != null &&
+      (requestedBackends.contains('metal') ||
+          requestedBackends.contains('mps'));
+  if (targetOS == OS.macOS &&
+      askedForMetal &&
+      backendDefines['ET_BUILD_METAL'] != 'ON') {
+    logger.info(
+      '[executorch_dart] NOTE: Metal was requested but is not available for '
+      '${input.config.code.targetArchitecture} — it is an Apple-Silicon-only '
+      'backend, and no macOS x86_64 prebuilt includes it. Building without '
+      'Metal; XNNPACK and CoreML still apply.\n',
+    );
+  }
+
   // MLX requires a macOS 14.0+ deployment target. Flutter currently HARDCODES
   // the native-assets macOS target to 13 (flutter_tools
   // .../native_assets/macos/native_assets.dart: `targetMacOSVersion = 13`), so
@@ -470,8 +489,15 @@ Map<String, String?> _getBackendDefines(BuildInput input, OS targetOS) {
   // Platform support for each backend
   final isApplePlatform = targetOS == OS.iOS || targetOS == OS.macOS;
   final supportsCoreml = isApplePlatform;
-  // Metal (AOTI) backend is macOS-desktop only (replaces the deprecated MPS).
-  final supportsMetal = targetOS == OS.macOS;
+  // Metal (AOTI) backend is macOS-desktop, arm64 ONLY (replaces the deprecated
+  // MPS). The native build hardcodes Metal off for x86_64 — see X64_VARIANTS in
+  // scripts/build-macos.sh — so no macos-x86_64-*-metal prebuilt exists, and
+  // requesting one 404s on the hash file rather than failing with anything
+  // legible. Metal is on by default for macOS, so without this arch gate every
+  // Intel or universal build breaks at configure.
+  final supportsMetal =
+      targetOS == OS.macOS &&
+      input.config.code.targetArchitecture == Architecture.arm64;
   // MLX backend (Apple-Silicon GPU) is macOS-desktop, arm64 ONLY. The native
   // build only produces a macos-arm64-xnnpack-mlx-llm prebuilt; gating here on
   // arm64 too keeps the prebuilt-variant selection from requesting a

@@ -1,3 +1,20 @@
+## 0.7.2
+
+### Fixed
+
+- macOS builds no longer fail with a 404 on a `macos-x86_64-...-metal`
+  prebuilt. Metal was enabled by default for all of macOS, but it builds
+  against PyTorch, which ships no macOS x86_64 wheels — so it is
+  Apple-Silicon only and no Intel artifact exists. Since a universal macOS
+  build compiles an x86_64 slice too, this broke Apple-Silicon developers who
+  never asked for Intel support. Metal is now gated on arm64, and each slice
+  gets the backends it can actually run.
+  Thanks @dariyooo ([#53](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/53)).
+- A missing prebuilt now says which backend combination was requested and why
+  it does not exist, instead of reading like a network failure. The suggested
+  `build_mode: "source"` fallback also named `executorch_flutter:`, a key
+  rejected since 0.6.0, so following it produced a second error.
+
 ## 0.7.1
 
 ### Fixed

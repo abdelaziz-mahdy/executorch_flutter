@@ -1,3 +1,12 @@
+## 0.7.2
+
+### Fixed
+
+- macOS builds no longer fail on a missing Metal prebuilt for the x86_64 slice
+  of a universal build. See the core package's changelog — Metal is
+  Apple-Silicon only and is now gated accordingly.
+  Thanks @dariyooo ([#53](https://github.com/abdelaziz-mahdy/executorch_flutter/issues/53)).
+
 ## 0.7.1
 
 ### Fixed
