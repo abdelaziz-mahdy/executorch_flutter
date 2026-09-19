@@ -38,17 +38,41 @@ ENV PATH="${EMSDK}:${EMSDK}/upstream/emscripten:${PATH}"
 # EMSDK_NODE will be set dynamically by emsdk_env.sh
 
 # Clone ExecuTorch repository with submodules
-ENV EXECUTORCH_VERSION=v1.4.0
+ENV EXECUTORCH_VERSION=v1.5.0
 WORKDIR /workspace
 RUN git clone --branch ${EXECUTORCH_VERSION} --depth 1 --recurse-submodules --shallow-submodules https://github.com/pytorch/executorch.git
 
-# Patch XNNPACK to remove the -mfp16 flag that causes build failures on ARM64 hosts
-# The -mfp16 flag is for ARM native FP16 support, not needed for WASM builds
-# See: https://github.com/pytorch/executorch/issues/XXXX
+# Build XNNPACK without the WebAssembly FP16 (half-precision) feature.
+#
+# XNNPACK passes -mfp16 to every Emscripten build. A module compiled that way
+# contains FP16 opcodes, and a browser that has not shipped the proposal
+# rejects the whole module at instantiation, not just the FP16 kernels. So:
+#   1. drop the -mfp16 flag, and
+#   2. drop the micro-kernels that cannot compile without it.
+# ExecuTorch 1.5.0's XNNPACK pin added (2)'s kernels; they are listed for
+# compilation unconditionally and fail with "requires target feature 'fp16'".
+# The list is derived from the sources so it follows the XNNPACK pin.
+#   3. repoint the two that the plain relaxed-SIMD config still selects.
+# With XNNPACK_ENABLE_WASMRELAXEDSIMDFP16 off (build_wasm_in_container.sh sets
+# it) the config stops choosing FP16 kernels, except f16 cosine and sine: their
+# "f32acc" relaxed-SIMD kernels also convert through FP16 intrinsics, so they
+# are in (2)'s list and would be undefined at link time. Use the scalar
+# kernels every other non-FP16 target falls back to. A future pin that adds
+# another such reference fails the link with the symbol name.
 WORKDIR /workspace/executorch
-RUN sed -i 's/ADD_COMPILE_OPTIONS("-mfp16")/#ADD_COMPILE_OPTIONS("-mfp16") # Disabled for WASM builds/' \
-    backends/xnnpack/third-party/XNNPACK/CMakeLists.txt && \
-    echo "Patched XNNPACK CMakeLists.txt to remove -mfp16 flag"
+RUN cd backends/xnnpack/third-party/XNNPACK && \
+    sed -i 's/ADD_COMPILE_OPTIONS("-mfp16")/#ADD_COMPILE_OPTIONS("-mfp16") # Disabled for WASM builds/' \
+        CMakeLists.txt && \
+    fp16_headers=$(grep -rlE 'wasm_f16x8_' src --include='*.h' | xargs -r -n1 basename | paste -sd'|') && \
+    { grep -rlE 'wasm_f16x8_' src --include='*.c'; \
+      [ -n "$fp16_headers" ] && grep -rlE "(${fp16_headers})" src --include='*.c'; } | sort -u > /tmp/wasm_fp16_srcs.txt && \
+    while read -r src; do \
+        sed -i -E "\|^  ${src}\)\$|s|^  .*\)\$|  )|; \|^  ${src}\$|d" cmake/gen/wasmrelaxedsimd_microkernels.cmake; \
+    done < /tmp/wasm_fp16_srcs.txt && \
+    sed -i -E '/xnn_f16_f32acc_v(cos|sin)_ukernel__wasmrelaxedsimd_poly_3_u8/{s/__wasmrelaxedsimd_poly_3_u8/__scalar_poly_3_u4/;n;s/element_tile = 8;/element_tile = 4;/}' \
+        src/configs/unary-elementwise-config.c && \
+    ! grep -q 'xnn_f16_f32acc_v\(cos\|sin\)_ukernel__wasmrelaxedsimd' src/configs/unary-elementwise-config.c && \
+    echo "Patched XNNPACK: removed -mfp16 and $(wc -l < /tmp/wasm_fp16_srcs.txt) FP16-only Wasm micro-kernels"
 
 # Install minimal Python dependencies for Wasm build
 

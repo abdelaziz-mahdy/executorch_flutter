@@ -35,7 +35,7 @@ cd packages/executorch_dart && dart run ffigen
 
 ## Current Development Status
 
-- **Status**: `executorch_flutter` is published on pub.dev; `executorch_dart` is new and has not been published yet (0.6.0 is its first release). Once tagged, both release together — CI publishes `executorch_dart` before `executorch_flutter`; see "Version Sources of Truth" below
+- **Status**: `executorch_flutter` is published on pub.dev; `executorch_dart` has been published since 0.6.0. Both release together — CI publishes `executorch_dart` before `executorch_flutter`; see "Version Sources of Truth" below
 - **API**: vision inference via `ExecuTorchModel` (`load`/`forward`/`dispose`) plus experimental
   streaming LLM via `ExecuTorchLLM` (see `packages/executorch_flutter/docs/LLM.md`)
 - **Code Quality**: `flutter analyze` and `dart format --set-exit-if-changed` (both package trees in full, not just `lib/` — CI checks `example/` and `test/` too) must be clean
@@ -348,14 +348,14 @@ Step 3: executorch_flutter repo (two packages — update both)
 ```
 
 **Version Sources of Truth (this repo):**
-- `packages/executorch_dart/lib/src/version.dart` → `executorchVersion` (currently `'1.3.1'`)
+- `packages/executorch_dart/lib/src/version.dart` → `executorchVersion` (currently `'1.5.0'`)
 - `packages/executorch_dart/lib/src/build/run_build.dart` → `_defaultPrebuiltVersion` =
   `'$executorchVersion.<n>'`, a manually incremented prebuilt-build counter that resets to
-  `.1` when `executorchVersion` bumps to a new upstream release (currently `1.3.1.9` — do
+  `.1` when `executorchVersion` bumps to a new upstream release (currently `1.5.0.1` — do
   **not** assume the suffix is always `.1`; it climbs with every prebuilt re-release of the
   same ExecuTorch version)
 - `packages/executorch_dart/pubspec.yaml` and `packages/executorch_flutter/pubspec.yaml` →
-  `version:` (both packages currently release together at `0.6.0`)
+  `version:` (both packages currently release together at `0.8.0`)
 
 ## Key APIs
 
@@ -735,7 +735,7 @@ for `build_mode: "source"`/`"local"`).
   - Ensure tensor shapes match exactly (including batch dimension)
   - Check ExecuTorch version compatibility — all platforms build against the
     same upstream version now (`executorchVersion` in
-    `packages/executorch_dart/lib/src/version.dart`, currently `1.3.1`)
+    `packages/executorch_dart/lib/src/version.dart`, currently `1.5.0`)
 
 **3. Memory Issues**
 - **Issue**: Models not disposed, accumulating in memory

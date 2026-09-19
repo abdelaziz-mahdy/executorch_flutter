@@ -1,3 +1,10 @@
+## 0.8.0
+
+### Changed
+
+- Upgraded to ExecuTorch 1.5.0 (skipping 1.4.1), including the WebAssembly
+  runtime used on Web. See the core package's changelog.
+
 ## 0.7.2
 
 ### Fixed

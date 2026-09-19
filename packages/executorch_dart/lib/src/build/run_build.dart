@@ -73,7 +73,7 @@ const String _packageName = 'executorch_dart';
 /// Default prebuilt release version (our release tag for prebuilt downloads).
 /// This includes a build iteration suffix (e.g., 1.1.0.1) to support multiple
 /// releases for the same ExecuTorch version.
-const String _defaultPrebuiltVersion = '$executorchVersion.6';
+const String _defaultPrebuiltVersion = '$executorchVersion.1';
 
 /// Default build mode.
 const String _defaultBuildMode = 'prebuilt';
@@ -361,8 +361,11 @@ Please verify the path to your local ExecuTorch checkout.
       'EXECUTORCH_VERSION': executorchVersion,
       // Prebuilt release version (for prebuilt downloads)
       'EXECUTORCH_PREBUILT_VERSION': prebuiltVersion,
-      // Local mode: disable download and use local directory
-      if (isLocalBuild) 'EXECUTORCH_DISABLE_DOWNLOAD': 'ON',
+      // Local mode: disable download and use local directory.
+      // Always passed, never only when ON: the CMake build directory is
+      // reused across configurations, so an option left out keeps whatever
+      // value an earlier configure cached.
+      'EXECUTORCH_DISABLE_DOWNLOAD': isLocalBuild ? 'ON' : 'OFF',
       if (isLocalBuild && localLibDir != null)
         'EXECUTORCH_INSTALL_DIR': localLibDir,
       // Python executable (only for source builds)
@@ -389,8 +392,10 @@ Please verify the path to your local ExecuTorch checkout.
           .toFilePath(),
       // Backend defines
       ...backendDefines,
-      // LLM (text generation) runner — opt-in
-      if (llmEnabled) 'ET_BUILD_LLM': 'ON',
+      // LLM (text generation) runner — opt-in. Explicit OFF for the same
+      // reason as EXECUTORCH_DISABLE_DOWNLOAD above: omitted, a cached ON from
+      // an earlier `llm: true` build keeps requesting the -llm prebuilt.
+      'ET_BUILD_LLM': llmEnabled ? 'ON' : 'OFF',
     },
   );
 
