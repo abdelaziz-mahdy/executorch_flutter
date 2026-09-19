@@ -365,7 +365,7 @@ hooks:
     executorch_dart:
       debug: false              # Enable debug logging
       build_mode: "prebuilt"    # "prebuilt", "local", or "source"
-      # prebuilt_version: "1.4.0.6"  # Optional: pin specific native version
+      # prebuilt_version: "1.5.0.1"  # Optional: pin specific native version
       # For source mode: build from local ExecuTorch checkout
       # build_mode: "source"
       # executorch_source: "/path/to/executorch"
