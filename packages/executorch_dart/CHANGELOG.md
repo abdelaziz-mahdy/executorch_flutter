@@ -4,6 +4,16 @@
 
 - Upgraded to ExecuTorch 1.5.0 (skipping 1.4.1).
 
+### Fixed
+
+- Turning `llm: true` back off now takes effect on the next build. The setting
+  was only ever passed to the native build when on, so a previously configured
+  build kept it cached and went on requesting an `-llm` prebuilt — which fails
+  with "No pre-built binary published" for backend combinations that have no
+  LLM variant, such as `xnnpack` + `metal`. Until now the only way out was
+  `flutter clean`. Switching from `build_mode: "local"` back to `"prebuilt"`
+  had the same problem and is fixed the same way.
+
 ## 0.7.2
 
 ### Fixed
