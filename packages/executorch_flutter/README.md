@@ -55,7 +55,7 @@ and Web support.
 ### Library Size by Backend
 
 <!-- NATIVE_VERSION_START -->
-📊 **[Download Release Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.4.0.6/size-report-release.svg)** | **[Download Debug Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.4.0.6/size-report-debug.svg)** | **[JSON Report](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.4.0.6/size-report.json)**
+📊 **[Download Release Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.5.0.1/size-report-release.svg)** | **[Download Debug Size Comparison (SVG)](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.5.0.1/size-report-debug.svg)** | **[JSON Report](https://github.com/abdelaziz-mahdy/executorch_native/releases/download/v1.5.0.1/size-report.json)**
 <!-- NATIVE_VERSION_END -->
 
 ---
@@ -67,7 +67,7 @@ and Web support.
 <!-- PACKAGE_VERSION_START -->
 ```yaml
 dependencies:
-  executorch_flutter: ^0.7.2
+  executorch_flutter: ^0.8.0
 ```
 <!-- PACKAGE_VERSION_END -->
 
