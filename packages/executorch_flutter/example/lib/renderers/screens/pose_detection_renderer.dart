@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../models/model_input.dart';
 import '../../models/pose_result.dart';
 import '../pose_detection/image_with_poses.dart';

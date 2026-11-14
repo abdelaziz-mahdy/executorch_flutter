@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:executorch_flutter/executorch_flutter.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:dartcv4/dartcv.dart' as cv;
 
 import '../blazeface_input_processor.dart';

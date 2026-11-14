@@ -1,3 +1,18 @@
+## 0.9.0
+
+### Changed
+
+- Upgraded to ExecuTorch 1.6.0 (skipping 1.5.1), including the WebAssembly
+  runtime used on Web. See the core package's changelog.
+- The example app needs Flutter 3.47+: it now imports Material from the
+  `material_ui` package, since Flutter 3.47 deprecated the SDK's own copy.
+  The plugin itself still supports Flutter 3.38+.
+
+### Fixed
+
+- iOS builds, and macOS builds without MLX, no longer fail on Xcode 27 with a
+  deployment target error. See the core package's changelog.
+
 ## 0.8.0
 
 ### Changed

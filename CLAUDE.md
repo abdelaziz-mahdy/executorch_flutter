@@ -348,14 +348,14 @@ Step 3: executorch_flutter repo (two packages — update both)
 ```
 
 **Version Sources of Truth (this repo):**
-- `packages/executorch_dart/lib/src/version.dart` → `executorchVersion` (currently `'1.5.0'`)
+- `packages/executorch_dart/lib/src/version.dart` → `executorchVersion` (currently `'1.6.0'`)
 - `packages/executorch_dart/lib/src/build/run_build.dart` → `_defaultPrebuiltVersion` =
   `'$executorchVersion.<n>'`, a manually incremented prebuilt-build counter that resets to
-  `.1` when `executorchVersion` bumps to a new upstream release (currently `1.5.0.1` — do
+  `.1` when `executorchVersion` bumps to a new upstream release (currently `1.6.0.1` — do
   **not** assume the suffix is always `.1`; it climbs with every prebuilt re-release of the
   same ExecuTorch version)
 - `packages/executorch_dart/pubspec.yaml` and `packages/executorch_flutter/pubspec.yaml` →
-  `version:` (both packages currently release together at `0.8.0`)
+  `version:` (both packages currently release together at `0.9.0`)
 
 ## Key APIs
 
@@ -735,7 +735,7 @@ for `build_mode: "source"`/`"local"`).
   - Ensure tensor shapes match exactly (including batch dimension)
   - Check ExecuTorch version compatibility — all platforms build against the
     same upstream version now (`executorchVersion` in
-    `packages/executorch_dart/lib/src/version.dart`, currently `1.5.0`)
+    `packages/executorch_dart/lib/src/version.dart`, currently `1.6.0`)
 
 **3. Memory Issues**
 - **Issue**: Models not disposed, accumulating in memory

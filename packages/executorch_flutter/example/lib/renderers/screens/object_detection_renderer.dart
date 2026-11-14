@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../models/model_input.dart';
 import '../../processors/yolo_processor.dart';
 import '../object_detection/image_with_detections.dart';

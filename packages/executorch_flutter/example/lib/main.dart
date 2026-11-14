@@ -10,7 +10,7 @@
 /// - Modern Material 3 design
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:executorch_flutter/executorch_flutter.dart';
 
 // Import category landing screen

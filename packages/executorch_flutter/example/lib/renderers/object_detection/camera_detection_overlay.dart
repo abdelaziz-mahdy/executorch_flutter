@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../processors/yolo_processor.dart';
 import '../../ui/camera_view_singleton.dart';
 

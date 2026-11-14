@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../models/face_result.dart';
 import '../../processors/yolo_processor.dart' show BoundingBox;
 

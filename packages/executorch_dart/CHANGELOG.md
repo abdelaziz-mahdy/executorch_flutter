@@ -1,3 +1,19 @@
+## 0.9.0
+
+### Changed
+
+- Upgraded to ExecuTorch 1.6.0 (skipping 1.5.1).
+
+### Fixed
+
+- Builds with Xcode 27 no longer fail with "The macOS deployment target
+  'MACOSX_DEPLOYMENT_TARGET' is set to 11.0, but the range of supported
+  deployment target versions is 12.0 to …". The native library's Apple
+  deployment target was fixed at macOS 11.0 (14.0 with MLX) and iOS 13.0,
+  below what Xcode 27 accepts (macOS 12.0, iOS 15.0), so every iOS build and
+  every macOS build without MLX failed. It now rises to the lowest target the
+  installed SDK supports; older Xcode versions keep the previous targets.
+
 ## 0.8.0
 
 ### Changed

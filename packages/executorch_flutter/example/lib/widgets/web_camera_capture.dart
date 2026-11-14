@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A widget that provides camera capture functionality for web platform.
 /// Uses the camera package's takePicture() method which is fully supported on web.

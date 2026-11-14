@@ -55,6 +55,7 @@
 ///   pre-built download
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:code_assets/code_assets.dart';
@@ -339,6 +340,31 @@ Please verify the path to your local ExecuTorch checkout.
   final cmakeBuildType = debugMode ? 'Debug' : 'Release';
   logger.info('[executorch_dart]   CMake build type: $cmakeBuildType\n');
 
+  // Apple deployment target. MLX requires macOS 14.0+ (its CMake
+  // FATAL_ERRORs below that), so the macOS target rises to 14.0 when the mlx
+  // backend is enabled; the app's macOS deployment target must match. Newer
+  // Xcode releases also drop old targets (Xcode 27 accepts macOS 12.0+ and
+  // iOS 15.0+), so never go below what the installed SDK supports.
+  String? appleDeploymentTarget;
+  if (targetOS == OS.macOS || targetOS == OS.iOS) {
+    final wanted = targetOS == OS.macOS
+        ? (backendDefines['ET_BUILD_MLX'] == 'ON' ? '14.0' : '11.0')
+        : '13.0';
+    final sdk = targetOS == OS.macOS
+        ? 'macosx'
+        : (input.config.code.iOS.targetSdk == IOSSdk.iPhoneSimulator
+              ? 'iphonesimulator'
+              : 'iphoneos');
+    final sdkMinimum = _sdkMinimumDeploymentTarget(sdk);
+    appleDeploymentTarget = _higherVersion(wanted, sdkMinimum);
+    if (appleDeploymentTarget != wanted) {
+      logger.info(
+        '[executorch_dart]   Deployment target raised from $wanted to '
+        '$appleDeploymentTarget, the lowest the installed $sdk SDK supports\n',
+      );
+    }
+  }
+
   // Create CMake builder - uses native/ directory (submodule)
   //
   // For local mode, we still use "prebuilt" as the CMake build mode
@@ -378,14 +404,8 @@ Please verify the path to your local ExecuTorch checkout.
         'EXECUTORCH_CACHE_DIR': Directory(executorchSourceDir).parent.path
       else if (cacheDir != null && cacheDir.isNotEmpty)
         'EXECUTORCH_CACHE_DIR': cacheDir,
-      // Platform-specific deployment targets. MLX requires macOS 14.0+ (its
-      // CMake FATAL_ERRORs below that), so bump the macOS target when the mlx
-      // backend is enabled — the app's macOS deployment target must match.
-      if (targetOS == OS.macOS)
-        'CMAKE_OSX_DEPLOYMENT_TARGET': backendDefines['ET_BUILD_MLX'] == 'ON'
-            ? '14.0'
-            : '11.0',
-      if (targetOS == OS.iOS) 'CMAKE_OSX_DEPLOYMENT_TARGET': '13.0',
+      // Platform-specific deployment target (see appleDeploymentTarget).
+      'CMAKE_OSX_DEPLOYMENT_TARGET': ?appleDeploymentTarget,
       // Install prefix
       'CMAKE_INSTALL_PREFIX': input.outputDirectory
           .resolve('install/')
@@ -997,4 +1017,40 @@ String? _autoDetectLocalBuild(
   }
 
   return null;
+}
+
+/// The lowest deployment target the installed Xcode SDK accepts (for example
+/// `12.0` for macOS on Xcode 27), read from the SDK's `SDKSettings.json`.
+/// Returns null if it cannot be determined; the caller then keeps its own
+/// default.
+String? _sdkMinimumDeploymentTarget(String sdk) {
+  try {
+    final result = Process.runSync('xcrun', ['--sdk', sdk, '--show-sdk-path']);
+    if (result.exitCode != 0) return null;
+    final settings = File(
+      '${(result.stdout as String).trim()}/SDKSettings.json',
+    );
+    if (!settings.existsSync()) return null;
+    final json = jsonDecode(settings.readAsStringSync());
+    final minimum = json['SupportedTargets']?[sdk]?['MinimumDeploymentTarget'];
+    return minimum is String ? minimum : null;
+  } on Exception {
+    return null;
+  }
+}
+
+/// The higher of two dotted version strings (`12.0` beats `11.0`); [b] may be
+/// null, in which case [a] is returned.
+String _higherVersion(String a, String? b) {
+  if (b == null) return a;
+  List<int> parts(String v) =>
+      v.split('.').map((p) => int.tryParse(p) ?? 0).toList();
+  final pa = parts(a);
+  final pb = parts(b);
+  for (var i = 0; i < 3; i++) {
+    final x = i < pa.length ? pa[i] : 0;
+    final y = i < pb.length ? pb[i] : 0;
+    if (x != y) return x > y ? a : b;
+  }
+  return a;
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../models/pose_result.dart';
 
 /// CustomPainter for drawing pose skeletons on an image
