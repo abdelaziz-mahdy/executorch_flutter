@@ -259,6 +259,9 @@ const Map<String, Set<String>> _backendPlatforms = {
   'xnnpack': {'android', 'ios', 'macos', 'linux', 'windows', 'web'},
   'coreml': {'ios', 'macos'},
   'mps': {'ios', 'macos'},
+  // The index names the Metal (AOTInductor) backend 'metal'; its prebuilts
+  // exist for arm64 macOS only.
+  'metal': {'macos'},
   'vulkan': {'android', 'ios', 'macos', 'linux', 'windows'},
 };
 
