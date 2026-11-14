@@ -31,7 +31,7 @@ dependencies:
     path: ../
 
   # Camera plugin for real-time inference demo
-  camera: ^0.11.3
+  camera: ^0.12.2
 
   # HTTP client for downloading models from network
   http: ^1.6.0
