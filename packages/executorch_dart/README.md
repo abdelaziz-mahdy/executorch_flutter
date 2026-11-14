@@ -38,7 +38,7 @@ it directly whenever your code doesn't need Flutter, such as a CLI tool or a
 Dart server.
 
 - **Vision inference**: load a model, run `forward()`, get tensors back.
-- **On-device LLM (experimental)**: streaming text generation with Gemma 4 —
+- **On-device LLM (experimental)**: streaming text generation (e.g. the hosted Qwen3 0.6B) —
   see `ExecuTorchLLM` below.
 - **Backends**: XNNPACK (all platforms), CoreML + Metal + MLX (Apple), Vulkan
   (opt-in).
@@ -242,11 +242,12 @@ use `ExecuTorchLLM` below, which owns its tokenizer internally.
 
 ### ExecuTorchLLM (experimental)
 
-On-device generative text — **Google Gemma 4 E2B** — with token-by-token
+On-device generative text — any causal LM exported for the LLM runner, e.g.
+the hosted **Qwen3 0.6B** — with token-by-token
 streaming, separate from the tensor API (`load` / `generate` `Stream<String>`
 / `stop` / `reset` / `dispose`). See **[executorch_flutter's LLM
 guide](https://github.com/abdelaziz-mahdy/executorch_flutter/blob/main/packages/executorch_flutter/docs/LLM.md)**
-for model export and setup — the API is identical from pure Dart; just import
+for the hosted model downloads, export and setup — the API is identical from pure Dart; just import
 `package:executorch_dart/executorch_dart.dart` instead of the Flutter
 package.
 

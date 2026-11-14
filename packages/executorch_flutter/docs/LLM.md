@@ -1,13 +1,14 @@
-# On-device LLM (Gemma 4) with executorch_flutter
+# On-device LLMs with executorch_flutter
 
-`executorch_flutter` can run a generative LLM — **Google Gemma 4 E2B** — fully
-on-device, with token-by-token streaming, via ExecuTorch's `extension/llm/runner`.
-This is separate from the vision/tensor API (`ExecuTorchModel`): an LLM is driven
-by a stateful decode loop, a real tokenizer, and a KV cache, and is loaded from
-**file paths** (weights are 1+ GB) rather than `Uint8List`.
+`executorch_flutter` can run a generative LLM fully on-device, with
+token-by-token streaming, via ExecuTorch's `extension/llm/runner`. This is
+separate from the vision/tensor API (`ExecuTorchModel`): an LLM is driven by a
+stateful decode loop, a real tokenizer, and a KV cache, and is loaded from
+**file paths** (weights are hundreds of MB) rather than `Uint8List`.
 
 > **Status:** experimental. Validated on **macOS** (XNNPACK CPU + MLX GPU). Other
-> platforms get the XNNPACK CPU runner; coverage expands over time.
+> platforms get the XNNPACK CPU runner; coverage expands over time. Not
+> available on web yet (there is no WebAssembly build of the LLM runner).
 
 ---
 
@@ -17,70 +18,76 @@ by a stateful decode loop, a real tokenizer, and a KV cache, and is loaded from
 import 'package:executorch_flutter/executorch_flutter.dart';
 
 final llm = await ExecuTorchLLM.load(
-  modelPath: '/path/gemma-4-E2B-it_xnnpack.pte',
-  tokenizerPath: '/path/gemma-4-E2B-it_tokenizer.json',
+  modelPath: '/path/qwen3_0.6b_xnnpack.pte',
+  tokenizerPath: '/path/qwen3_0.6b_tokenizer.json',
   // MLX (Apple-GPU) models ONLY — point at the mlx.metallib you shipped:
   // mlxMetallibPath: '/path/mlx.metallib',
 );
 
-final prompt = '<bos><|turn>user\nExplain Flutter in one line.<turn|>\n<|turn>model\n';
+const prompt = '<|im_start|>user\nExplain Flutter in one line.<|im_end|>\n'
+    '<|im_start|>assistant\n<think>\n\n</think>\n\n';
 await for (final piece in llm.generate(
   prompt,
   config: const GenConfig(maxNewTokens: 512, temperature: 0), // 0 = greedy
 )) {
-  stdout.write(piece);
+  stdout.write(piece.replaceAll('<|im_end|>', ''));
 }
 await llm.dispose();
 ```
 
-See `example/lib/screens/llm_chat_screen.dart` for a complete streaming chat
-screen (multi-turn, stop, reset, settings, MLX metallib field).
+The example app's **Language Models** screen
+(`example/lib/screens/llm_chat_screen.dart`) downloads a hosted model with one
+tap and chats with it: multi-turn, stop, reset, generation settings, and a
+"use your own model" panel for files you exported yourself.
 
 ---
 
-## 1. Get the model
+## 1. Get a model
 
-LLM weights are large (1+ GB) and carry their own license terms, so — unlike the
-vision models — **nothing is pre-hosted**: there is no download URL to point at.
-You export the model yourself, once, with the scripts below.
+### Hosted: Qwen3 0.6B
 
-Sources you'll need:
+Ready-made exports of [Qwen3 0.6B](https://huggingface.co/Qwen/Qwen3-0.6B)
+(Apache 2.0) are published on the models repo's release for each ExecuTorch
+version, and listed with sizes and SHA-256 hashes in
+[`<version>/llms.json`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/blob/main/1.6.0/llms.json).
+For ExecuTorch 1.6.0:
 
-- **Base model + `tokenizer.json`**: [`google/gemma-4-E2B-it`](https://huggingface.co/google/gemma-4-E2B-it) on Hugging Face (accept the Gemma terms)
-- **Export scripts**: [`executorch_flutter_models/python`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/tree/main/python)
-- **`mlx.metallib`** (MLX only): [`executorch_native` releases](https://github.com/abdelaziz-mahdy/executorch_native/releases)
+| File | Backend | Size |
+|------|---------|-----:|
+| [`qwen3_0.6b_xnnpack.pte`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_xnnpack.pte) | XNNPACK (CPU, every native platform) | 470 MB |
+| [`qwen3_0.6b_mlx.pte`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_mlx.pte) | MLX (Apple-Silicon GPU, macOS) | 617 MB |
+| [`qwen3_0.6b_tokenizer.json`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_tokenizer.json) | both | 11 MB |
+| [`mlx.metallib`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/mlx.metallib) | MLX only (§3) | 1.4 MB |
 
-The example app's LLM screen lists these same links next to the file pickers.
+The license text ships next to them as
+[`Qwen3-LICENSE`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/Qwen3-LICENSE).
+An export only runs on the ExecuTorch version it was exported for, so take the
+files from the release that matches `executorchVersion`.
 
-You need **three** files (for MLX) or **two** (for XNNPACK):
+### Export your own
 
-| File | XNNPACK | MLX | What it is |
-|------|:------:|:---:|------------|
-| `gemma-4-E2B-it_{xnnpack,mlx}.pte` | ✅ | ✅ | the model |
-| `gemma-4-E2B-it_tokenizer.json` | ✅ | ✅ | HF tokenizer (from the model repo) |
-| `mlx.metallib` | — | ✅ | MLX's Metal GPU kernels |
-
-### Export it yourself
-
-The export scripts live in the models repo (`models/python/`):
+[`export_llm.py`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/blob/main/python/export_llm.py)
+exports a Hugging Face causal LM the same way the hosted files were made:
 
 ```bash
-# (in a Python env with optimum-executorch + executorch installed)
-python models/python/export_gemma4_xnnpack.py   # -> CPU model (all platforms)
-python models/python/export_gemma4_mlx.py        # -> Apple-GPU model (macOS)
+# (in a Python env with executorch + optimum-executorch installed)
+python export_llm.py --model Qwen/Qwen3-0.6B --backend xnnpack \
+  --out qwen3_0.6b_xnnpack.pte --extra-eos 151645 151643
+python export_llm.py --model Qwen/Qwen3-0.6B --backend mlx \
+  --out qwen3_0.6b_mlx.pte --extra-eos 151645 151643
 ```
 
-Key recipe details (already handled by the scripts):
-- **XNNPACK:** `qlinear="8da4w"`, **no** `qembedding` (quantizing the embedding
-  breaks Gemma 4's `pad_embedding` op during export), static decode-only export.
-- **MLX:** `qlinear="4w"`, MLX partitioner, dynamic.
-- Both **rename `get_eos_id` → `get_eos_ids`** and embed `[1, 106]` so the runner
-  stops on `<end_of_turn>` (106). (For the XNNPACK export that omits it, the
-  example app stops on the `<turn|>` marker instead — see §4.)
+- **XNNPACK:** `8da4w` linears, 8-bit embedding, dynamic shapes (parallel
+  prefill).
+- **MLX:** 4-bit linears, MLX partitioner.
+- Both embed the stop set as `get_eos_ids` (the runner reads the plural name;
+  optimum writes `get_eos_id`), so the runner stops by itself. `--extra-eos`
+  adds the end-of-turn token.
+- No custom ops, so the prebuilt LLM runtimes can run the result.
 
-The `tokenizer.json` comes from the HF model repo (`google/gemma-4-E2B-it`).
-The `mlx.metallib` is produced by the MLX native build and is published as a
-release artifact of `executorch_native`.
+Take `tokenizer.json` from the model's Hugging Face repo. Gemma 4 E2B has its
+own recipes (`export_gemma4_{xnnpack,mlx}.py` in the same folder), because its
+multimodal checkpoint needs the text model extracted first.
 
 ---
 
@@ -131,10 +138,12 @@ MLX is macOS-arm64 only.
 **This only applies to the MLX (Apple-GPU) backend. XNNPACK needs nothing here.**
 
 MLX loads its Metal kernels from `mlx.metallib` at runtime. A sandboxed app can't
-read the copy next to the native library, so **your app must ship the metallib and
-tell the runner where it is**:
+read the copy next to the native library, so **your app must provide the
+metallib and tell the runner where it is**:
 
-1. Get `mlx.metallib` (from the `executorch_native` release, or your MLX build).
+1. Get `mlx.metallib` from the models release (table in §1). It is the same
+   file the `xnnpack-mlx-llm` prebuilt carries in its `lib/`, and must match the
+   runtime's ExecuTorch version.
 2. Bundle it with your app — e.g. as a Flutter asset:
    ```yaml
    flutter:
@@ -157,37 +166,53 @@ tell the runner where it is**:
 Without this, an MLX model fails to load with `Error 0x23` (`MLXBackend` could not
 load its metallib).
 
-> The example app instead lets you **pick the metallib file** and disables its
-> sandbox for convenience — that's a dev shortcut; real apps keep the sandbox and
-> use the bundle-and-path approach above.
+> The example app downloads the metallib with the hosted MLX model, or lets you
+> **pick the metallib file** for your own model, and disables its sandbox for
+> convenience — that's a dev shortcut; real apps keep the sandbox and use the
+> bundle-and-path approach above.
 
 ---
 
 ## 4. Using the API
 
-### The Gemma 4 chat template
+### Chat templates
 
-Gemma 4 (instruction-tuned) expects turn markers, or it produces degenerate
-output. The runner tokenizes the prompt verbatim, so **you format it**:
+Instruction-tuned models expect their own turn markers, or they produce
+degenerate output. The runner tokenizes the prompt verbatim, so **you format
+it**. For multi-turn, re-send the whole conversation each turn and call
+`llm.reset()` between turns (the prompt carries the full history).
+
+**Qwen3 (ChatML)**, with thinking turned off by the empty think block:
+
+```
+<|im_start|>user\n{message}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n
+```
+
+**Gemma 4:**
 
 ```
 <bos><|turn>user\n{message}<turn|>\n<|turn>model\n
 ```
 
-For multi-turn, re-send the whole conversation each turn and call `llm.reset()`
-between turns (the prompt carries the full history). The turn tokens are the
-literal strings `<|turn>` (start) and `<turn|>` (end) — **not**
-`<start_of_turn>`/`<end_of_turn>`, which this tokenizer splits into many tokens.
+The Gemma turn tokens are the literal strings `<|turn>` (start) and `<turn|>`
+(end) — **not** `<start_of_turn>`/`<end_of_turn>`, which this tokenizer splits
+into many tokens.
+
+The hosted catalog (`llms.json`) carries each model's template as data
+(`chatFormat`), which is how the example app's chat screen stays
+model-agnostic.
 
 ### Stopping
 
-MLX models embed `get_eos_ids=[1,106]`, so the runner stops on `<end_of_turn>`
-itself. The XNNPACK export only declares `<eos>`, so the model keeps emitting
-`<turn|>` — handle it at the app level (strip it from display and stop):
+When an export declares its end-of-turn token in `get_eos_ids` (the hosted
+Qwen3 files and the MLX Gemma export do), the runner stops by itself, though
+the marker's text may still arrive as the last piece. The XNNPACK Gemma export
+only declares `<eos>`, so the model keeps emitting `<turn|>`. Handle both at the
+app level — strip the marker from display and stop:
 
 ```dart
 .listen((piece) {
-  if (piece.contains('<turn|>') || piece.contains('<end_of_turn>')) {
+  if (piece.contains('<|im_end|>')) {
     // strip the marker, append the rest, then:
     llm.stop();
     return;
@@ -220,9 +245,19 @@ await llm.dispose();                // release native resources
 | macOS (arm64) | ✅ | ✅ (needs metallib + macOS 14) |
 | macOS (x64) | ✅ | — |
 | iOS / Android / Linux / Windows | ✅ (CPU) | — |
+| Web | — | — |
 
-Performance (Gemma 4 E2B, M-series, approx): XNNPACK ~4 tok/s decode; MLX
-~30–40 tok/s decode.
+Performance on an M2 Pro (release build, approx):
+
+| Model | Backend | Prefill | Decode |
+|-------|---------|--------:|-------:|
+| Qwen3 0.6B | XNNPACK | ~75 tok/s | ~8 tok/s |
+| Qwen3 0.6B | MLX | ~590 tok/s | ~155 tok/s |
+| Gemma 4 E2B | XNNPACK | — | ~4 tok/s |
+| Gemma 4 E2B | MLX | — | ~30–40 tok/s |
+
+The `debug: true` build option makes the native library log every XNNPACK
+operator, which slows generation by an order of magnitude; measure with it off.
 
 ---
 
@@ -232,7 +267,8 @@ Performance (Gemma 4 E2B, M-series, approx): XNNPACK ~4 tok/s decode; MLX
 |---------|-------------|
 | `Error 0x23` `MLXBackend` metallib | metallib not shipped — pass `mlxMetallibPath` (§3) |
 | `Error 0x10` resize static tensor | older build without auto-detect prefill; update the native lib |
-| Garbage / repeated tokens | wrong chat template — use `<bos><|turn>user\n…<turn|>\n<|turn>model\n` |
-| Never stops | XNNPACK model lacks `<turn|>` in eos — stop at app level (§4) |
+| Garbage / repeated tokens | wrong chat template for the model (§4) |
+| Never stops | the export lacks the end-of-turn token in `get_eos_ids` — stop at app level (§4) |
+| Very slow generation | native library built with `debug: true` |
 | MLX build: "cannot execute tool 'metal'" | `xcodebuild -downloadComponent MetalToolchain` |
 | App won't launch (macOS, MLX) | app deployment target < 14.0 (§2) |
