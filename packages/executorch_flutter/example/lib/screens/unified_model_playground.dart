@@ -1,7 +1,7 @@
 import 'dart:io' show Platform;
 
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:universal_platform/universal_platform.dart';

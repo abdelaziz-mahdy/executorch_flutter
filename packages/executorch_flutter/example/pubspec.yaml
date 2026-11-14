@@ -6,6 +6,8 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
+  # material_ui (Material outside the Flutter SDK) needs Flutter 3.47+.
+  flutter: '>=3.47.0'
 
 resolution: workspace
 
@@ -18,6 +20,7 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
+  material_ui: ^1.11.0
 
   executorch_flutter:
     # When depending on this package from a real application you should use:
@@ -83,7 +86,7 @@ dev_dependencies:
 
   # Pure-Dart core. integration_test/dtype_roundtrip_test.dart reaches into it
   # directly to exercise the native tensor layer.
-  executorch_dart: ^0.8.0
+  executorch_dart: ^0.9.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../processors/yolo_processor.dart';
 
 /// Custom painter for drawing object detection bounding boxes on a canvas.

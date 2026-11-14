@@ -8,7 +8,7 @@
 // its interaction model. Add a new [_Category] to surface more demos.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'llm_chat_screen.dart';
 import 'unified_model_playground.dart';

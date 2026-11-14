@@ -10,7 +10,7 @@ import 'dart:async';
 
 import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 /// A single chat turn.

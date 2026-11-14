@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart' as camera_pkg;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'camera_controller.dart';
 import '../processors/camera_image_converter.dart';
 

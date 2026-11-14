@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../models/model_input.dart';
 import '../../models/face_result.dart';
 import '../face_detection/image_with_faces.dart';

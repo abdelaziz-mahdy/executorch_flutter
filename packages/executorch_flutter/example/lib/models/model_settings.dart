@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:universal_platform/universal_platform.dart';
 
 /// Camera provider options (how to capture frames)

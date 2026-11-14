@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Base interface for rendering model results
 /// Generic and reusable across different input types (image, text, audio, etc.)
