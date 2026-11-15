@@ -77,6 +77,21 @@ val result_error(const std::string& message, Error err) {
   return result_error(message, error_kind(err));
 }
 
+// Runs [body], turning a C++ exception into an error result. Exceptions are
+// only a backstop (ExecuTorch reports errors as values), but one escaping
+// into JS would arrive as a bare pointer. The native FFI catches them at its
+// boundary the same way.
+template <typename Body>
+val guarded(Body&& body) {
+  try {
+    return body();
+  } catch (const std::exception& e) {
+    return result_error(std::string("Unexpected error: ") + e.what(), "inference");
+  } catch (...) {
+    return result_error("Unexpected error", "inference");
+  }
+}
+
 // A JS copy of [bytes]. Token pieces go to JS as bytes, not strings: a piece
 // can end partway through a UTF-8 character, and the worker's streaming
 // TextDecoder joins and validates them across pieces.
@@ -104,19 +119,19 @@ class WebLLMRunner {
 
   // Loads the model from [model_ptr, model_ptr + model_size), a buffer the
   // worker allocated with _malloc and filled; the runner owns it from here on
-  // and frees it on delete(). Returns "" on success, else the reason.
-  std::string load(
+  // and frees it on delete(). Returns {} on success, else {error, kind}.
+  val load_impl(
       uintptr_t model_ptr,
       size_t model_size,
       const std::string& tokenizer_path) {
     if (module_) {
-      return "A model is already loaded";
+      return result_error("A model is already loaded", Error::InvalidState);
     }
     model_data_ = reinterpret_cast<void*>(model_ptr);
 
     tokenizer_ = el::load_tokenizer(tokenizer_path);
     if (!tokenizer_ || !tokenizer_->is_loaded()) {
-      return "Could not load the tokenizer";
+      return result_error("Could not load the tokenizer", Error::InvalidArgument);
     }
 
     module_ = std::make_unique<Module>(
@@ -124,11 +139,14 @@ class WebLLMRunner {
 
     auto metadata = el::get_llm_metadata(tokenizer_.get(), module_.get());
     if (!metadata.ok()) {
-      return error_text("Could not read the model's LLM metadata", metadata.error());
+      return result_error(
+          error_text("Could not read the model's LLM metadata", metadata.error()),
+          metadata.error());
     }
     metadata_ = metadata.get();
     if (!metadata_.at(el::kUseKVCache)) {
-      return "Only KV-cache exports are supported on web";
+      return result_error(
+          "Only KV-cache exports are supported on web", Error::NotSupported);
     }
 
     eos_ids_ = el::get_eos_ids(tokenizer_.get(), module_.get());
@@ -172,19 +190,21 @@ class WebLLMRunner {
 
     Error err = prefiller_->load();
     if (err != Error::Ok) {
-      return error_text("Could not load the model's forward method", err);
+      return result_error(
+          error_text("Could not load the model's forward method", err), err);
     }
     err = io_manager_->load();
     if (err != Error::Ok) {
-      return error_text("Could not set up the model's inputs", err);
+      return result_error(
+          error_text("Could not set up the model's inputs", err), err);
     }
-    return "";
+    return val::object();
   }
 
   // Checks the settings and encodes [prompt] for prefill(). Returns {} or
   // {error, kind}. Split from prefill() so the worker can echo the prompt
   // where upstream does: after these checks, before prefill.
-  val start(
+  val start_impl(
       const std::string& prompt,
       int max_new_tokens,
       int seq_len,
@@ -247,7 +267,7 @@ class WebLLMRunner {
 
   // Prefills the prompt start() encoded. Returns {bytes: Uint8Array, done:
   // bool} with the first generated piece's bytes, or {error, kind}.
-  val prefill() {
+  val prefill_impl() {
     if (!started_) {
       return result_error("Call start() first", Error::InvalidState);
     }
@@ -280,6 +300,9 @@ class WebLLMRunner {
           "Could not decode the first token", Error::InvalidArgument);
     }
 
+    // Upstream adds the generated tokens to pos_ only when generation
+    // succeeds (or stops); after an error it stays where prefill left it.
+    generation_start_pos_ = pos_;
     token_data_.assign(1, static_cast<int64_t>(cur_token_));
     tokens_ = executorch::extension::from_blob(
         token_data_.data(), {1, 1}, ScalarType::Long);
@@ -295,7 +318,7 @@ class WebLLMRunner {
 
   // Generates one token. Returns {bytes: Uint8Array, done: bool} or
   // {error, kind}.
-  val step() {
+  val step_impl() {
     val out = val::object();
     if (done_ || !module_) {
       out.set("bytes", js_bytes(std::string()));
@@ -305,6 +328,7 @@ class WebLLMRunner {
     auto logits = decoder_->step(tokens_, pos_);
     if (!logits.ok()) {
       done_ = true;
+      pos_ = generation_start_pos_;
       return result_error(
           error_text("Decoding failed", logits.error()), logits.error());
     }
@@ -318,6 +342,7 @@ class WebLLMRunner {
     auto piece = tokenizer_->decode(prev, cur_token_);
     if (!piece.ok()) {
       done_ = true;
+      pos_ = generation_start_pos_;
       return result_error("Could not decode a token", Error::InvalidArgument);
     }
     done_ = remaining_ <= 0 ||
@@ -334,6 +359,39 @@ class WebLLMRunner {
     started_ = false;
   }
 
+ public:
+  val load(uintptr_t model_ptr, size_t model_size, const std::string& tokenizer_path) {
+    return guarded([&] { return load_impl(model_ptr, model_size, tokenizer_path); });
+  }
+
+  val start(
+      const std::string& prompt,
+      int max_new_tokens,
+      int seq_len,
+      float temperature,
+      bool ignore_eos,
+      int num_bos,
+      int num_eos) {
+    return guarded([&] {
+      return start_impl(
+          prompt, max_new_tokens, seq_len, temperature, ignore_eos, num_bos, num_eos);
+    });
+  }
+
+  val prefill() {
+    return guarded([&] { return prefill_impl(); });
+  }
+
+  val step() {
+    val out = guarded([&] { return step_impl(); });
+    if (out.hasOwnProperty("error")) {
+      // Whatever failed, end the generation as step_impl's own errors do.
+      done_ = true;
+      pos_ = generation_start_pos_;
+    }
+    return out;
+  }
+
  private:
   void* model_data_ = nullptr;
   std::unique_ptr<tokenizers::Tokenizer> tokenizer_;
@@ -345,6 +403,7 @@ class WebLLMRunner {
   std::unordered_set<uint64_t> eos_ids_;
 
   int64_t pos_ = 0;
+  int64_t generation_start_pos_ = 0;
   uint64_t cur_token_ = 0;
   int64_t remaining_ = 0;
   float temperature_ = 0.0f;

@@ -264,7 +264,10 @@ final llm = await ExecuTorchLLM.load(
   there yourself to download once with your own progress UI and keep them
   across reloads; the example app's `llm_files_web.dart` does this. (Cache
   Storage doesn't work for this: browsers cap a single entry, some at a few
-  hundred MB.)
+  hundred MB.) The worker uses any non-empty file it finds there as is, so
+  only store complete, verified files (a `createWritable()` stream commits on
+  `close()`, so an interrupted write leaves nothing), and delete a stored
+  file when the one at its URL changes.
 - **Large files on capped hosts:** if the model URL fails (404, or 403 from
   object stores that hide missing keys), the worker looks for
   `<url>.parts.json` (`{"size": bytes, "parts": [names relative to it]}`)

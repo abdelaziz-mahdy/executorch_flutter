@@ -36,7 +36,18 @@
 'use strict';
 
 const STORE_DIR = 'executorch-llm';
-const TOKENIZER_PATH = '/tokenizer.json';
+// The tokenizer goes into the Wasm file system under its own file name:
+// upstream picks some tokenizer kinds by name (Mistral's tekken.json).
+function tokenizerPath(url) {
+  let name = '';
+  try {
+    name = decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
+  } catch (_) {
+    name = '';
+  }
+  name = name.replace(/[\/\\]/g, '_');
+  return '/' + (name || 'tokenizer.json');
+}
 
 // The wasm/ directory sits next to js/ in a Flutter web app; a page can point
 // elsewhere with ?wasm=<url ending in />.
@@ -229,20 +240,21 @@ async function load({ id, modelUrl, tokenizerUrl }) {
     printErr: onStderr,
   });
 
-  et.FS.writeFile(TOKENIZER_PATH, await readAll(await openSource(tokenizerUrl)));
+  const tokenizerFile = tokenizerPath(tokenizerUrl);
+  et.FS.writeFile(tokenizerFile, await readAll(await openSource(tokenizerUrl)));
   try {
     const model = await readIntoHeap(await openSource(modelUrl));
     const instance = new et.LLMRunner();
     // On success the runner owns the model buffer; on failure deleting the
     // runner frees the buffer too.
-    const failure = instance.load(model.ptr, model.size, TOKENIZER_PATH);
-    if (failure) {
+    const loaded = instance.load(model.ptr, model.size, tokenizerFile);
+    if (loaded.error) {
       instance.delete();
-      throw new Error(withRuntimeErrors(failure));
+      throw new WorkerError(withRuntimeErrors(loaded.error), loaded.kind);
     }
     runner = instance;
   } finally {
-    et.FS.unlink(TOKENIZER_PATH);
+    et.FS.unlink(tokenizerFile);
   }
   post({ id, type: 'ok' });
 }

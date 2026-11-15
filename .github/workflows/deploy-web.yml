@@ -114,17 +114,16 @@ jobs:
           if [ "$STATUS" = "404" ]; then
             # The app was built to read models/llms.json; an empty catalog
             # makes it list no hosted models instead of failing to load one.
-            echo "No hosted LLMs for $VERSION; publishing an empty catalog"
-            echo '{"llms": []}' > build/web/models/llms.json
-            exit 0
-          fi
-          if [ "$STATUS" != "200" ]; then
+            echo "::warning::No hosted LLMs for $VERSION; publishing an empty catalog"
+            echo '{"llms": []}' > /tmp/llms.json
+          elif [ "$STATUS" != "200" ]; then
             echo "::error::Fetching $LLMS failed with HTTP $STATUS"
             exit 1
           fi
 
           python3 - <<'PY'
           import hashlib, json, os, subprocess
+          from urllib.parse import unquote, urlsplit
           PART = 90 * 1024 * 1024
           llms = json.load(open('/tmp/llms.json'))['llms']
           total = 0
@@ -132,9 +131,10 @@ jobs:
           for llm in (l for l in llms if l['backend'] == 'xnnpack'):
               for f in llm['files'].values():
                   path = f"build/web/models/{f['name']}"
-                  # The app requests models/<last segment of url>; it must be
-                  # this name, and must not replace another model's file.
-                  if f['url'].split('?')[0].rsplit('/', 1)[-1] != f['name']:
+                  # The app requests models/<decoded last path segment of
+                  # url>; it must be this name, and must not replace another
+                  # model's file.
+                  if unquote(urlsplit(f['url']).path.rsplit('/', 1)[-1]) != f['name']:
                       raise SystemExit(f"{f['name']}: name doesn't match {f['url']}")
                   if f['name'] in fetched:
                       # Shared by two LLMs (a common tokenizer): fine if equal.
@@ -162,6 +162,8 @@ jobs:
                   json.dump({'size': f['size'], 'parts': parts},
                             open(f"{path}.parts.json", 'w'))
                   print(f"    split into {len(parts)} parts")
+          if llms and not fetched:
+              print("::warning::The catalog lists no CPU (XNNPACK) LLMs; the web demo will offer none")
           print(f"Fetched {total / 1e6:.1f} MB of LLM files")
           PY
           # The app reads this copy (LLM_CATALOG_URL above), not the live one,
@@ -172,6 +174,12 @@ jobs:
           # Nothing over GitHub's 100 MB push limit may reach the deploy.
           if find build/web -type f -size +95M | grep .; then
             echo "::error::Files over 95 MB would be refused by the gh-pages push"
+            exit 1
+          fi
+          # GitHub Pages sites are limited to 1 GB.
+          SITE_BYTES=$(find build/web -type f -exec stat -f %z {} + | awk '{s+=$1} END {print s}')
+          if [ "$SITE_BYTES" -gt 1000000000 ]; then
+            echo "::error::The site is $SITE_BYTES bytes; GitHub Pages allows 1 GB"
             exit 1
           fi
 

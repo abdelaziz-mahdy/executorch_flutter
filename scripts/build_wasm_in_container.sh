@@ -138,6 +138,9 @@ target_sources(
   executorch_llm_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/executorch_llm_web.cpp
 )
 target_include_directories(executorch_llm_lib PRIVATE ${EXECUTORCH_ROOT}/..)
+# The binding catches C++ exceptions so they reach JS as error results rather
+# than bare pointers; that needs exception support when compiling it too.
+target_compile_options(executorch_llm_lib PRIVATE -fexceptions)
 target_link_libraries(
   executorch_llm_lib
   PRIVATE embind

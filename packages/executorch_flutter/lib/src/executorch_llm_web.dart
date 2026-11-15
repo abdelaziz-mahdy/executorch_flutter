@@ -61,7 +61,8 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
 ///   (404, or 403 from object stores) may be served split, as
 ///   `<url>.parts.json` (`{"size": bytes, "parts": [names relative to it]}`),
 ///   for static hosts that cap file size. A cross-origin URL must send CORS
-///   headers.
+///   headers. A stored file is used as is: store only complete, verified
+///   files, and delete one when the file at its URL changes.
 /// - Only XNNPACK (CPU) exports with a KV cache run, on a single thread, so
 ///   expect a fraction of native speed.
 ///
@@ -115,6 +116,13 @@ class ExecuTorchLLM {
     String? dataPath,
     String? mlxMetallibPath,
   }) async {
+    // Same checks, and messages, as the native runner's create.
+    if (modelPath.isEmpty) {
+      throw const ExecuTorchValidationException('model_path is null/empty');
+    }
+    if (tokenizerPath.isEmpty) {
+      throw const ExecuTorchValidationException('tokenizer_path is null/empty');
+    }
     if (dataPath != null && dataPath.isNotEmpty) {
       throw const ExecuTorchModelException(
         'Separate .ptd weight files are not supported on web yet',
@@ -331,7 +339,9 @@ class ExecuTorchLLM {
   }
 
   void _checkDisposed() {
-    if (_disposed) {
+    // From the moment dispose() starts: listeners still run while it drains
+    // the last generation, and must not start another.
+    if (_disposed || _disposal != null) {
       throw const ExecuTorchModelException('LLM runner has been disposed');
     }
   }

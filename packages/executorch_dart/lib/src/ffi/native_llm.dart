@@ -105,6 +105,11 @@ class NativeLLMRunner implements ffi.Finalizable {
   /// when the generation ends.
   bool _resetPending = false;
 
+  /// Set when disposeAsync() starts. Stream listeners still run while it
+  /// drains the last generation; a generate() from one of them must not
+  /// start work on a runner that is about to be freed.
+  bool _disposing = false;
+
   static final _finalizer = ffi.NativeFinalizer(
     addresses.et_llm_runner_free.cast(),
   );
@@ -258,7 +263,8 @@ class NativeLLMRunner implements ffi.Finalizable {
   /// Stop any in-flight generation, wait for it to finish, then free the
   /// runner.
   Future<void> disposeAsync() async {
-    if (_disposed) return;
+    if (_disposed || _disposing) return;
+    _disposing = true;
     final generation = _generation;
     if (generation != null) {
       stop(); // also re-sent once tokens flow, if this lands in prefill
@@ -277,7 +283,7 @@ class NativeLLMRunner implements ffi.Finalizable {
   }
 
   void _checkDisposed() {
-    if (_disposed) {
+    if (_disposed || _disposing) {
       throw const ExecuTorchModelException('LLM runner has been disposed');
     }
   }
