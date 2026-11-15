@@ -44,7 +44,7 @@ class HomeScreen extends StatelessWidget {
     ),
     _Category(
       title: 'Language Models',
-      subtitle: 'On-device LLM streaming chat\n(Gemma 4)',
+      subtitle: 'On-device LLM streaming chat\n(Qwen3, or bring your own)',
       icon: Icons.chat_bubble_outline,
       color: Color(0xFF34A853),
       builder: _buildChat,

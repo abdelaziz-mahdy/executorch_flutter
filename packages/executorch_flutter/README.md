@@ -18,7 +18,7 @@ A Flutter plugin for on-device ML inference using PyTorch ExecuTorch, supporting
 - [Quick Start](#quick-start)
 - [Platform Support](#platform-support)
 - [API Reference](#api-reference)
-- [On-device LLM (Gemma 4)](docs/LLM.md)
+- [On-device LLMs](docs/LLM.md)
 - [Build Configuration](#build-configuration)
 - [Advanced Usage](#advanced-usage)
 - [Web Platform](#web-platform)
@@ -49,7 +49,7 @@ and Web support.
 - **Error Handling**: Structured exception handling with clear error messages
 - **Backend Support**: XNNPACK (all platforms), CoreML (Apple), Metal + MLX (macOS), Vulkan (opt-in)
 - **13 Tensor Dtypes**: float32/64, float16, bfloat16, int8/16/32/64, uint8/16/32/64, bool
-- **On-device LLM (experimental)**: streaming text generation with Gemma 4 (XNNPACK CPU + MLX Apple-GPU) — see **[docs/LLM.md](docs/LLM.md)**
+- **On-device LLM (experimental)**: streaming text generation (XNNPACK CPU + MLX Apple-GPU), with a hosted Qwen3 0.6B to try it — see **[docs/LLM.md](docs/LLM.md)**
 - **Live Camera**: Real-time inference with camera stream support
 
 ### Library Size by Backend
@@ -196,9 +196,9 @@ manager, like its `loadModel`/`loadModelFromBytes` counterparts.
 
 ### ExecuTorchLLM (experimental)
 
-On-device generative text — **Google Gemma 4 E2B** — with token-by-token
-streaming, separate from the tensor API. Loaded from **file paths** (weights are
-1+ GB) and driven by a stateful decode loop + tokenizer + KV cache. Backends:
+On-device generative text — any causal LM exported for the LLM runner, e.g. the
+hosted **Qwen3 0.6B** — with token-by-token streaming, separate from the tensor
+API. Loaded from **file paths** (weights are hundreds of MB) and driven by a stateful decode loop + tokenizer + KV cache. Backends:
 **XNNPACK** (CPU, all platforms) and **MLX** (Apple-Silicon GPU, macOS arm64).
 
 ```dart
@@ -224,11 +224,12 @@ const GenConfig({int maxNewTokens, int seqLen, double temperature, bool echo, bo
 
 ```dart
 final llm = await ExecuTorchLLM.load(
-  modelPath: '/path/gemma-4-E2B-it_xnnpack.pte',
-  tokenizerPath: '/path/gemma-4-E2B-it_tokenizer.json',
+  modelPath: '/path/qwen3_0.6b_xnnpack.pte',
+  tokenizerPath: '/path/qwen3_0.6b_tokenizer.json',
 );
-// Gemma 4 needs its turn markers around the message:
-final prompt = '<bos><|turn>user\nExplain Flutter in one line.<turn|>\n<|turn>model\n';
+// Instruction-tuned models need their turn markers around the message:
+const prompt = '<|im_start|>user\nExplain Flutter in one line.<|im_end|>\n'
+    '<|im_start|>assistant\n<think>\n\n</think>\n\n';
 await for (final piece in llm.generate(prompt,
     config: const GenConfig(maxNewTokens: 512, temperature: 0))) {
   stdout.write(piece);
@@ -243,8 +244,8 @@ llm: true
 backends: [xnnpack, mlx]   # mlx is auto-dropped off macOS-arm64
 ```
 
-> 📖 **Full guide: [docs/LLM.md](docs/LLM.md)** — model **export** (the Gemma 4
-> scripts), the chat template, the MLX `mlx.metallib` shipping step, stopping,
+> 📖 **Full guide: [docs/LLM.md](docs/LLM.md)** — the hosted model downloads,
+> **exporting** your own, chat templates, the MLX `mlx.metallib` shipping step, stopping,
 > platform support, and troubleshooting. A complete streaming chat screen is in
 > [`example/lib/screens/llm_chat_screen.dart`](example/lib/screens/llm_chat_screen.dart).
 
@@ -532,12 +533,14 @@ cd models/python
 python3 main.py
 ```
 
-**LLM (Gemma 4)** models are exported with dedicated scripts (they need a
-tokenizer + quantization recipe, not the tensor export path):
+**LLMs** are exported with dedicated scripts (they need a tokenizer +
+quantization recipe, not the tensor export path):
 
 ```bash
-python models/python/export_gemma4_xnnpack.py   # CPU model (all platforms)
-python models/python/export_gemma4_mlx.py        # Apple-GPU model (macOS)
+python models/python/export_llm.py --model Qwen/Qwen3-0.6B --backend xnnpack \
+  --out qwen3_0.6b_xnnpack.pte --extra-eos 151645 151643   # CPU, all platforms
+python models/python/export_gemma4_xnnpack.py   # Gemma 4 E2B, CPU
+python models/python/export_gemma4_mlx.py        # Gemma 4 E2B, Apple GPU (macOS)
 ```
 
 See **[docs/LLM.md](docs/LLM.md)** for the full export recipe, the required

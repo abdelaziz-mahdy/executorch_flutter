@@ -51,6 +51,9 @@ dependencies:
   # File picker for selecting local LLM model + tokenizer files (chat demo)
   file_selector: ^1.0.3
 
+  # Renders the LLM's Markdown replies (lists, bold, code) in the chat demo
+  flutter_markdown_plus: ^1.0.12
+
   # Permission handling for camera access
   permission_handler: ^12.0.1
 
