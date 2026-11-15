@@ -1,0 +1,75 @@
+{
+  "version": "1.6.0",
+  "llms": [
+    {
+      "displayName": "Qwen3 0.6B",
+      "license": "Apache-2.0",
+      "sourceUrl": "https://huggingface.co/Qwen/Qwen3-0.6B",
+      "chatFormat": {
+        "id": "chatml-qwen3",
+        "label": "ChatML (Qwen3)",
+        "user": "<|im_start|>user\n{text}<|im_end|>\n",
+        "assistant": "<|im_start|>assistant\n{text}<|im_end|>\n",
+        "generationPrompt": "<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "stop": [
+          "<|im_end|>",
+          "<|endoftext|>"
+        ]
+      },
+      "id": "qwen3-0.6b-xnnpack",
+      "backend": "xnnpack",
+      "files": {
+        "model": {
+          "name": "qwen3_0.6b_xnnpack.pte",
+          "url": "https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_xnnpack.pte",
+          "size": 492501248,
+          "sha256": "8d4f3113ec800accd35b72743c64a8de8343650f449dcd94a96c21ef838014b7"
+        },
+        "tokenizer": {
+          "name": "qwen3_0.6b_tokenizer.json",
+          "url": "https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_tokenizer.json",
+          "size": 11422654,
+          "sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+        }
+      }
+    },
+    {
+      "displayName": "Qwen3 0.6B",
+      "license": "Apache-2.0",
+      "sourceUrl": "https://huggingface.co/Qwen/Qwen3-0.6B",
+      "chatFormat": {
+        "id": "chatml-qwen3",
+        "label": "ChatML (Qwen3)",
+        "user": "<|im_start|>user\n{text}<|im_end|>\n",
+        "assistant": "<|im_start|>assistant\n{text}<|im_end|>\n",
+        "generationPrompt": "<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "stop": [
+          "<|im_end|>",
+          "<|endoftext|>"
+        ]
+      },
+      "id": "qwen3-0.6b-mlx",
+      "backend": "mlx",
+      "files": {
+        "model": {
+          "name": "qwen3_0.6b_mlx.pte",
+          "url": "https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_mlx.pte",
+          "size": 646818944,
+          "sha256": "80b400dc0f37f484a65afd3c9784069add0157c809df9212652ca16b0d3b3130"
+        },
+        "tokenizer": {
+          "name": "qwen3_0.6b_tokenizer.json",
+          "url": "https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_tokenizer.json",
+          "size": 11422654,
+          "sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+        },
+        "metallib": {
+          "name": "mlx.metallib",
+          "url": "https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/mlx.metallib",
+          "size": 1453720,
+          "sha256": "02e1c4ff124c5b2b67fbf6c5e0678f226ece507f4e419d83b9596aad6bbb1d6b"
+        }
+      }
+    }
+  ]
+}
