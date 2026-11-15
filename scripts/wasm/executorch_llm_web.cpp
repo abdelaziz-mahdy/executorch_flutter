@@ -117,21 +117,31 @@ class WebLLMRunner {
     std::free(model_data_);
   }
 
+  // Loads the tokenizer, before the model is downloaded, so a bad one fails
+  // fast as it does natively. Returns {} or {error, kind}.
+  val load_tokenizer_impl(const std::string& tokenizer_path) {
+    if (tokenizer_) {
+      return result_error("A tokenizer is already loaded", Error::InvalidState);
+    }
+    tokenizer_ = el::load_tokenizer(tokenizer_path);
+    if (!tokenizer_ || !tokenizer_->is_loaded()) {
+      tokenizer_.reset();
+      return result_error("Could not load the tokenizer", Error::InvalidArgument);
+    }
+    return val::object();
+  }
+
   // Loads the model from [model_ptr, model_ptr + model_size), a buffer the
   // worker allocated with _malloc and filled; the runner owns it from here on
-  // and frees it on delete(). Returns {} on success, else {error, kind}.
-  val load_impl(
-      uintptr_t model_ptr,
-      size_t model_size,
-      const std::string& tokenizer_path) {
+  // and frees it on delete(). Needs loadTokenizer() first. Returns {} on
+  // success, else {error, kind}.
+  val load_impl(uintptr_t model_ptr, size_t model_size) {
     if (module_) {
       return result_error("A model is already loaded", Error::InvalidState);
     }
     model_data_ = reinterpret_cast<void*>(model_ptr);
-
-    tokenizer_ = el::load_tokenizer(tokenizer_path);
-    if (!tokenizer_ || !tokenizer_->is_loaded()) {
-      return result_error("Could not load the tokenizer", Error::InvalidArgument);
+    if (!tokenizer_) {
+      return result_error("Load the tokenizer first", Error::InvalidState);
     }
 
     module_ = std::make_unique<Module>(
@@ -360,8 +370,12 @@ class WebLLMRunner {
   }
 
  public:
-  val load(uintptr_t model_ptr, size_t model_size, const std::string& tokenizer_path) {
-    return guarded([&] { return load_impl(model_ptr, model_size, tokenizer_path); });
+  val loadTokenizer(const std::string& tokenizer_path) {
+    return guarded([&] { return load_tokenizer_impl(tokenizer_path); });
+  }
+
+  val load(uintptr_t model_ptr, size_t model_size) {
+    return guarded([&] { return load_impl(model_ptr, model_size); });
   }
 
   val start(
@@ -422,6 +436,7 @@ class WebLLMRunner {
 EMSCRIPTEN_BINDINGS(executorch_llm_web) {
   emscripten::class_<WebLLMRunner>("LLMRunner")
       .constructor<>()
+      .function("loadTokenizer", &WebLLMRunner::loadTokenizer)
       .function("load", &WebLLMRunner::load)
       .function("start", &WebLLMRunner::start)
       .function("prefill", &WebLLMRunner::prefill)

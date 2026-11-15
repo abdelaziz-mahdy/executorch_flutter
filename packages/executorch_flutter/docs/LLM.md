@@ -284,9 +284,10 @@ final llm = await ExecuTorchLLM.load(
 - **MLX**, separate `.ptd` weight files, and exports without a KV cache are
   not available on web.
 - **Tokenizer file names:** the runner recognises some tokenizers by file name
-  (Mistral's `tekken.json`). For a URL whose path has no such name, such as a
-  `blob:` URL from a file picker, put the name in the fragment:
-  `blob:...#tekken.json`.
+  (Mistral's `tekken.json`). For a URL whose path has no file name (no
+  extension), such as a `blob:` URL from a file picker, put the name in the
+  fragment: `blob:...#tekken.json`. A tokenizer is a single file on web;
+  native also accepts a directory with `tokenizer.json` and its config files.
 
 ---
 

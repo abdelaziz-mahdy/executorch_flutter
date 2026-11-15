@@ -63,9 +63,10 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
 ///   `<url>.parts.json` (`{"size": bytes, "parts": [names relative to it]}`),
 ///   for static hosts that cap file size. A cross-origin URL must send CORS
 ///   headers. A stored file is used as is: store only complete, verified
-///   files, and delete one when the file at its URL changes. A tokenizer
-///   URL's fragment, if any, names the file (`blob:...#tekken.json`): the
-///   runner picks some tokenizer kinds by file name.
+///   files, and delete one when the file at its URL changes. When a
+///   tokenizer URL's path has no file name (no extension), its fragment names
+///   the file (`blob:...#tekken.json`): the runner picks some tokenizer kinds
+///   by file name. The tokenizer is a single file (no directories).
 /// - Only XNNPACK (CPU) exports with a KV cache run, on a single thread, so
 ///   expect a fraction of native speed.
 ///

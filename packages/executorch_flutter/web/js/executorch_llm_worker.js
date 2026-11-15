@@ -39,14 +39,17 @@
 const STORE_DIR = 'executorch-llm';
 // The tokenizer goes into the Wasm file system under its own file name:
 // upstream picks some tokenizer kinds by name (Mistral's tekken.json). A URL
-// fragment names the file when the path can't (blob: URLs, ?id= downloads).
+// fragment names the file when the path's last segment has no extension
+// (blob: URLs, ?id= downloads).
 function tokenizerPath(url) {
   let name = '';
   try {
     const parsed = new URL(url);
-    name = decodeURIComponent(
-      parsed.hash.length > 1 ? parsed.hash.slice(1) : parsed.pathname.split('/').pop() || '',
-    );
+    const last = decodeURIComponent(parsed.pathname.split('/').pop() || '');
+    // The path's name unless it isn't one (no extension), then the fragment.
+    name = !last.includes('.') && parsed.hash.length > 1
+      ? decodeURIComponent(parsed.hash.slice(1))
+      : last;
   } catch (_) {
     name = '';
   }
@@ -77,7 +80,9 @@ function onStderr(line) {
 function withRuntimeErrors(message) {
   // ExecuTorch's own error lines ("E 00:00:01.234 executorch:...") and
   // XNNPACK's; tokenizer libraries also print harmless "error" lines.
-  const lines = stderrTail.filter((l) => /^E \d\d:\d\d:\d\d|^Error in XNNPACK/.test(l));
+  const lines = stderrTail.filter((l) =>
+    /^E \d\d:\d\d:\d\d|^E tokenizers:|^Error in XNNPACK/.test(l),
+  );
   return lines.length ? `${message}\n${lines.slice(-8).join('\n')}` : message;
 }
 
@@ -229,6 +234,12 @@ async function readIntoHeap({ body, length, exact }) {
     et._free(ptr);
     throw new Error('The model file is empty');
   }
+  if (offset < capacity) {
+    // Grown past the real size (no or compressed Content-Length): give the
+    // rest back, since the runner keeps this buffer for the model's lifetime.
+    const trimmed = et._realloc(ptr, offset);
+    if (trimmed) ptr = trimmed;
+  }
   return { ptr, size: offset };
 }
 
@@ -248,23 +259,30 @@ async function load({ id, modelUrl, tokenizerUrl }) {
     printErr: onStderr,
   });
 
-  const tokenizerFile = tokenizerPath(tokenizerUrl);
-  et.FS.mkdirTree('/tokenizer');
-  et.FS.writeFile(tokenizerFile, await readAll(await openSource(tokenizerUrl)));
+  const instance = new et.LLMRunner();
   try {
-    const model = await readIntoHeap(await openSource(modelUrl));
-    const instance = new et.LLMRunner();
-    // On success the runner owns the model buffer; on failure deleting the
-    // runner frees the buffer too.
-    const loaded = instance.load(model.ptr, model.size, tokenizerFile);
-    if (loaded.error) {
-      instance.delete();
-      throw new WorkerError(withRuntimeErrors(loaded.error), loaded.kind);
+    // The tokenizer first, as natively: a bad one fails before the model
+    // (hundreds of MB) is downloaded.
+    const tokenizerFile = tokenizerPath(tokenizerUrl);
+    et.FS.mkdirTree('/tokenizer');
+    et.FS.writeFile(tokenizerFile, await readAll(await openSource(tokenizerUrl)));
+    let loaded;
+    try {
+      loaded = instance.loadTokenizer(tokenizerFile);
+    } finally {
+      et.FS.unlink(tokenizerFile);
     }
-    runner = instance;
-  } finally {
-    et.FS.unlink(tokenizerFile);
+    if (loaded.error) throw new WorkerError(withRuntimeErrors(loaded.error), loaded.kind);
+
+    const model = await readIntoHeap(await openSource(modelUrl));
+    // From here the runner owns the model buffer, and delete() frees it.
+    loaded = instance.load(model.ptr, model.size);
+    if (loaded.error) throw new WorkerError(withRuntimeErrors(loaded.error), loaded.kind);
+  } catch (err) {
+    instance.delete();
+    throw err;
   }
+  runner = instance;
   post({ id, type: 'ok' });
 }
 
@@ -289,7 +307,17 @@ function generate({ id, prompt, config }) {
   // one streaming decoder per generation joins them. Invalid bytes become
   // U+FFFD, and a BOM the model generates is kept, as on native.
   const decoder = new TextDecoder('utf-8', { ignoreBOM: true });
+  // Like native's decoder, each byte order mark at the very start of the
+  // output (echo included) is a piece of its own.
+  let atStart = true;
   const emit = (text) => {
+    if (atStart) {
+      while (text.startsWith('\uFEFF')) {
+        post({ id, type: 'piece', piece: '\uFEFF' });
+        text = text.slice(1);
+      }
+      if (text) atStart = false;
+    }
     if (text) post({ id, type: 'piece', piece: text });
   };
   // Echo where upstream does: after the checks, before prefill (so it also
