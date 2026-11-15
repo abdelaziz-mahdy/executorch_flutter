@@ -1,3 +1,14 @@
+## 0.9.1
+
+### Fixed
+
+- `ExecuTorchLLM.generate` no longer fails with a `FormatException` when a
+  token ends partway through a multi-byte character, which byte-level
+  tokenizers do for emoji and many non-Latin scripts. Such characters now
+  arrive whole, in the piece that completes them.
+- The `GenConfig.temperature` docs now state the accepted range, `[0, 1]`;
+  values outside it fail the generation (they always did).
+
 ## 0.9.0
 
 ### Changed

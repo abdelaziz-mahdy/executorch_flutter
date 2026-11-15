@@ -5,7 +5,9 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi' as ffi;
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
@@ -110,6 +112,13 @@ class NativeLLMRunner implements ffi.Finalizable {
     final generation = Completer<void>();
     _generation = generation;
 
+    // A token's bytes can end partway through a multi-byte character (byte-
+    // level BPE splits emoji and many non-Latin characters); the chunked
+    // decoder keeps the partial bytes until the next token completes them.
+    final text = const Utf8Decoder(
+      allowMalformed: true,
+    ).startChunkedConversion(_PieceSink(controller));
+
     final promptPtr = prompt.toNativeUtf8().cast<ffi.Char>();
     final cfgPtr = calloc<ETGenConfig>();
     cfgPtr.ref
@@ -143,8 +152,11 @@ class NativeLLMRunner implements ffi.Finalizable {
     void onToken(ffi.Pointer<ffi.Char> token, ffi.Pointer<ffi.Void> _) {
       if (token == ffi.nullptr) return;
       try {
-        final piece = token.cast<Utf8>().toDartString();
-        if (!controller.isClosed) controller.add(piece);
+        final length = token.cast<Utf8>().length;
+        // Copied before the native string is freed below.
+        text.add(
+          Uint8List.fromList(token.cast<ffi.Uint8>().asTypedList(length)),
+        );
       } finally {
         // We own the heap string handed to us by the native side.
         et_llm_string_free(token);
@@ -152,6 +164,7 @@ class NativeLLMRunner implements ffi.Finalizable {
     }
 
     void onDone(ffi.Pointer<ffi.Void> statusVoid) {
+      text.close(); // emits any bytes still held back, before the outcome
       try {
         checkStatus(statusVoid.cast<ETStatus>());
       } catch (e, st) {
@@ -221,4 +234,19 @@ class NativeLLMRunner implements ffi.Finalizable {
       throw const ExecuTorchModelException('LLM runner has been disposed');
     }
   }
+}
+
+/// Forwards decoded text to a generation's stream, skipping empty pieces.
+class _PieceSink implements Sink<String> {
+  _PieceSink(this._controller);
+
+  final StreamController<String> _controller;
+
+  @override
+  void add(String data) {
+    if (data.isNotEmpty && !_controller.isClosed) _controller.add(data);
+  }
+
+  @override
+  void close() {}
 }

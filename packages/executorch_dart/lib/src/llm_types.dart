@@ -33,7 +33,8 @@ class GenConfig {
   /// `-1` uses the model's `max_context_len` metadata directly.
   final int seqLen;
 
-  /// Sampling temperature (higher = more random). `<= 0` is greedy (argmax).
+  /// Sampling temperature in `[0, 1]` (higher = more random). `0` is greedy
+  /// (argmax); values outside the range fail the generation.
   final double temperature;
 
   /// Whether to echo the input prompt back at the start of the output stream.

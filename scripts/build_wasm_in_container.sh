@@ -28,6 +28,20 @@ echo ""
 # Navigate to ExecuTorch directory
 cd "${EXECUTORCH_ROOT}"
 
+# Fix XNNPACK's tensor size check on 32-bit targets. It counted bits in a
+# size_t, so any tensor over 512 MiB looked like an overflow on wasm32 and the
+# delegate refused it: an LLM's logits ([1, seq, vocab] fp32) reach that.
+# Upstream: https://github.com/google/XNNPACK/pull/12038. Applied here rather
+# than in the Docker image so native builds get it too; skipped once applied.
+XNNPACK_PATCH="${SCRIPT_DIR}/wasm/xnnpack-tensor-size-32bit.patch"
+XNNPACK_DIR="backends/xnnpack/third-party/XNNPACK"
+if git -C "${XNNPACK_DIR}" apply --reverse --check "${XNNPACK_PATCH}" 2>/dev/null; then
+    echo "XNNPACK tensor size patch already applied"
+else
+    git -C "${XNNPACK_DIR}" apply "${XNNPACK_PATCH}"
+    echo "Applied XNNPACK tensor size patch"
+fi
+
 # Source Emscripten environment
 echo "Setting up Emscripten environment..."
 if [ -f /.dockerenv ]; then
@@ -147,7 +161,7 @@ target_link_options(
   -sENVIRONMENT=worker
   -sNO_EXIT_RUNTIME=1
   -sFORCE_FILESYSTEM=1
-  "-sEXPORTED_FUNCTIONS=['_malloc','_free']"
+  "-sEXPORTED_FUNCTIONS=['_malloc','_realloc','_free']"
   "-sEXPORTED_RUNTIME_METHODS=['FS','HEAPU8']"
   -fexceptions
 )

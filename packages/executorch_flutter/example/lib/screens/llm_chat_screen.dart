@@ -195,12 +195,19 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     try {
       await _llm?.dispose();
       _llm = null;
-      _llm = await ExecuTorchLLM.load(
+      final llm = await ExecuTorchLLM.load(
         modelPath: modelPath,
         tokenizerPath: tokenizerPath,
         // Required for MLX (Apple-GPU) models; harmless/ignored otherwise.
         mlxMetallibPath: metallibPath,
       );
+      // Loading can take a while on web; if the screen closed meanwhile,
+      // dispose() already ran and nothing else will free this model.
+      if (!mounted) {
+        await llm.dispose();
+        return;
+      }
+      _llm = llm;
       _modelName = name;
       _loadedId = id;
       _format = format;
@@ -309,8 +316,9 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
               ),
               Slider(
                 value: temperature,
-                max: 1.5,
-                divisions: 30,
+                // The runner accepts [0, 1].
+                max: 1,
+                divisions: 20,
                 label: temperature.toStringAsFixed(2),
                 onChanged: (v) => setLocal(() => temperature = v),
               ),

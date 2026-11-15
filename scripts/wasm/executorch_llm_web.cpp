@@ -48,10 +48,60 @@ std::string error_text(const char* what, Error err) {
   return std::string(what) + code;
 }
 
-val result_error(const std::string& message) {
+// The exception class Dart throws, mirroring the native FFI's error mapping
+// (to_et_error + _mapErrorCode): argument errors are validation errors, state
+// errors are model errors, the rest are inference errors.
+const char* error_kind(Error err) {
+  switch (err) {
+    case Error::InvalidArgument:
+      return "validation";
+    case Error::MemoryAllocationFailed:
+      return "memory";
+    case Error::InvalidState:
+      return "state";
+    case Error::NotSupported:
+      return "unsupported";
+    default:
+      return "inference";
+  }
+}
+
+val result_error(const std::string& message, const char* kind) {
   val out = val::object();
   out.set("error", message);
+  out.set("kind", std::string(kind));
   return out;
+}
+
+val result_error(const std::string& message, Error err) {
+  return result_error(message, error_kind(err));
+}
+
+// Length of the prefix of [s] that does not end inside a UTF-8 sequence. A
+// byte-level BPE token can end partway through a multi-byte character; the
+// rest of it arrives with the next token.
+size_t complete_utf8_prefix(const std::string& s) {
+  const size_t n = s.size();
+  size_t start = n;
+  // Walk back over at most three continuation bytes to the lead byte.
+  while (start > 0 && n - start < 3 &&
+         (static_cast<unsigned char>(s[start - 1]) & 0xC0) == 0x80) {
+    --start;
+  }
+  if (start == 0) {
+    return n; // only continuation bytes: not ours to repair
+  }
+  const auto lead = static_cast<unsigned char>(s[start - 1]);
+  size_t needed = 1;
+  if ((lead & 0xE0) == 0xC0) {
+    needed = 2;
+  } else if ((lead & 0xF0) == 0xE0) {
+    needed = 3;
+  } else if ((lead & 0xF8) == 0xF0) {
+    needed = 4;
+  }
+  const size_t have = n - (start - 1);
+  return have < needed ? start - 1 : n;
 }
 
 class WebLLMRunner {
@@ -161,24 +211,28 @@ class WebLLMRunner {
       int num_bos,
       int num_eos) {
     if (!module_) {
-      return result_error("No model is loaded");
+      return result_error("No model is loaded", Error::InvalidState);
     }
     done_ = true;
+    utf8_pending_.clear();
     if (prompt.empty()) {
-      return result_error("The prompt is empty");
+      // Upstream: "Empty prompt requires a prior prefill() call".
+      return result_error("The prompt is empty", Error::InvalidState);
     }
     if (temperature < 0.0f || temperature > 1.0f) {
-      return result_error("Temperature must be in [0, 1]");
+      return result_error(
+          "Temperature must be in [0, 1]", Error::InvalidArgument);
     }
 
     auto encoded = tokenizer_->encode(prompt, num_bos, num_eos);
     if (!encoded.ok()) {
-      return result_error("Could not tokenize the prompt");
+      return result_error(
+          "Could not tokenize the prompt", Error::InvalidArgument);
     }
     std::vector<uint64_t> tokens = encoded.get();
     const auto num_prompt_tokens = static_cast<int64_t>(tokens.size());
     if (num_prompt_tokens < 1) {
-      return result_error("The prompt has no tokens");
+      return result_error("The prompt has no tokens", Error::InvalidArgument);
     }
 
     const int64_t max_seq_len = metadata_.at(el::kMaxSeqLen);
@@ -186,10 +240,13 @@ class WebLLMRunner {
     if (max_seq_len >= max_context_len) {
       if (pos_ + num_prompt_tokens >= max_context_len) {
         return result_error(
-            "The conversation no longer fits the model's context; reset it");
+            "The conversation no longer fits the model's context; reset it",
+            Error::InvalidArgument);
       }
     } else if (num_prompt_tokens >= max_context_len) {
-      return result_error("The prompt is longer than the model's context");
+      return result_error(
+          "The prompt is longer than the model's context",
+          Error::InvalidArgument);
     }
 
     val pieces = val::array();
@@ -199,7 +256,8 @@ class WebLLMRunner {
 
     auto prefilled = prefiller_->prefill(tokens, pos_);
     if (!prefilled.ok()) {
-      return result_error(error_text("Prefill failed", prefilled.error()));
+      return result_error(
+          error_text("Prefill failed", prefilled.error()), prefilled.error());
     }
     cur_token_ = prefilled.get();
 
@@ -209,14 +267,16 @@ class WebLLMRunner {
     const int64_t occupied = max_seq_len < max_context_len ? 0 : pos_;
     remaining_ = config.resolve_max_new_tokens(max_context_len, occupied);
     if (remaining_ <= 0) {
-      return result_error("No room left in the model's context; reset it");
+      return result_error(
+          "No room left in the model's context; reset it",
+          Error::InvalidArgument);
     }
 
     auto first = tokenizer_->decode(cur_token_, cur_token_);
     if (!first.ok()) {
-      return result_error("Could not decode the first token");
+      return result_error(
+          "Could not decode the first token", Error::InvalidArgument);
     }
-    pieces.call<void>("push", first.get());
 
     temperature_ = temperature;
     ignore_eos_ = ignore_eos;
@@ -226,6 +286,7 @@ class WebLLMRunner {
     // Prefill produced one token; the rest come from step().
     remaining_ -= 1;
     done_ = remaining_ <= 0;
+    pieces.call<void>("push", take_complete(first.get()));
 
     val out = val::object();
     out.set("pieces", pieces);
@@ -244,7 +305,8 @@ class WebLLMRunner {
     auto logits = decoder_->step(tokens_, pos_);
     if (!logits.ok()) {
       done_ = true;
-      return result_error(error_text("Decoding failed", logits.error()));
+      return result_error(
+          error_text("Decoding failed", logits.error()), logits.error());
     }
     const uint64_t prev = cur_token_;
     cur_token_ = static_cast<uint64_t>(
@@ -256,22 +318,44 @@ class WebLLMRunner {
     auto piece = tokenizer_->decode(prev, cur_token_);
     if (!piece.ok()) {
       done_ = true;
-      return result_error("Could not decode a token");
+      return result_error("Could not decode a token", Error::InvalidArgument);
     }
     done_ = remaining_ <= 0 ||
         (!ignore_eos_ && eos_ids_.count(cur_token_) > 0);
-    out.set("piece", piece.get());
+    out.set("piece", take_complete(piece.get()));
     out.set("done", done_);
     return out;
+  }
+
+  // Bytes held back because the last piece ended inside a UTF-8 character.
+  // The worker emits them when a generation ends early (stop), so nothing the
+  // model produced is dropped.
+  std::string flush() {
+    std::string rest;
+    rest.swap(utf8_pending_);
+    return rest;
   }
 
   // Starts a new conversation: the next prompt is written from position 0.
   void reset() {
     pos_ = 0;
     done_ = true;
+    utf8_pending_.clear();
   }
 
  private:
+  // Returns the part of utf8_pending_ + [piece] that ends on a character
+  // boundary and keeps the rest for the next piece. When the generation is
+  // done, everything goes out.
+  std::string take_complete(const std::string& piece) {
+    utf8_pending_ += piece;
+    const size_t keep_from =
+        done_ ? utf8_pending_.size() : complete_utf8_prefix(utf8_pending_);
+    std::string out = utf8_pending_.substr(0, keep_from);
+    utf8_pending_.erase(0, keep_from);
+    return out;
+  }
+
   void* model_data_ = nullptr;
   std::unique_ptr<tokenizers::Tokenizer> tokenizer_;
   std::unique_ptr<Module> module_;
@@ -287,6 +371,7 @@ class WebLLMRunner {
   float temperature_ = 0.0f;
   bool ignore_eos_ = false;
   bool done_ = true;
+  std::string utf8_pending_;
   std::vector<int64_t> token_data_;
   TensorPtr tokens_;
 };
@@ -299,5 +384,6 @@ EMSCRIPTEN_BINDINGS(executorch_llm_web) {
       .function("load", &WebLLMRunner::load)
       .function("begin", &WebLLMRunner::begin)
       .function("step", &WebLLMRunner::step)
+      .function("flush", &WebLLMRunner::flush)
       .function("reset", &WebLLMRunner::reset);
 }

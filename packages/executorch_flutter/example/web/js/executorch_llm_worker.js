@@ -10,15 +10,24 @@
  *   {id, type: 'generate', prompt, config}      -> {id, type: 'piece', piece}*,
  *                                                  then {id, type: 'done'} | error
  *   {type: 'stop'}                              -> ends the current generation
- *   {id, type: 'reset'}                         -> {id, type: 'ok'}
+ *   {id, type: 'reset'}                         -> {id, type: 'ok'}, after the
+ *                                                  current generation ends
  *
- * Errors come back as {id, type: 'error', message}.
+ * Errors come back as {id, type: 'error', message, kind}, where kind is
+ * 'validation', 'memory', 'state', 'unsupported' or 'inference', the same
+ * classes the native runner reports.
  *
- * Model and tokenizer URLs are read from the origin private file system
- * (OPFS), directory 'executorch-llm', file name encodeURIComponent(url), when
- * they are there, and fetched otherwise. Apps that want the files to survive a
- * reload download them there first. (OPFS rather than Cache Storage: browsers
- * cap a single cache entry, some at a few hundred MB, below an LLM's size.)
+ * Where files come from, for each of modelUrl and tokenizerUrl:
+ * 1. The origin private file system (OPFS), directory 'executorch-llm', file
+ *    name encodeURIComponent(url), when stored there and not empty. Apps that
+ *    want the files to survive a reload download them there first. (OPFS
+ *    rather than Cache Storage: browsers cap a single cache entry, some at a
+ *    few hundred MB, below an LLM's size.)
+ * 2. The URL itself.
+ * 3. If the URL answers 404, a split copy described by url + '.parts.json':
+ *    {"size": <bytes>, "parts": ["<name>", ...]}, part names relative to the
+ *    manifest, concatenated in order. Static hosts that cap file size (GitHub
+ *    Pages deploys refuse files over 100 MB) serve large models this way.
  *
  * The worker yields to its message queue between tokens, so 'stop' takes
  * effect after the token being computed.
@@ -37,7 +46,7 @@ importScripts(wasmBase + 'executorch_llm.js');
 
 let et = null; // Emscripten module
 let runner = null; // LLMRunner from executorch_llm_web.cpp
-let generation = null; // {id, stopped}
+let generation = null; // {id, stopped, resets: [id]}
 
 // The runtime's recent stderr. ExecuTorch and XNNPACK explain failures there,
 // so the lines that look like errors are attached to load errors.
@@ -52,11 +61,19 @@ function withRuntimeErrors(message) {
   return lines.length ? `${message}\n${lines.slice(-8).join('\n')}` : message;
 }
 
+class WorkerError extends Error {
+  constructor(message, kind) {
+    super(message);
+    this.kind = kind;
+  }
+}
+
 function post(message) {
   self.postMessage(message);
 }
 
-// The stored copy of [url] in the origin private file system, or null.
+// The stored copy of [url] in the origin private file system, or null. An
+// empty file is a download that never finished, so it doesn't count.
 async function openStored(url) {
   if (!self.navigator || !navigator.storage || !navigator.storage.getDirectory) {
     return null;
@@ -65,93 +82,138 @@ async function openStored(url) {
     const root = await navigator.storage.getDirectory();
     const dir = await root.getDirectoryHandle(STORE_DIR);
     const handle = await dir.getFileHandle(encodeURIComponent(url));
-    return await handle.getFile();
+    const file = await handle.getFile();
+    return file.size > 0 ? file : null;
   } catch (_) {
     return null; // not stored
   }
 }
 
-async function openResponse(url) {
-  const stored = await openStored(url);
-  if (stored) {
-    return new Response(stored, {
-      headers: { 'Content-Length': String(stored.size) },
-    });
-  }
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Could not download ${url} (HTTP ${response.status})`);
-  }
-  return response;
+// A stream that concatenates the parts listed in [manifest], fetched in order.
+function partsStream(manifestUrl, manifest) {
+  const urls = manifest.parts.map((name) => new URL(name, manifestUrl).href);
+  let index = 0;
+  let reader = null;
+  return new ReadableStream({
+    async pull(controller) {
+      for (;;) {
+        if (!reader) {
+          if (index >= urls.length) {
+            controller.close();
+            return;
+          }
+          const part = await fetch(urls[index]);
+          if (!part.ok || !part.body) {
+            throw new Error(`Could not download ${urls[index]} (HTTP ${part.status})`);
+          }
+          index += 1;
+          reader = part.body.getReader();
+        }
+        const { done, value } = await reader.read();
+        if (!done) {
+          controller.enqueue(value);
+          return;
+        }
+        reader = null;
+      }
+    },
+  });
 }
 
-// Copies a response body into a _malloc'd buffer in the Wasm heap. With a
-// known, uncompressed length it streams chunk by chunk, so the weights are
-// never held twice; otherwise it reads the whole body first.
-async function readIntoHeap(response) {
-  const length = Number(response.headers.get('Content-Length'));
-  const encoded = response.headers.get('Content-Encoding');
-  if (!length || (encoded && encoded !== 'identity') || !response.body) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    const ptr = et._malloc(bytes.length);
-    if (!ptr) throw new Error(`Out of memory for a ${bytes.length}-byte model`);
-    et.HEAPU8.set(bytes, ptr);
-    return { ptr, size: bytes.length };
-  }
+// Opens [url] as a stream of its bytes, with the expected length when known.
+async function openSource(url) {
+  const stored = await openStored(url);
+  if (stored) return { body: stored.stream(), length: stored.size };
 
-  const ptr = et._malloc(length);
-  if (!ptr) throw new Error(`Out of memory for a ${length}-byte model`);
+  const response = await fetch(url);
+  if (response.ok) {
+    // Content-Length is the length on the wire: with a compressed transfer it
+    // is smaller than the body, and a cross-origin response hides the
+    // Content-Encoding that would say so. It is only a size hint.
+    const length = Number(response.headers.get('Content-Length')) || 0;
+    return { body: response.body, length };
+  }
+  if (response.status === 404) {
+    const manifestUrl = url + '.parts.json';
+    const manifest = await fetch(manifestUrl);
+    if (manifest.ok) {
+      const parts = await manifest.json();
+      return { body: partsStream(manifestUrl, parts), length: parts.size };
+    }
+  }
+  throw new Error(`Could not download ${url} (HTTP ${response.status})`);
+}
+
+// Copies a stream into a _malloc'd buffer in the Wasm heap, chunk by chunk, so
+// the weights are never held twice in full. The buffer starts at the expected
+// length and grows if the body turns out longer.
+async function readIntoHeap({ body, length }) {
+  let capacity = length > 0 ? length : 64 * 1024 * 1024;
+  let ptr = et._malloc(capacity);
+  if (!ptr) throw new WorkerError(`Out of memory for a ${capacity}-byte model`, 'memory');
   let offset = 0;
   try {
-    const reader = response.body.getReader();
+    const reader = body.getReader();
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      if (offset + value.length > length) {
-        throw new Error('The model is larger than its Content-Length');
+      if (offset + value.length > capacity) {
+        const grown = Math.max(capacity * 2, offset + value.length);
+        const moved = et._realloc(ptr, grown);
+        if (!moved) throw new WorkerError(`Out of memory for a ${grown}-byte model`, 'memory');
+        ptr = moved;
+        capacity = grown;
       }
       // HEAPU8 is replaced when the heap grows, so read it on every chunk.
       et.HEAPU8.set(value, ptr + offset);
       offset += value.length;
     }
-    if (offset !== length) {
-      throw new Error(`The model download stopped at ${offset} of ${length} bytes`);
-    }
   } catch (err) {
     et._free(ptr);
     throw err;
   }
-  return { ptr, size: length };
+  if (offset === 0) {
+    et._free(ptr);
+    throw new Error('The model file is empty');
+  }
+  return { ptr, size: offset };
+}
+
+async function readAll({ body }) {
+  return new Uint8Array(await new Response(body).arrayBuffer());
 }
 
 async function load({ id, modelUrl, tokenizerUrl }) {
-  if (runner) throw new Error('A model is already loaded in this worker');
+  if (runner) throw new WorkerError('A model is already loaded in this worker', 'state');
   // Without locateFile Emscripten looks for the .wasm next to this script.
   et = await createExecuTorchLLMModule({
     locateFile: (file) => wasmBase + file,
     printErr: onStderr,
   });
 
-  const tokenizer = await openResponse(tokenizerUrl);
-  et.FS.writeFile(TOKENIZER_PATH, new Uint8Array(await tokenizer.arrayBuffer()));
-
-  const model = await readIntoHeap(await openResponse(modelUrl));
-  const instance = new et.LLMRunner();
-  // On success the runner owns the model buffer; on failure deleting it frees
-  // the buffer too.
-  const failure = instance.load(model.ptr, model.size, TOKENIZER_PATH);
-  if (failure) {
-    instance.delete();
-    throw new Error(withRuntimeErrors(failure));
+  et.FS.writeFile(TOKENIZER_PATH, await readAll(await openSource(tokenizerUrl)));
+  try {
+    const model = await readIntoHeap(await openSource(modelUrl));
+    const instance = new et.LLMRunner();
+    // On success the runner owns the model buffer; on failure deleting the
+    // runner frees the buffer too.
+    const failure = instance.load(model.ptr, model.size, TOKENIZER_PATH);
+    if (failure) {
+      instance.delete();
+      throw new Error(withRuntimeErrors(failure));
+    }
+    runner = instance;
+  } finally {
+    et.FS.unlink(TOKENIZER_PATH);
   }
-  et.FS.unlink(TOKENIZER_PATH);
-  runner = instance;
   post({ id, type: 'ok' });
 }
 
 function generate({ id, prompt, config }) {
-  if (!runner) throw new Error('No model is loaded');
-  if (generation) throw new Error('A generation is already in progress');
+  if (!runner) throw new WorkerError('No model is loaded', 'state');
+  if (generation) {
+    throw new WorkerError('A generation is already in progress on this runner', 'inference');
+  }
 
   const first = runner.begin(
     prompt,
@@ -163,23 +225,34 @@ function generate({ id, prompt, config }) {
     config.numBos,
     config.numEos,
   );
-  if (first.error) throw new Error(first.error);
-  for (const piece of first.pieces) post({ id, type: 'piece', piece });
+  if (first.error) throw new WorkerError(first.error, first.kind);
+  for (const piece of first.pieces) {
+    if (piece) post({ id, type: 'piece', piece });
+  }
   if (first.done) {
     post({ id, type: 'done' });
     return;
   }
 
-  generation = { id, stopped: false };
+  generation = { id, stopped: false, resets: [] };
   const channel = new MessageChannel();
   const finish = (message) => {
     channel.port1.close();
+    const { resets } = generation;
     generation = null;
     post(message);
+    // Like the native runner, a reset requested mid-generation waits for the
+    // generation to end and then applies.
+    for (const resetId of resets) {
+      runner.reset();
+      post({ id: resetId, type: 'ok' });
+    }
   };
   // One token per task, so 'stop' and 'reset' messages run in between.
   channel.port1.onmessage = () => {
     if (generation.stopped) {
+      const rest = runner.flush();
+      if (rest) post({ id, type: 'piece', piece: rest });
       finish({ id, type: 'done' });
       return;
     }
@@ -187,11 +260,11 @@ function generate({ id, prompt, config }) {
     try {
       next = runner.step();
     } catch (err) {
-      finish({ id, type: 'error', message: String(err && err.message || err) });
+      finish({ id, type: 'error', kind: 'inference', message: String((err && err.message) || err) });
       return;
     }
     if (next.error) {
-      finish({ id, type: 'error', message: next.error });
+      finish({ id, type: 'error', kind: next.kind, message: next.error });
       return;
     }
     if (next.piece) post({ id, type: 'piece', piece: next.piece });
@@ -218,17 +291,21 @@ self.onmessage = async (event) => {
         if (generation) generation.stopped = true;
         break;
       case 'reset':
-        if (generation) generation.stopped = true;
-        if (runner) runner.reset();
-        post({ id: message.id, type: 'ok' });
+        if (generation) {
+          generation.resets.push(message.id);
+        } else {
+          if (runner) runner.reset();
+          post({ id: message.id, type: 'ok' });
+        }
         break;
       default:
-        throw new Error(`Unknown message type ${message.type}`);
+        throw new WorkerError(`Unknown message type ${message.type}`, 'state');
     }
   } catch (err) {
     post({
       id: message.id,
       type: 'error',
+      kind: (err && err.kind) || 'inference',
       message: String((err && err.message) || err),
     });
   }

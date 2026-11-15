@@ -10,7 +10,14 @@ import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:executorch_dart/executorch_dart_shared.dart'
-    show ExecuTorchInferenceException, ExecuTorchModelException, GenConfig;
+    show
+        ExecuTorchException,
+        ExecuTorchInferenceException,
+        ExecuTorchMemoryException,
+        ExecuTorchModelException,
+        ExecuTorchPlatformException,
+        ExecuTorchValidationException,
+        GenConfig;
 
 export 'package:executorch_dart/executorch_dart_shared.dart' show GenConfig;
 
@@ -41,7 +48,9 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
 ///   the origin private file system (OPFS) when stored there — directory
 ///   `executorch-llm`, file name `Uri.encodeComponent(url)` — so an app can
 ///   download them once and keep them across reloads, and fetched otherwise.
-///   A cross-origin URL must send CORS headers.
+///   A URL that answers 404 may be served split, as `<url>.parts.json`
+///   (`{"size": bytes, "parts": [names relative to it]}`), for static hosts
+///   that cap file size. A cross-origin URL must send CORS headers.
 /// - Only XNNPACK (CPU) exports run, on a single thread, so expect a fraction
 ///   of native speed.
 ///
@@ -72,20 +81,40 @@ class ExecuTorchLLM {
         'Separate .ptd weight files are not supported on web yet',
       );
     }
-    final llm = ExecuTorchLLM._(_Worker(workerUrl));
+    final ExecuTorchLLM llm;
+    try {
+      llm = ExecuTorchLLM._(_Worker(workerUrl));
+    } catch (e) {
+      // The script could not be started at all (blocked by a content security
+      // policy, or a page opened from file://).
+      throw ExecuTorchModelException('Could not start the LLM worker: $e');
+    }
     try {
       await llm._request({
         'type': 'load',
         'modelUrl': Uri.base.resolve(modelPath).toString(),
         'tokenizerUrl': Uri.base.resolve(tokenizerPath).toString(),
       });
-    } catch (e) {
+    } on ExecuTorchMemoryException {
       llm._terminate();
-      throw ExecuTorchModelException('Could not load the LLM: $e');
+      rethrow;
+    } on ExecuTorchException catch (e) {
+      llm._terminate();
+      throw ExecuTorchModelException('Could not load the LLM: ${e.message}');
     }
     llm._loaded = true;
     return llm;
   }
+
+  /// The exception the native runner raises for the same class of failure.
+  static ExecuTorchException _exceptionFor(String? kind, String message) =>
+      switch (kind) {
+        'validation' => ExecuTorchValidationException(message),
+        'memory' => ExecuTorchMemoryException(message),
+        'state' => ExecuTorchModelException(message),
+        'unsupported' => ExecuTorchPlatformException(message),
+        _ => ExecuTorchInferenceException(message),
+      };
 
   final _Worker _worker;
   final Map<int, Completer<void>> _pending = {};
@@ -181,7 +210,7 @@ class ExecuTorchLLM {
           controller.add(data['piece'] as String);
         case 'error':
           controller.addError(
-            ExecuTorchInferenceException(data['message'] as String),
+            _exceptionFor(data['kind'] as String?, data['message'] as String),
           );
           _endGeneration();
         case 'done':
@@ -193,7 +222,9 @@ class ExecuTorchLLM {
     final completer = id == null ? null : _pending.remove(id);
     if (completer == null) return;
     if (type == 'error') {
-      completer.completeError(Exception(data['message']));
+      completer.completeError(
+        _exceptionFor(data['kind'] as String?, data['message'] as String),
+      );
     } else {
       completer.complete();
     }
@@ -204,7 +235,7 @@ class ExecuTorchLLM {
     // start). Fail everything that is waiting.
     final message = 'LLM worker failed: ${event.message ?? 'unknown error'}';
     for (final completer in _pending.values) {
-      completer.completeError(Exception(message));
+      completer.completeError(ExecuTorchModelException(message));
     }
     _pending.clear();
     _generation?.addError(ExecuTorchInferenceException(message));

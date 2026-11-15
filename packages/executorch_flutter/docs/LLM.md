@@ -264,6 +264,11 @@ final llm = await ExecuTorchLLM.load(
   across reloads; the example app's `llm_files_web.dart` does this. (Cache
   Storage doesn't work for this: browsers cap a single entry, some at a few
   hundred MB.)
+- **Large files on capped hosts:** if the model URL answers 404, the worker
+  looks for `<url>.parts.json` (`{"size": bytes, "parts": [names relative to
+  it]}`) and joins the parts in order. GitHub Pages deploys refuse files over
+  100 MB, so this repo's web demo serves the 470 MB model split into 90 MB
+  parts; the example's download handles the same layout.
 - **Memory:** the weights live in the Wasm heap (up to 4 GB), so a 0.6B model
   fits easily; much larger models will not.
 - **Speed:** one thread, since multi-threaded Wasm needs cross-origin isolation
