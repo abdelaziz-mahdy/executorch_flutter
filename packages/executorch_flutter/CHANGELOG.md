@@ -16,10 +16,10 @@
 
 ### Changed
 
-- The Web runtime (`executorch.wasm`) grows from 3.7 MB to 4.7 MB: it now
-  includes the quantized operators, so quantized models run on Web, and
+- The Web runtime (`executorch.wasm`) grows from 3.7 MB to 4.8 MB: it now
+  includes the quantized operators, so quantized models run on Web,
   ExecuTorch's error log, so load failures report ExecuTorch's own reason in
-  the browser console.
+  the browser console, and C++ exception support.
 
 ### Fixed
 
