@@ -8,6 +8,12 @@ analyzer:
   exclude:
     - specs/**
     - '**/*.g.dart'
+    - build/**
+    - android/**
+    - ios/**
+    - windows/**
+    - macos/**
+    - linux/**
   strong-mode:
     implicit-casts: false
     implicit-dynamic: false

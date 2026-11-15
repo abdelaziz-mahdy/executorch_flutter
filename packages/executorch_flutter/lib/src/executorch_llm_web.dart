@@ -59,14 +59,15 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
 ///   `executorch-llm`, file name `Uri.encodeComponent` of the absolute URL,
 ///   resolved against `document.baseURI` — so an app can download them once
 ///   and keep them across reloads, and fetched otherwise. A URL that fails
-///   (404, or 403 from object stores) may be served split, as
-///   `<url>.parts.json` (`{"size": bytes, "parts": [names relative to it]}`),
-///   for static hosts that cap file size. A cross-origin URL must send CORS
+///   (404, or 403 from object stores) may be served split, described at the
+///   same URL with `.parts.json` added to its path (query kept, fragment
+///   dropped) as `{"size": bytes, "parts": [names relative to it]}`, for
+///   static hosts that cap file size. A cross-origin URL must send CORS
 ///   headers. A stored file is used as is: store only complete, verified
-///   files, and delete one when the file at its URL changes. When a
-///   tokenizer URL's path has no file name (no extension), its fragment names
-///   the file (`blob:...#tekken.json`): the runner picks some tokenizer kinds
-///   by file name. The tokenizer is a single file (no directories).
+///   files, and delete one when the file at its URL changes. A tokenizer
+///   URL's fragment, when it has an extension, names the file
+///   (`blob:...#tekken.json`): the runner picks some tokenizer kinds by file
+///   name. The tokenizer is a single file (no directories).
 /// - Only XNNPACK (CPU) exports with a KV cache run, on a single thread, so
 ///   expect a fraction of native speed.
 ///

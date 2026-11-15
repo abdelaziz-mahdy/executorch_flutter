@@ -179,7 +179,12 @@ Future<List<Future<web.ReadableStream> Function()>> _openSource(
   await response.body?.cancel().toDart;
   // A split copy. Missing files answer 404, or 403 on object stores that
   // hide missing keys, so look for the manifest whatever the failure.
-  final manifestUrl = '$url.parts.json';
+  // Its path plus .parts.json, same query, no fragment (as the worker does).
+  final source = Uri.parse(url);
+  final manifestUrl = source
+      .removeFragment()
+      .replace(path: '${source.path}.parts.json')
+      .toString();
   final manifest = await _fetch(manifestUrl);
   if (!manifest.ok) {
     throw StateError('Downloading $url failed (HTTP ${response.status})');

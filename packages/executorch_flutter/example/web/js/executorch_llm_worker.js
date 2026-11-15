@@ -39,21 +39,22 @@
 const STORE_DIR = 'executorch-llm';
 // The tokenizer goes into the Wasm file system under its own file name:
 // upstream picks some tokenizer kinds by name (Mistral's tekken.json). A URL
-// fragment names the file when the path's last segment has no extension
-// (blob: URLs, ?id= downloads).
+// fragment names the file when it looks like one (has an extension): blob:
+// URLs, ?id= downloads, or any URL whose own name doesn't say tekken.json.
 function tokenizerPath(url) {
   let name = '';
   try {
     const parsed = new URL(url);
     const last = decodeURIComponent(parsed.pathname.split('/').pop() || '');
-    // The path's name unless it isn't one (no extension), then the fragment.
-    name = !last.includes('.') && parsed.hash.length > 1
-      ? decodeURIComponent(parsed.hash.slice(1))
-      : last;
+    const fragment = parsed.hash.length > 1 ? decodeURIComponent(parsed.hash.slice(1)) : '';
+    // A fragment that looks like a file name names the file; one that
+    // doesn't (#v2) leaves the path's name in place.
+    name = fragment.includes('.') ? fragment : last;
   } catch (_) {
     name = '';
   }
   name = name.replace(/[\/\\]/g, '_');
+  if (name === '.' || name === '..') name = '';
   // In a folder of its own: names like `tmp` or `dev` are folders at the root.
   return '/tokenizer/' + (name || 'tokenizer.json');
 }
@@ -72,18 +73,35 @@ let generation = null; // {id, stopped, resets: [id]}
 // The runtime's recent stderr. ExecuTorch and XNNPACK explain failures there,
 // so the lines that look like errors are attached to load errors.
 const stderrTail = [];
+let stderrTotal = 0;
 function onStderr(line) {
+  stderrTotal += 1;
   stderrTail.push(line);
   if (stderrTail.length > 200) stderrTail.shift();
   console.debug(line);
 }
-function withRuntimeErrors(message) {
-  // ExecuTorch's own error lines ("E 00:00:01.234 executorch:...") and
-  // XNNPACK's; tokenizer libraries also print harmless "error" lines.
-  const lines = stderrTail.filter((l) =>
-    /^E \d\d:\d\d:\d\d|^E tokenizers:|^Error in XNNPACK/.test(l),
-  );
+// Lines logged from now on, for withRuntimeErrors.
+function stderrMark() {
+  return stderrTotal;
+}
+
+// [message] plus the error lines logged since [mark]: ExecuTorch's
+// ("E 00:00:01.234 executorch:..."), XNNPACK's, and the tokenizer library's.
+// Only lines from the failing step: an earlier step that succeeded can log
+// errors too (each tokenizer format tried before the right one).
+function withRuntimeErrors(message, mark) {
+  const fresh = stderrTail.slice(Math.max(0, stderrTail.length - (stderrTotal - mark)));
+  const lines = fresh
+    .filter((l) => /^E \d\d:\d\d:\d\d|^E tokenizers:|^Error in XNNPACK/.test(l))
+    .map((l) => (l.length > 300 ? l.slice(0, 300) + '…' : l));
   return lines.length ? `${message}\n${lines.slice(-8).join('\n')}` : message;
+}
+
+// Emscripten's file-system errors carry an errno and no message.
+function errorText(err) {
+  if (err && err.message) return String(err.message);
+  if (err && typeof err.errno === 'number') return `File system error (errno ${err.errno})`;
+  return String(err);
 }
 
 class WorkerError extends Error {
@@ -156,6 +174,15 @@ function partsStream(manifestUrl, manifest) {
   });
 }
 
+// Where a split copy of [url] is described: its path plus `.parts.json`, same
+// query, no fragment.
+function partsManifestUrl(url) {
+  const manifest = new URL(url);
+  manifest.hash = '';
+  manifest.pathname += '.parts.json';
+  return manifest.href;
+}
+
 // Opens [url] as a stream of its bytes. `length` is the expected size, and
 // `exact` says whether the body must be exactly that long (a stored file or a
 // split manifest) or the size is only a hint (Content-Length).
@@ -172,7 +199,7 @@ async function openSource(url) {
     return { body: response.body, length, exact: false };
   }
   if (response.body) response.body.cancel().catch(() => {});
-  const manifestUrl = url + '.parts.json';
+  const manifestUrl = partsManifestUrl(url);
   const manifest = await fetchFresh(manifestUrl);
   if (manifest.ok) {
     const parts = await manifest.json();
@@ -267,17 +294,19 @@ async function load({ id, modelUrl, tokenizerUrl }) {
     et.FS.mkdirTree('/tokenizer');
     et.FS.writeFile(tokenizerFile, await readAll(await openSource(tokenizerUrl)));
     let loaded;
+    let mark = stderrMark();
     try {
       loaded = instance.loadTokenizer(tokenizerFile);
     } finally {
       et.FS.unlink(tokenizerFile);
     }
-    if (loaded.error) throw new WorkerError(withRuntimeErrors(loaded.error), loaded.kind);
+    if (loaded.error) throw new WorkerError(withRuntimeErrors(loaded.error, mark), loaded.kind);
 
     const model = await readIntoHeap(await openSource(modelUrl));
     // From here the runner owns the model buffer, and delete() frees it.
+    mark = stderrMark();
     loaded = instance.load(model.ptr, model.size);
-    if (loaded.error) throw new WorkerError(withRuntimeErrors(loaded.error), loaded.kind);
+    if (loaded.error) throw new WorkerError(withRuntimeErrors(loaded.error, mark), loaded.kind);
   } catch (err) {
     instance.delete();
     throw err;
@@ -358,7 +387,7 @@ function generate({ id, prompt, config }) {
     try {
       next = runner.step();
     } catch (err) {
-      finish({ id, type: 'error', kind: 'inference', message: String((err && err.message) || err) });
+      finish({ id, type: 'error', kind: 'inference', message: errorText(err) });
       return;
     }
     if (next.error) {
@@ -404,7 +433,7 @@ self.onmessage = async (event) => {
       id: message.id,
       type: 'error',
       kind: (err && err.kind) || 'inference',
-      message: String((err && err.message) || err),
+      message: errorText(err),
     });
   }
 };

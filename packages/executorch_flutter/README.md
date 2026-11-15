@@ -514,9 +514,10 @@ while it generates. `setup_web` copies both; nothing goes in `index.html`.
   without a download, so an app can download a model once (with its own
   progress UI) and keep it across reloads. The example app does this. (Not
   Cache Storage: browsers cap a single cache entry, some at a few hundred MB.)
-- A URL that fails (404, or 403 from object stores) can be served split, as
-  `<url>.parts.json` plus its parts, for hosts that cap file size (GitHub
-  Pages deploys refuse files over 100 MB).
+- A URL that fails (404, or 403 from object stores) can be served split: a
+  manifest at the same URL with `.parts.json` added to its path, plus the
+  parts it lists, for hosts that cap file size (GitHub Pages deploys refuse
+  files over 100 MB).
 - It runs on one thread, since GitHub Pages and most hosts can't send the
   cross-origin isolation headers that Wasm threads need. Expect a few tokens
   per second for a 0.6B model on a recent laptop.

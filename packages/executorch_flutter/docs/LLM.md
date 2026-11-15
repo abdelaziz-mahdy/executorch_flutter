@@ -269,9 +269,10 @@ final llm = await ExecuTorchLLM.load(
   `close()`, so an interrupted write leaves nothing), and delete a stored
   file when the one at its URL changes.
 - **Large files on capped hosts:** if the model URL fails (404, or 403 from
-  object stores that hide missing keys), the worker looks for
-  `<url>.parts.json` (`{"size": bytes, "parts": [names relative to it]}`)
-  and joins the parts in order. GitHub Pages deploys refuse files over
+  object stores that hide missing keys), the worker looks for the same URL
+  with `.parts.json` added to its path (query kept, fragment dropped):
+  `{"size": bytes, "parts": [names relative to it]}`, and joins the parts in
+  order. GitHub Pages deploys refuse files over
   100 MB, so this repo's web demo serves the 470 MB model split into 90 MB
   parts; the example's download handles the same layout.
 - **Memory:** the model lives in the worker's Wasm heap (at most 4 GB) along
@@ -284,9 +285,10 @@ final llm = await ExecuTorchLLM.load(
 - **MLX**, separate `.ptd` weight files, and exports without a KV cache are
   not available on web.
 - **Tokenizer file names:** the runner recognises some tokenizers by file name
-  (Mistral's `tekken.json`). For a URL whose path has no file name (no
-  extension), such as a `blob:` URL from a file picker, put the name in the
-  fragment: `blob:...#tekken.json`. A tokenizer is a single file on web;
+  (Mistral's `tekken.json`). When the URL's own name doesn't say so, such as
+  a `blob:` URL from a file picker, put the name in the fragment:
+  `blob:...#tekken.json`. A fragment counts as a name when it has an
+  extension. A tokenizer is a single file on web;
   native also accepts a directory with `tokenizer.json` and its config files.
 
 ---
