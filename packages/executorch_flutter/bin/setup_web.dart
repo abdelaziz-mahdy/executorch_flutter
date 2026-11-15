@@ -14,6 +14,7 @@
 library;
 
 import 'dart:io';
+import 'dart:isolate';
 
 void main(List<String> args) {
   print('🔧 ExecuTorch Flutter - Web Setup');
@@ -49,17 +50,16 @@ void main(List<String> args) {
     print('📁 Created: web/js/');
   }
 
-  // Copy JavaScript wrapper
-  final sourceJs = File(
-    _joinPath(packageRoot, 'web', 'js', 'executorch_wrapper.js'),
-  );
-  final destJs = File(_joinPath(webJsDir.path, 'executorch_wrapper.js'));
-
-  if (sourceJs.existsSync()) {
-    sourceJs.copySync(destJs.path);
-    print('✅ Copied: executorch_wrapper.js');
-  } else {
-    print('⚠️  Warning: executorch_wrapper.js not found in package');
+  // Copy the JavaScript files: the model wrapper the page loads, and the
+  // worker ExecuTorchLLM starts.
+  for (final name in ['executorch_wrapper.js', 'executorch_llm_worker.js']) {
+    final source = File(_joinPath(packageRoot, 'web', 'js', name));
+    if (source.existsSync()) {
+      source.copySync(_joinPath(webJsDir.path, name));
+      print('✅ Copied: $name');
+    } else {
+      print('⚠️  Warning: $name not found in package');
+    }
   }
 
   // Check if wasm directory exists and copy if present
@@ -166,6 +166,21 @@ String? _findPackageRoot() {
       multiLine: true,
     ).hasMatch(content)) {
       return Directory.current.path;
+    }
+  }
+
+  // The version this app actually depends on: `dart run
+  // executorch_flutter:setup_web` runs with the app's package config. The
+  // worker and the Wasm files must match the Dart code exactly, so this comes
+  // before any guess below.
+  final library = Isolate.resolvePackageUriSync(
+    Uri.parse('package:executorch_flutter/executorch_flutter.dart'),
+  );
+  if (library != null && library.isScheme('file')) {
+    final libDir = File.fromUri(library).parent;
+    final root = libDir.parent.path;
+    if (File(_joinPath(root, 'pubspec.yaml')).existsSync()) {
+      return root;
     }
   }
 

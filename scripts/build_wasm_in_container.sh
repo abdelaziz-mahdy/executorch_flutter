@@ -28,6 +28,20 @@ echo ""
 # Navigate to ExecuTorch directory
 cd "${EXECUTORCH_ROOT}"
 
+# Fix XNNPACK's tensor size check on 32-bit targets. It counted bits in a
+# size_t, so any tensor over 512 MiB looked like an overflow on wasm32 and the
+# delegate refused it: an LLM's logits ([1, seq, vocab] fp32) reach that.
+# Upstream: https://github.com/google/XNNPACK/pull/12038. Applied here rather
+# than in the Docker image so native builds get it too; skipped once applied.
+XNNPACK_PATCH="${SCRIPT_DIR}/wasm/xnnpack-tensor-size-32bit.patch"
+XNNPACK_DIR="backends/xnnpack/third-party/XNNPACK"
+if git -C "${XNNPACK_DIR}" apply --reverse --check "${XNNPACK_PATCH}" 2>/dev/null; then
+    echo "XNNPACK tensor size patch already applied"
+else
+    git -C "${XNNPACK_DIR}" apply "${XNNPACK_PATCH}"
+    echo "Applied XNNPACK tensor size patch"
+fi
+
 # Source Emscripten environment
 echo "Setting up Emscripten environment..."
 if [ -f /.dockerenv ]; then
@@ -114,7 +128,51 @@ set_target_properties(
   OUTPUT_NAME "executorch"
   SUFFIX ".js"
 )
+
+# LLM runner for ExecuTorchLLM on web: a separate module so the vision page
+# never downloads the runner and tokenizers. Loaded by a Web Worker
+# (web/js/executorch_llm_worker.js). Model weights are hundreds of MB and live
+# in the Wasm heap, so it may grow to the wasm32 ceiling.
+add_executable(executorch_llm_lib)
+target_sources(
+  executorch_llm_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/executorch_llm_web.cpp
+)
+target_include_directories(executorch_llm_lib PRIVATE ${EXECUTORCH_ROOT}/..)
+target_link_libraries(
+  executorch_llm_lib
+  PRIVATE embind
+          executorch
+          extension_llm_runner
+          extension_module_static
+          extension_data_loader
+          extension_tensor
+          tokenizers::tokenizers
+          executorch_kernels
+          xnnpack_backend
+)
+target_link_options(
+  executorch_llm_lib
+  PRIVATE
+  -sALLOW_MEMORY_GROWTH=1
+  -sMAXIMUM_MEMORY=4GB
+  -sINITIAL_MEMORY=67108864
+  -sMODULARIZE=1
+  -sEXPORT_NAME=createExecuTorchLLMModule
+  -sENVIRONMENT=worker
+  -sNO_EXIT_RUNTIME=1
+  -sFORCE_FILESYSTEM=1
+  "-sEXPORTED_FUNCTIONS=['_malloc','_realloc','_free']"
+  "-sEXPORTED_RUNTIME_METHODS=['FS','HEAPU8']"
+  -fexceptions
+)
+set_target_properties(
+  executorch_llm_lib
+  PROPERTIES
+  OUTPUT_NAME "executorch_llm"
+  SUFFIX ".js"
+)
 EOF
+cp "${SCRIPT_DIR}/wasm/executorch_llm_web.cpp" "${BUILD_DIR}/"
 
 # Create empty main.cpp (Embind handles everything)
 cat > "${BUILD_DIR}/main.cpp" << 'EOF'
@@ -130,6 +188,14 @@ echo ""
 echo "Configuring CMake with Emscripten..."
 cd "${BUILD_DIR}"
 
+# C++ exceptions are compiled in everywhere (-fexceptions): Emscripten's default
+# lets code throw but never runs a catch block, and the tokenizers catch their
+# own exceptions in normal operation (an HF tokenizer.json parse failure falls
+# back to the next tokenizer type, optional JSON keys are probed with
+# try/catch), so without it most tokenizers fail to load.
+# Native builds: emsdk_env.sh puts emsdk's own Python first on PATH, and it has
+# no torch/torchgen. Set PYTHON_EXECUTABLE to a Python that has them, or codegen
+# fails (and an empty torchgen path turns its source glob into "/*.py").
 emcmake cmake \
     -DEXECUTORCH_PAL_DEFAULT=posix \
     -DCMAKE_BUILD_TYPE=Release \
@@ -143,22 +209,29 @@ emcmake cmake \
     -DEXECUTORCH_BUILD_KERNELS_PORTABLE=ON \
     -DEXECUTORCH_BUILD_XNNPACK=ON \
     -DXNNPACK_ENABLE_WASMRELAXEDSIMDFP16=OFF \
+    -DEXECUTORCH_BUILD_EXTENSION_LLM=ON \
+    -DEXECUTORCH_BUILD_EXTENSION_LLM_RUNNER=ON \
+    -DEXECUTORCH_BUILD_KERNELS_QUANTIZED=ON \
+    -DEXECUTORCH_ENABLE_LOGGING=ON \
+    -DCMAKE_CXX_FLAGS="-fexceptions" \
+    -DEXECUTORCH_LOG_LEVEL=Error \
+    ${PYTHON_EXECUTABLE:+-DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}"} \
     .
 
 # Build the library target
 # Use limited parallelism to avoid compiler crashes (LLVM bug with XNNPACK code)
 echo ""
-echo "Building executorch_lib target..."
-cmake --build . -j2 --target executorch_lib
+echo "Building executorch_lib and executorch_llm_lib targets..."
+cmake --build . -j"${WASM_BUILD_JOBS:-2}" --target executorch_lib executorch_llm_lib
 
 # Verify outputs
 echo ""
 echo "Verifying build outputs..."
-if [ -f "executorch.js" ] && [ -f "executorch.wasm" ]; then
+if [ -f "executorch.js" ] && [ -f "executorch.wasm" ] && [ -f "executorch_llm.js" ] && [ -f "executorch_llm.wasm" ]; then
     echo "✅ Library build successful!"
     echo ""
     echo "Generated files:"
-    ls -lh executorch.js executorch.wasm
+    ls -lh executorch.js executorch.wasm executorch_llm.js executorch_llm.wasm
     echo ""
 
     # Copy to output directory if specified
@@ -167,6 +240,7 @@ if [ -f "executorch.js" ] && [ -f "executorch.wasm" ]; then
         mkdir -p "${OUTPUT_DIR}"
         cp executorch.js "${OUTPUT_DIR}/"
         cp executorch.wasm "${OUTPUT_DIR}/"
+        cp executorch_llm.js executorch_llm.wasm "${OUTPUT_DIR}/"
         echo "✅ Copied to ${OUTPUT_DIR}"
     fi
 
@@ -175,6 +249,7 @@ if [ -f "executorch.js" ] && [ -f "executorch.wasm" ]; then
         echo "Copying binaries to /output volume..."
         cp executorch.js /output/
         cp executorch.wasm /output/
+        cp executorch_llm.js executorch_llm.wasm /output/
         echo "✅ Copied to /output"
     fi
 else

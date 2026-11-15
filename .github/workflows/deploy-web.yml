@@ -40,7 +40,8 @@ jobs:
         run: |
           flutter build web --release \
             --base-href "/executorch_flutter/" \
-            --dart-define=MODEL_BASE_URL=models
+            --dart-define=MODEL_BASE_URL=models \
+            --dart-define=LLM_CATALOG_URL=models/llms.json
 
       # GitHub release assets send no Access-Control-Allow-Origin header, so a
       # browser cannot fetch them cross-origin — model loading fails in the
@@ -96,8 +97,101 @@ jobs:
 
           ls -la build/web/models | head -12
 
+      # The hosted LLMs hit the same CORS wall. The web runner is XNNPACK-only,
+      # so only the CPU builds are copied (Qwen3 0.6B: about 480 MB with its
+      # tokenizer; GitHub Pages allows a 1 GB site). The deploy pushes the site
+      # to the gh-pages branch, and git refuses files over 100 MB, so larger
+      # files are split into 90 MB parts listed in <file>.parts.json, which
+      # ExecuTorchLLM's web worker and the example both reassemble.
+      - name: Fetch hosted LLMs into the published site
+        working-directory: packages/executorch_flutter/example
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oE "executorchVersion = '[^']+'" \
+            ../../executorch_dart/lib/src/version.dart | cut -d"'" -f2)
+          LLMS="https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main/$VERSION/llms.json"
+          STATUS=$(curl -sS -o /tmp/llms.json -w '%{http_code}' "$LLMS")
+          if [ "$STATUS" = "404" ]; then
+            # The app was built to read models/llms.json; an empty catalog
+            # makes it list no hosted models instead of failing to load one.
+            echo "::warning::No hosted LLMs for $VERSION; publishing an empty catalog"
+            echo '{"llms": []}' > /tmp/llms.json
+          elif [ "$STATUS" != "200" ]; then
+            echo "::error::Fetching $LLMS failed with HTTP $STATUS"
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import hashlib, json, os, subprocess
+          from urllib.parse import unquote, urlsplit
+          PART = 90 * 1024 * 1024
+          llms = json.load(open('/tmp/llms.json'))['llms']
+          total = 0
+          fetched = {}  # name -> sha256 of the LLM files placed so far
+          for llm in (l for l in llms if l['backend'] == 'xnnpack'):
+              for f in llm['files'].values():
+                  path = f"build/web/models/{f['name']}"
+                  # The app requests models/<decoded last path segment of
+                  # url>; it must be this name, and must not replace another
+                  # model's file.
+                  if unquote(urlsplit(f['url']).path.rsplit('/', 1)[-1]) != f['name']:
+                      raise SystemExit(f"{f['name']}: name doesn't match {f['url']}")
+                  # The app pastes the name into a URL unencoded, so these
+                  # would turn into an escape, a fragment or a query.
+                  if any(c in f['name'] for c in '%#?'):
+                      raise SystemExit(f"{f['name']}: '%', '#' and '?' can't be served")
+                  if f['name'] in fetched:
+                      # Shared by two LLMs (a common tokenizer): fine if equal.
+                      if fetched[f['name']] != f['sha256']:
+                          raise SystemExit(f"two different files named {f['name']}")
+                      continue
+                  if os.path.exists(path) or os.path.exists(f"{path}.parts.json"):
+                      raise SystemExit(f"{f['name']} would overwrite another file")
+                  fetched[f['name']] = f['sha256']
+                  print(f"  {f['name']} ({f['size'] / 1e6:.1f} MB)")
+                  subprocess.run(['curl', '-fsSL', f['url'], '-o', path], check=True)
+                  digest = hashlib.sha256(open(path, 'rb').read()).hexdigest()
+                  if os.path.getsize(path) != f['size'] or digest != f['sha256']:
+                      raise SystemExit(f"{f['name']} does not match llms.json")
+                  total += f['size']
+                  if f['size'] <= PART:
+                      continue
+                  parts = []
+                  with open(path, 'rb') as src:
+                      while chunk := src.read(PART):
+                          name = f"{f['name']}.part{len(parts):03d}"
+                          open(f"build/web/models/{name}", 'wb').write(chunk)
+                          parts.append(name)
+                  os.remove(path)
+                  json.dump({'size': f['size'], 'parts': parts},
+                            open(f"{path}.parts.json", 'w'))
+                  print(f"    split into {len(parts)} parts")
+          if llms and not fetched:
+              print("::warning::The catalog lists no CPU (XNNPACK) LLMs; the web demo will offer none")
+          print(f"Fetched {total / 1e6:.1f} MB of LLM files")
+          PY
+          # The app reads this copy (LLM_CATALOG_URL above), not the live one,
+          # so its sizes and hashes always match the files served next to it.
+          cp /tmp/llms.json build/web/models/llms.json
+
+          du -sh build/web
+          # Nothing over GitHub's 100 MB push limit may reach the deploy.
+          if find build/web -type f -size +95M | grep .; then
+            echo "::error::Files over 95 MB would be refused by the gh-pages push"
+            exit 1
+          fi
+          # GitHub Pages sites are limited to 1 GB.
+          SITE_BYTES=$(find build/web -type f -exec stat -f %z {} + | awk '{s+=$1} END {print s}')
+          if [ "$SITE_BYTES" -gt 1000000000 ]; then
+            echo "::error::The site is $SITE_BYTES bytes; GitHub Pages allows 1 GB"
+            exit 1
+          fi
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./packages/executorch_flutter/example/build/web
+          # One commit, no history: the site carries ~0.5 GB of hosted model
+          # parts, and every model change would otherwise stay in gh-pages.
+          force_orphan: true

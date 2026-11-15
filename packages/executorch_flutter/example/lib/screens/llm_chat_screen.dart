@@ -13,12 +13,14 @@ import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 import '../llm/chat_format.dart';
 import '../llm/llm_catalog.dart';
 import '../llm/llm_files_stub.dart'
-    if (dart.library.io) '../llm/llm_files_io.dart';
+    if (dart.library.io) '../llm/llm_files_io.dart'
+    if (dart.library.js_interop) '../llm/llm_files_web.dart';
 
 /// A single chat turn.
 class _ChatMessage {
@@ -142,10 +144,13 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
       }
       return;
     }
+    // On web without usable browser storage nothing was kept, and the model
+    // downloads again on the next visit.
+    final cached = await cachedFiles(entry) != null;
     if (!mounted) return;
     setState(() {
       state.downloading = false;
-      state.cached = true;
+      state.cached = cached;
     });
     await _load(
       name: entry.displayName,
@@ -194,12 +199,19 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     try {
       await _llm?.dispose();
       _llm = null;
-      _llm = await ExecuTorchLLM.load(
+      final llm = await ExecuTorchLLM.load(
         modelPath: modelPath,
         tokenizerPath: tokenizerPath,
         // Required for MLX (Apple-GPU) models; harmless/ignored otherwise.
         mlxMetallibPath: metallibPath,
       );
+      // Loading can take a while on web; if the screen closed meanwhile,
+      // dispose() already ran and nothing else will free this model.
+      if (!mounted) {
+        await llm.dispose();
+        return;
+      }
+      _llm = llm;
       _modelName = name;
       _loadedId = id;
       _format = format;
@@ -234,6 +246,9 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     // Fresh KV cache each turn — the prompt already carries the full history.
     llm.reset();
     final done = Completer<void>();
+    // Once the end-of-turn marker is seen, pieces already in flight before the
+    // stop lands are not part of the reply.
+    var ended = false;
     _sub = llm
         .generate(
           prompt,
@@ -247,12 +262,16 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
             // Exports that declare the end-of-turn marker as a stop token stop
             // by themselves; others keep emitting it. Handle it here so the
             // package stays model-agnostic: hide the marker and stop.
+            if (ended) return;
             final cleaned = _format.clean(piece);
             if (cleaned.text.isNotEmpty) {
               setState(() => assistant.text += cleaned.text);
               _scrollToBottom();
             }
-            if (cleaned.ended) _stop();
+            if (cleaned.ended) {
+              ended = true;
+              _stop();
+            }
           },
           onError: (Object e) {
             setState(() => _error = '$e');
@@ -281,7 +300,13 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
       acceptedTypeGroups: [XTypeGroup(label: label, extensions: extensions)],
     );
     if (file != null) {
-      setState(() => controller.text = file.path);
+      // On web the path is a blob: URL with no file name in it. The runner
+      // picks some tokenizer kinds by name (tekken.json), so pass the picked
+      // name along as the URL fragment, which ExecuTorchLLM's worker reads.
+      final path = kIsWeb
+          ? '${file.path}#${Uri.encodeComponent(file.name)}'
+          : file.path;
+      setState(() => controller.text = path);
     }
   }
 
@@ -308,8 +333,9 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
               ),
               Slider(
                 value: temperature,
-                max: 1.5,
-                divisions: 30,
+                // The runner accepts [0, 1].
+                max: 1,
+                divisions: 20,
                 label: temperature.toStringAsFixed(2),
                 onChanged: (v) => setLocal(() => temperature = v),
               ),
@@ -425,7 +451,7 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
                 ],
               ),
             )
-          : const _WebNotice(),
+          : const _UnsupportedNotice(),
     );
   }
 
@@ -787,9 +813,9 @@ class _HostedModelTile extends StatelessWidget {
   }
 }
 
-/// Shown on web, where there is no WebAssembly build of the LLM runner yet.
-class _WebNotice extends StatelessWidget {
-  const _WebNotice();
+/// Shown where the LLM runner isn't available.
+class _UnsupportedNotice extends StatelessWidget {
+  const _UnsupportedNotice();
 
   @override
   Widget build(BuildContext context) {
@@ -807,14 +833,14 @@ class _WebNotice extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              "LLM chat isn't supported on web yet",
+              "LLM chat isn't supported on this platform",
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Run the example on Android, iOS, macOS, Windows or Linux to '
-              'download a model and chat with it on-device.',
+              'Run the example on Android, iOS, macOS, Windows, Linux or the '
+              'web to download a model and chat with it on-device.',
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),

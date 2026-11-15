@@ -6,6 +6,8 @@ library;
 
 import 'dart:async';
 import 'dart:ffi' as ffi;
+import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
@@ -13,6 +15,7 @@ import '../executorch_errors.dart';
 import '../generated/executorch_ffi.g.dart' show ETStatus;
 import '../generated/executorch_llm_ffi.g.dart';
 import '../llm_types.dart';
+import '../utf8_pieces.dart';
 import 'native_status.dart';
 
 /// Thin wrapper around the native `ETLLMRunner` with streaming generation.
@@ -58,6 +61,20 @@ class NativeLLMRunner implements ffi.Finalizable {
     }
   }
 
+  /// Loads the model's methods (for XNNPACK, compiling the delegate graphs),
+  /// which the runner otherwise does on the first generate. Runs on a helper
+  /// isolate: it takes seconds for a large model and would block the caller.
+  Future<void> loadAsync() async {
+    _checkDisposed();
+    final address = _ptr.address;
+    final statusAddress = await Isolate.run(
+      () => et_llm_runner_load(
+        ffi.Pointer<ETLLMRunner>.fromAddress(address),
+      ).address,
+    );
+    checkStatus(ffi.Pointer<ETStatus>.fromAddress(statusAddress));
+  }
+
   /// Point the MLX backend at its Metal kernel library (`mlx.metallib`).
   ///
   /// Must be called BEFORE [NativeLLMRunner.create] for MLX models. No-op for
@@ -80,6 +97,19 @@ class NativeLLMRunner implements ffi.Finalizable {
   /// Tracks an in-flight generation so [disposeAsync] never frees the runner
   /// mid-generation (which would crash deep in the kernels, use-after-free).
   Completer<void>? _generation;
+
+  /// Whether stop() was asked for during the current generation.
+  bool _stopRequested = false;
+
+  /// Whether reset() was asked for during the current generation; it applies
+  /// when the generation ends.
+  bool _resetPending = false;
+
+  /// Set when disposeAsync() starts. Stream listeners still run while it
+  /// drains the last generation; a generate() from one of them must not
+  /// start work on a runner that is about to be freed.
+  bool _disposing = false;
+  Future<void>? _disposal;
 
   static final _finalizer = ffi.NativeFinalizer(
     addresses.et_llm_runner_free.cast(),
@@ -106,9 +136,22 @@ class NativeLLMRunner implements ffi.Finalizable {
       );
     }
 
+    final invalid = validateGenConfig(config);
+    if (invalid != null) {
+      return Stream.error(ExecuTorchValidationException(invalid));
+    }
+
     final controller = StreamController<String>();
     final generation = Completer<void>();
     _generation = generation;
+    _stopRequested = false;
+
+    // A token's bytes can end partway through a multi-byte character (byte-
+    // level BPE splits emoji and many non-Latin characters), so pieces are
+    // decoded with the partial bytes held back until the next token.
+    final text = Utf8Pieces((piece) {
+      if (!controller.isClosed) controller.add(piece);
+    });
 
     final promptPtr = prompt.toNativeUtf8().cast<ffi.Char>();
     final cfgPtr = calloc<ETGenConfig>();
@@ -137,14 +180,26 @@ class NativeLLMRunner implements ffi.Finalizable {
       calloc.free(cfgPtr);
       malloc.free(promptPtr);
       _generation = null;
+      // The generation has released the runner, so this doesn't block.
+      if (_resetPending && !_disposed) {
+        _resetPending = false;
+        et_llm_reset(_ptr);
+      }
       if (!generation.isCompleted) generation.complete();
     }
 
     void onToken(ffi.Pointer<ffi.Char> token, ffi.Pointer<ffi.Void> _) {
       if (token == ffi.nullptr) return;
+      // The runner's token loop clears its stop flag when it starts, after
+      // prefill, so a stop asked for during prefill is lost. Ask again: the
+      // loop is running now.
+      if (_stopRequested && !_disposed) et_llm_stop(_ptr);
       try {
-        final piece = token.cast<Utf8>().toDartString();
-        if (!controller.isClosed) controller.add(piece);
+        final length = token.cast<Utf8>().length;
+        // Copied before the native string is freed below.
+        text.add(
+          Uint8List.fromList(token.cast<ffi.Uint8>().asTypedList(length)),
+        );
       } finally {
         // We own the heap string handed to us by the native side.
         et_llm_string_free(token);
@@ -152,6 +207,7 @@ class NativeLLMRunner implements ffi.Finalizable {
     }
 
     void onDone(ffi.Pointer<ffi.Void> statusVoid) {
+      text.close(); // emits any bytes still held back, before the outcome
       try {
         checkStatus(statusVoid.cast<ETStatus>());
       } catch (e, st) {
@@ -166,9 +222,11 @@ class NativeLLMRunner implements ffi.Finalizable {
     doneCallable = ffi.NativeCallable.listener(onDone);
 
     // Cooperatively stop generation if the consumer cancels. The native done
-    // callback still fires afterwards and runs cleanup().
+    // callback still fires afterwards and runs cleanup(). A subscription can
+    // be cancelled after its generation ended and another began; leave that
+    // one alone.
     controller.onCancel = () {
-      if (!_disposed) et_llm_stop(_ptr);
+      if (identical(_generation, generation)) stop();
     };
 
     et_llm_generate_async(
@@ -185,23 +243,34 @@ class NativeLLMRunner implements ffi.Finalizable {
 
   /// Cooperatively stop an in-flight generation.
   void stop() {
-    if (_disposed) return;
+    if (_disposed || _generation == null) return;
+    _stopRequested = true;
     et_llm_stop(_ptr);
   }
 
   /// Clear the KV cache and start a fresh conversation.
+  ///
+  /// During a generation the reset waits for it to end: the runner is busy,
+  /// and waiting here would block the calling isolate until then.
   void reset() {
     _checkDisposed();
+    if (_generation != null) {
+      _resetPending = true;
+      return;
+    }
     et_llm_reset(_ptr);
   }
 
   /// Stop any in-flight generation, wait for it to finish, then free the
   /// runner.
-  Future<void> disposeAsync() async {
+  Future<void> disposeAsync() => _disposal ??= _disposeAsync();
+
+  Future<void> _disposeAsync() async {
     if (_disposed) return;
+    _disposing = true;
     final generation = _generation;
     if (generation != null) {
-      et_llm_stop(_ptr);
+      stop(); // also re-sent once tokens flow, if this lands in prefill
       await generation.future.catchError((_) {});
     }
     dispose();
@@ -217,7 +286,7 @@ class NativeLLMRunner implements ffi.Finalizable {
   }
 
   void _checkDisposed() {
-    if (_disposed) {
+    if (_disposed || _disposing) {
       throw const ExecuTorchModelException('LLM runner has been disposed');
     }
   }

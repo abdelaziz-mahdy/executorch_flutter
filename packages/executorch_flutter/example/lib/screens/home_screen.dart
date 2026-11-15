@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../llm/llm_files_stub.dart'
     if (dart.library.io) '../llm/llm_files_io.dart'
+    if (dart.library.js_interop) '../llm/llm_files_web.dart'
     show llmSupported;
 import 'llm_chat_screen.dart';
 import 'unified_model_playground.dart';
@@ -55,8 +56,7 @@ class HomeScreen extends StatelessWidget {
       icon: Icons.chat_bubble_outline,
       color: Color(0xFF34A853),
       builder: _buildChat,
-      // No WebAssembly build of the LLM runner yet.
-      unavailable: llmSupported ? null : 'Not available on web yet',
+      unavailable: llmSupported ? null : 'Not available on this platform',
     ),
   ];
 

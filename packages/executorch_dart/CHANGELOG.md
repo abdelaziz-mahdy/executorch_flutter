@@ -1,3 +1,36 @@
+## 0.9.1
+
+### Added
+
+- `validateGenConfig(config)` returns why a `GenConfig` can't be used, or
+  null. `ExecuTorchLLM.generate` runs it first on every platform.
+
+### Changed
+
+- `ExecuTorchLLM.load` loads the model before it returns, on a helper
+  isolate, so `isLoaded` is true once it has, and a model that can't run
+  fails at load (with `ExecuTorchModelException`, or
+  `ExecuTorchMemoryException` when memory runs out) instead of on the first
+  `generate`.
+- `generate` checks `GenConfig` before any output: a temperature outside
+  `[0, 1]` (the range the runner accepts, now stated in the docs), a
+  `maxNewTokens` or `seqLen` of 0, below -1 or beyond 32 bits, or a
+  `numBos`/`numEos` outside 0–127 fails at once with
+  `ExecuTorchValidationException`.
+- `reset()` during a generation now applies when the generation ends instead
+  of blocking the calling isolate until then.
+
+### Fixed
+
+- `ExecuTorchLLM.generate` no longer fails with a `FormatException` when a
+  token ends partway through a multi-byte character, which byte-level
+  tokenizers do for emoji and many non-Latin scripts. Such characters now
+  arrive whole, in the piece that completes them.
+- Cancelling a generation, calling `stop()`, or disposing while the prompt is
+  still being processed now stops it. Before, the runner cleared the stop
+  request when generation began and produced up to `maxNewTokens` tokens
+  anyway, and `dispose()` waited for all of them.
+
 ## 0.9.0
 
 ### Changed

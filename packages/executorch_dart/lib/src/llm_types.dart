@@ -33,7 +33,8 @@ class GenConfig {
   /// `-1` uses the model's `max_context_len` metadata directly.
   final int seqLen;
 
-  /// Sampling temperature (higher = more random). `<= 0` is greedy (argmax).
+  /// Sampling temperature in `[0, 1]` (higher = more random). `0` is greedy
+  /// (argmax); values outside the range fail the generation.
   final double temperature;
 
   /// Whether to echo the input prompt back at the start of the output stream.
@@ -66,4 +67,35 @@ class GenConfig {
     numBos: numBos ?? this.numBos,
     numEos: numEos ?? this.numEos,
   );
+}
+
+/// Why [config] can't be used, or null if it can. The runner rejects these
+/// too, but only after prefill; checking first fails fast, before any output,
+/// the same way on every platform.
+String? validateGenConfig(GenConfig config) {
+  final t = config.temperature;
+  if (!(t >= 0 && t <= 1)) {
+    return 'Temperature must be in [0, 1], got $t';
+  }
+  const int32Max = 0x7FFFFFFF;
+  if (config.maxNewTokens == 0 ||
+      config.maxNewTokens < -1 ||
+      config.maxNewTokens > int32Max) {
+    return 'maxNewTokens must be -1 (fill the context) or between 1 and '
+        '$int32Max, got ${config.maxNewTokens}';
+  }
+  if (config.seqLen == 0 || config.seqLen < -1 || config.seqLen > int32Max) {
+    return "seqLen must be -1 (the model's context) or between 1 and "
+        '$int32Max, got ${config.seqLen}';
+  }
+  // The tokenizer takes these counts as 8-bit integers.
+  for (final (name, count) in [
+    ('numBos', config.numBos),
+    ('numEos', config.numEos),
+  ]) {
+    if (count < 0 || count > 127) {
+      return '$name must be between 0 and 127, got $count';
+    }
+  }
+  return null;
 }

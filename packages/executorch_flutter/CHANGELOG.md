@@ -1,3 +1,37 @@
+## 0.9.1
+
+### Added
+
+- `ExecuTorchLLM` runs on Web. A separate WebAssembly build of the ExecuTorch
+  LLM runner runs in a Web Worker, so replies stream token by token while the
+  page stays responsive, with stop and reset as on the other platforms. It
+  supports XNNPACK (CPU) exports on one thread. On web, model and tokenizer
+  paths are URLs, and files stored in the browser's origin private file system
+  are used without a download. A URL that fails can be served split, as
+  `<url>.parts.json` plus its parts, for static hosts that cap file size.
+  `setup_web` copies the new worker and Wasm files. See `docs/LLM.md`.
+- The example app's LLM chat downloads a hosted Qwen3 0.6B with one tap on
+  every platform, including Web, renders replies as Markdown, and keeps a
+  "use your own model" option with a chat format picker.
+
+### Changed
+
+- The Web runtime (`executorch.wasm`) grows from 3.7 MB to 4.8 MB: it now
+  includes the quantized operators, so quantized models run on Web,
+  ExecuTorch's error log, so load failures report ExecuTorch's own reason in
+  the browser console, and C++ exception support.
+
+### Fixed
+
+- Web: models with a tensor larger than 512 MB no longer fail to load. An
+  XNNPACK size check overflowed on 32-bit WebAssembly and rejected them.
+- `ExecuTorchLLM` replies with emoji or other multi-byte characters split
+  across tokens no longer fail, and stopping while the prompt is processed
+  works. See the core package's changelog, which also covers the changes to
+  `load`, `reset` and `GenConfig` checks.
+- `setup_web` copies the web files of the `executorch_flutter` version the
+  app depends on. Before, it could pick any version found in the pub cache.
+
 ## 0.9.0
 
 ### Changed

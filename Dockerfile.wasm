@@ -92,6 +92,9 @@ ENV PYTHONPATH="/workspace/executorch:${PYTHONPATH}"
 
 # Build script that will be executed
 COPY scripts/build_wasm_in_container.sh /build_wasm.sh
+# Sources the script compiles in (the web LLM runner binding) and the XNNPACK
+# patch it applies
+COPY scripts/wasm /workspace/scripts/wasm
 RUN chmod +x /build_wasm.sh
 
 # Default command: build Wasm binaries

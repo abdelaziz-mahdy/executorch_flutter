@@ -49,7 +49,7 @@ and Web support.
 - **Error Handling**: Structured exception handling with clear error messages
 - **Backend Support**: XNNPACK (all platforms), CoreML (Apple), Metal + MLX (macOS), Vulkan (opt-in)
 - **13 Tensor Dtypes**: float32/64, float16, bfloat16, int8/16/32/64, uint8/16/32/64, bool
-- **On-device LLM (experimental)**: streaming text generation (XNNPACK CPU + MLX Apple-GPU), with a hosted Qwen3 0.6B to try it — see **[docs/LLM.md](docs/LLM.md)**
+- **On-device LLM (experimental)**: streaming text generation (XNNPACK CPU on every platform including Web, MLX on Apple-Silicon GPUs), with a hosted Qwen3 0.6B to try it — see **[docs/LLM.md](docs/LLM.md)**
 - **Live Camera**: Real-time inference with camera stream support
 
 ### Library Size by Backend
@@ -198,8 +198,8 @@ manager, like its `loadModel`/`loadModelFromBytes` counterparts.
 
 On-device generative text — any causal LM exported for the LLM runner, e.g. the
 hosted **Qwen3 0.6B** — with token-by-token streaming, separate from the tensor
-API. Loaded from **file paths** (weights are hundreds of MB) and driven by a stateful decode loop + tokenizer + KV cache. Backends:
-**XNNPACK** (CPU, all platforms) and **MLX** (Apple-Silicon GPU, macOS arm64).
+API. Loaded from **file paths** (weights are hundreds of MB; **URLs** on web) and driven by a stateful decode loop + tokenizer + KV cache. Backends:
+**XNNPACK** (CPU, all platforms including web) and **MLX** (Apple-Silicon GPU, macOS arm64).
 
 ```dart
 // Load (file paths; mlxMetallibPath is MLX-only)
@@ -499,6 +499,28 @@ check — it is easy to fix the model download and still fail on labels.
 
 This repo's own web demo takes the second approach: its deploy workflow copies
 the models into the published site so they are served from the app's origin.
+
+### LLMs on web
+
+`ExecuTorchLLM` runs in the browser too, XNNPACK (CPU) exports only. The runner
+is a separate WebAssembly module (`wasm/executorch_llm.{js,wasm}`) that runs in
+a Web Worker (`js/executorch_llm_worker.js`), so the page stays responsive
+while it generates. `setup_web` copies both; nothing goes in `index.html`.
+
+- `load(modelPath:, tokenizerPath:)` takes **URLs**, with the same CORS rules
+  as above.
+- Files stored in the origin private file system (OPFS), directory
+  `executorch-llm`, named by their percent-encoded absolute URL, are used
+  without a download, so an app can download a model once (with its own
+  progress UI) and keep it across reloads. The example app does this. (Not
+  Cache Storage: browsers cap a single cache entry, some at a few hundred MB.)
+- A URL that fails (404, or 403 from object stores) can be served split: a
+  manifest at the same URL with `.parts.json` added to its path, plus the
+  parts it lists, for hosts that cap file size (GitHub Pages deploys refuse
+  files over 100 MB).
+- It runs on one thread, since GitHub Pages and most hosts can't send the
+  cross-origin isolation headers that Wasm threads need. Expect a few tokens
+  per second for a 0.6B model on a recent laptop.
 
 ---
 
