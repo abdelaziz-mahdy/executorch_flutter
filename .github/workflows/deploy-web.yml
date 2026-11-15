@@ -112,7 +112,10 @@ jobs:
           LLMS="https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main/$VERSION/llms.json"
           STATUS=$(curl -sS -o /tmp/llms.json -w '%{http_code}' "$LLMS")
           if [ "$STATUS" = "404" ]; then
-            echo "No hosted LLMs for $VERSION; skipping"
+            # The app was built to read models/llms.json; an empty catalog
+            # makes it list no hosted models instead of failing to load one.
+            echo "No hosted LLMs for $VERSION; publishing an empty catalog"
+            echo '{"llms": []}' > build/web/models/llms.json
             exit 0
           fi
           if [ "$STATUS" != "200" ]; then
@@ -125,6 +128,7 @@ jobs:
           PART = 90 * 1024 * 1024
           llms = json.load(open('/tmp/llms.json'))['llms']
           total = 0
+          fetched = {}  # name -> sha256 of the LLM files placed so far
           for llm in (l for l in llms if l['backend'] == 'xnnpack'):
               for f in llm['files'].values():
                   path = f"build/web/models/{f['name']}"
@@ -132,8 +136,14 @@ jobs:
                   # this name, and must not replace another model's file.
                   if f['url'].split('?')[0].rsplit('/', 1)[-1] != f['name']:
                       raise SystemExit(f"{f['name']}: name doesn't match {f['url']}")
-                  if os.path.exists(path):
+                  if f['name'] in fetched:
+                      # Shared by two LLMs (a common tokenizer): fine if equal.
+                      if fetched[f['name']] != f['sha256']:
+                          raise SystemExit(f"two different files named {f['name']}")
+                      continue
+                  if os.path.exists(path) or os.path.exists(f"{path}.parts.json"):
                       raise SystemExit(f"{f['name']} would overwrite another file")
+                  fetched[f['name']] = f['sha256']
                   print(f"  {f['name']} ({f['size'] / 1e6:.1f} MB)")
                   subprocess.run(['curl', '-fsSL', f['url'], '-o', path], check=True)
                   digest = hashlib.sha256(open(path, 'rb').read()).hexdigest()

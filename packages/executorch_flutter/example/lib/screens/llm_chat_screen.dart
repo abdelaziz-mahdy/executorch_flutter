@@ -245,6 +245,9 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
     // Fresh KV cache each turn — the prompt already carries the full history.
     llm.reset();
     final done = Completer<void>();
+    // Once the end-of-turn marker is seen, pieces already in flight before the
+    // stop lands are not part of the reply.
+    var ended = false;
     _sub = llm
         .generate(
           prompt,
@@ -258,12 +261,16 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
             // Exports that declare the end-of-turn marker as a stop token stop
             // by themselves; others keep emitting it. Handle it here so the
             // package stays model-agnostic: hide the marker and stop.
+            if (ended) return;
             final cleaned = _format.clean(piece);
             if (cleaned.text.isNotEmpty) {
               setState(() => assistant.text += cleaned.text);
               _scrollToBottom();
             }
-            if (cleaned.ended) _stop();
+            if (cleaned.ended) {
+              ended = true;
+              _stop();
+            }
           },
           onError: (Object e) {
             setState(() => _error = '$e');

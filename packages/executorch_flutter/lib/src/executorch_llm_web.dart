@@ -70,8 +70,36 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
 /// this package's `web/` folder).
 class ExecuTorchLLM {
   ExecuTorchLLM._(this._worker) {
-    _worker.onmessage = _onMessage.toJS;
-    _worker.onerror = _onError.toJS;
+    // The handlers hold this object weakly: a strong reference from the
+    // worker would keep it alive forever, and the finalizer could never end
+    // a worker whose ExecuTorchLLM was dropped without dispose(). While a
+    // reply is awaited, _inFlight holds it instead (see _track).
+    final self = WeakReference(this);
+    _worker
+      ..onmessage = ((_MessageEvent event) => self.target?._onMessage(
+        event,
+      )).toJS
+      ..onerror = ((_ErrorEvent event) => self.target?._onError(event)).toJS;
+    _finalizer.attach(this, _worker, detach: this);
+  }
+
+  /// Ends the worker (and frees its Wasm heap) of an instance that was
+  /// garbage-collected without dispose(), as native frees its runner.
+  static final Finalizer<_Worker> _finalizer = Finalizer(
+    (worker) => worker.terminate(),
+  );
+
+  /// Instances waiting for a reply from their worker. Only the weak handler
+  /// leads back to an instance whose caller is awaiting a future, so without
+  /// this it could be collected mid-request and the reply lost.
+  static final Set<ExecuTorchLLM> _inFlight = {};
+
+  void _track() {
+    if (_pending.isNotEmpty || _generation != null) {
+      _inFlight.add(this);
+    } else {
+      _inFlight.remove(this);
+    }
   }
 
   /// Where the worker script is served from, relative to the page.
@@ -134,6 +162,8 @@ class ExecuTorchLLM {
   var _disposed = false;
   int? _generationId;
   StreamController<String>? _generation;
+  Completer<void>? _generationEnded;
+  Future<void>? _disposal;
 
   /// Whether the model has finished loading.
   bool get isLoaded => _loaded && !_disposed;
@@ -170,6 +200,8 @@ class ExecuTorchLLM {
       };
     _generation = controller;
     _generationId = id;
+    _generationEnded = Completer<void>();
+    _track();
     _worker.postMessage(
       {
         'id': id,
@@ -202,8 +234,17 @@ class ExecuTorchLLM {
   }
 
   /// Stop any in-flight generation, then release the worker and its memory.
-  Future<void> dispose() async {
-    if (_disposed) return;
+  ///
+  /// Like native, a running generation is stopped and drained first, so its
+  /// stream gets the pieces already produced before it closes.
+  Future<void> dispose() => _disposal ??= _dispose();
+
+  Future<void> _dispose() async {
+    final ended = _generationEnded;
+    if (_generation != null && ended != null) {
+      stop();
+      await ended.future;
+    }
     _disposed = true;
     _terminate();
   }
@@ -212,6 +253,7 @@ class ExecuTorchLLM {
     final id = _nextId++;
     final completer = Completer<void>();
     _pending[id] = completer;
+    _track();
     _worker.postMessage({...message, 'id': id}.jsify());
     return completer.future;
   }
@@ -241,6 +283,7 @@ class ExecuTorchLLM {
 
     final completer = id == null ? null : _pending.remove(id);
     if (completer == null) return;
+    _track();
     if (type == 'error') {
       completer.completeError(
         _exceptionFor(data['kind'] as String?, data['message'] as String),
@@ -264,12 +307,17 @@ class ExecuTorchLLM {
 
   void _endGeneration() {
     final controller = _generation;
+    final ended = _generationEnded;
     _generation = null;
     _generationId = null;
+    _generationEnded = null;
+    _track();
     controller?.close();
+    if (ended != null && !ended.isCompleted) ended.complete();
   }
 
   void _terminate() {
+    _finalizer.detach(this);
     _worker.terminate();
     for (final completer in _pending.values) {
       if (!completer.isCompleted) {

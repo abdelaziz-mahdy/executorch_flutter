@@ -73,6 +73,12 @@ function post(message) {
   self.postMessage(message);
 }
 
+// Revalidates any HTTP-cached copy: after a redeploy that changes a file at the
+// same URL, a cached part or tokenizer would otherwise pair with new ones.
+function fetchFresh(url) {
+  return fetch(url, { cache: 'no-cache' });
+}
+
 // The stored copy of [url] in the origin private file system, or null. An
 // empty file is a download that never finished, so it doesn't count.
 async function openStored(url) {
@@ -103,7 +109,7 @@ function partsStream(manifestUrl, manifest) {
             controller.close();
             return;
           }
-          const part = await fetch(urls[index]);
+          const part = await fetchFresh(urls[index]);
           if (!part.ok || !part.body) {
             throw new Error(`Could not download ${urls[index]} (HTTP ${part.status})`);
           }
@@ -133,8 +139,8 @@ async function openSource(url) {
   const stored = await openStored(url);
   if (stored) return { body: stored.stream(), length: stored.size, exact: true };
 
-  const response = await fetch(url);
-  if (response.ok) {
+  const response = await fetchFresh(url);
+  if (response.ok && response.body) {
     // Content-Length is the length on the wire: with a compressed transfer it
     // is smaller than the body, and a cross-origin response hides the
     // Content-Encoding that would say so. It is only a size hint.
@@ -143,7 +149,7 @@ async function openSource(url) {
   }
   if (response.body) response.body.cancel().catch(() => {});
   const manifestUrl = url + '.parts.json';
-  const manifest = await fetch(manifestUrl);
+  const manifest = await fetchFresh(manifestUrl);
   if (manifest.ok) {
     const parts = await manifest.json();
     return { body: partsStream(manifestUrl, parts), length: parts.size, exact: true };
@@ -166,8 +172,9 @@ async function readIntoHeap({ body, length, exact }) {
   let ptr = et._malloc(capacity);
   if (!ptr) throw new WorkerError(`Out of memory for a ${capacity}-byte model`, 'memory');
   let offset = 0;
-  const reader = body.getReader();
+  let reader = null;
   try {
+    reader = body.getReader();
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -196,7 +203,7 @@ async function readIntoHeap({ body, length, exact }) {
     }
   } catch (err) {
     et._free(ptr);
-    reader.cancel().catch(() => {}); // don't keep downloading
+    if (reader) reader.cancel().catch(() => {}); // don't keep downloading
     throw err;
   }
   if (offset === 0) {
