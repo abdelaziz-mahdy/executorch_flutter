@@ -58,19 +58,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract changelog for version
-        id: changelog
+      - name: Write release notes
+        env:
+          VERSION: ${{ needs.get-version.outputs.version }}
+          REPO: ${{ github.repository }}
         run: |
-          VERSION="${{ needs.get-version.outputs.version }}"
-          # Extract changelog section for this version
-          CHANGELOG=$(awk "/^## $VERSION/,/^## [0-9]/" packages/executorch_flutter/CHANGELOG.md | head -n -1 | tail -n +2)
-          if [ -z "$CHANGELOG" ]; then
-            CHANGELOG="Release version $VERSION"
-          fi
-          # Handle multiline output
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Each package's CHANGELOG section for this version, with its
+          # pub.dev link (scripts/release_notes.sh), then the example apps.
+          D="https://github.com/$REPO/releases/download/v$VERSION"
+          {
+            bash scripts/release_notes.sh "$VERSION"
+            echo "---"
+            echo
+            echo "## Example App Downloads"
+            echo
+            echo "| Platform | Architecture | Download |"
+            echo "|----------|--------------|----------|"
+            echo "| Android | arm64-v8a | [APK]($D/executorch_flutter_example-android-arm64-v$VERSION.apk) |"
+            echo "| iOS | arm64 | [ZIP]($D/executorch_flutter_example-ios-arm64-v$VERSION.zip) |"
+            echo "| macOS | Universal | [ZIP]($D/executorch_flutter_example-macos-universal-v$VERSION.zip) |"
+            echo "| Windows | x64 | [ZIP]($D/executorch_flutter_example-windows-x64-v$VERSION.zip) |"
+            echo "| Linux | x64 | [ZIP]($D/executorch_flutter_example-linux-x64-v$VERSION.zip) |"
+          } > release-notes.md
+          cat release-notes.md
 
       # Download all example app build artifacts
       - name: Download Android APK
@@ -144,26 +154,7 @@ jobs:
         with:
           tag_name: v${{ needs.get-version.outputs.version }}
           name: v${{ needs.get-version.outputs.version }}
-          body: |
-            ## What's Changed
-
-            ${{ steps.changelog.outputs.changelog }}
-
-            ---
-
-            ## Example App Downloads
-
-            | Platform | Architecture | Download |
-            |----------|--------------|----------|
-            | Android | arm64-v8a | [APK](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-android-arm64-v${{ needs.get-version.outputs.version }}.apk) |
-            | iOS | arm64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-ios-arm64-v${{ needs.get-version.outputs.version }}.zip) |
-            | macOS | Universal | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-macos-universal-v${{ needs.get-version.outputs.version }}.zip) |
-            | Windows | x64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-windows-x64-v${{ needs.get-version.outputs.version }}.zip) |
-            | Linux | x64 | [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ needs.get-version.outputs.version }}/executorch_flutter_example-linux-x64-v${{ needs.get-version.outputs.version }}.zip) |
-
-            ---
-
-            📦 [View on pub.dev](https://pub.dev/packages/executorch_flutter/versions/${{ needs.get-version.outputs.version }})
+          body_path: release-notes.md
           draft: false
           prerelease: false
           files: |
