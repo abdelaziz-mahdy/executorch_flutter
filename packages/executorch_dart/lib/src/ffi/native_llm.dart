@@ -5,8 +5,8 @@
 library;
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ffi' as ffi;
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -15,6 +15,7 @@ import '../executorch_errors.dart';
 import '../generated/executorch_ffi.g.dart' show ETStatus;
 import '../generated/executorch_llm_ffi.g.dart';
 import '../llm_types.dart';
+import '../utf8_pieces.dart';
 import 'native_status.dart';
 
 /// Thin wrapper around the native `ETLLMRunner` with streaming generation.
@@ -60,6 +61,20 @@ class NativeLLMRunner implements ffi.Finalizable {
     }
   }
 
+  /// Loads the model's methods (for XNNPACK, compiling the delegate graphs),
+  /// which the runner otherwise does on the first generate. Runs on a helper
+  /// isolate: it takes seconds for a large model and would block the caller.
+  Future<void> loadAsync() async {
+    _checkDisposed();
+    final address = _ptr.address;
+    final statusAddress = await Isolate.run(
+      () => et_llm_runner_load(
+        ffi.Pointer<ETLLMRunner>.fromAddress(address),
+      ).address,
+    );
+    checkStatus(ffi.Pointer<ETStatus>.fromAddress(statusAddress));
+  }
+
   /// Point the MLX backend at its Metal kernel library (`mlx.metallib`).
   ///
   /// Must be called BEFORE [NativeLLMRunner.create] for MLX models. No-op for
@@ -82,6 +97,9 @@ class NativeLLMRunner implements ffi.Finalizable {
   /// Tracks an in-flight generation so [disposeAsync] never frees the runner
   /// mid-generation (which would crash deep in the kernels, use-after-free).
   Completer<void>? _generation;
+
+  /// Whether stop() was asked for during the current generation.
+  bool _stopRequested = false;
 
   static final _finalizer = ffi.NativeFinalizer(
     addresses.et_llm_runner_free.cast(),
@@ -108,16 +126,22 @@ class NativeLLMRunner implements ffi.Finalizable {
       );
     }
 
+    final invalid = validateGenConfig(config);
+    if (invalid != null) {
+      return Stream.error(ExecuTorchValidationException(invalid));
+    }
+
     final controller = StreamController<String>();
     final generation = Completer<void>();
     _generation = generation;
+    _stopRequested = false;
 
     // A token's bytes can end partway through a multi-byte character (byte-
-    // level BPE splits emoji and many non-Latin characters); the chunked
-    // decoder keeps the partial bytes until the next token completes them.
-    final text = const Utf8Decoder(
-      allowMalformed: true,
-    ).startChunkedConversion(_PieceSink(controller));
+    // level BPE splits emoji and many non-Latin characters), so pieces are
+    // decoded with the partial bytes held back until the next token.
+    final text = Utf8Pieces((piece) {
+      if (!controller.isClosed) controller.add(piece);
+    });
 
     final promptPtr = prompt.toNativeUtf8().cast<ffi.Char>();
     final cfgPtr = calloc<ETGenConfig>();
@@ -151,6 +175,10 @@ class NativeLLMRunner implements ffi.Finalizable {
 
     void onToken(ffi.Pointer<ffi.Char> token, ffi.Pointer<ffi.Void> _) {
       if (token == ffi.nullptr) return;
+      // The runner's token loop clears its stop flag when it starts, after
+      // prefill, so a stop asked for during prefill is lost. Ask again: the
+      // loop is running now.
+      if (_stopRequested && !_disposed) et_llm_stop(_ptr);
       try {
         final length = token.cast<Utf8>().length;
         // Copied before the native string is freed below.
@@ -180,9 +208,7 @@ class NativeLLMRunner implements ffi.Finalizable {
 
     // Cooperatively stop generation if the consumer cancels. The native done
     // callback still fires afterwards and runs cleanup().
-    controller.onCancel = () {
-      if (!_disposed) et_llm_stop(_ptr);
-    };
+    controller.onCancel = stop;
 
     et_llm_generate_async(
       _ptr,
@@ -198,7 +224,8 @@ class NativeLLMRunner implements ffi.Finalizable {
 
   /// Cooperatively stop an in-flight generation.
   void stop() {
-    if (_disposed) return;
+    if (_disposed || _generation == null) return;
+    _stopRequested = true;
     et_llm_stop(_ptr);
   }
 
@@ -234,19 +261,4 @@ class NativeLLMRunner implements ffi.Finalizable {
       throw const ExecuTorchModelException('LLM runner has been disposed');
     }
   }
-}
-
-/// Forwards decoded text to a generation's stream, skipping empty pieces.
-class _PieceSink implements Sink<String> {
-  _PieceSink(this._controller);
-
-  final StreamController<String> _controller;
-
-  @override
-  void add(String data) {
-    if (data.isNotEmpty && !_controller.isClosed) _controller.add(data);
-  }
-
-  @override
-  void close() {}
 }

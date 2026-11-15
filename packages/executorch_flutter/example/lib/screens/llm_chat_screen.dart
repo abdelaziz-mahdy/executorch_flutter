@@ -143,10 +143,13 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
       }
       return;
     }
+    // On web without usable browser storage nothing was kept, and the model
+    // downloads again on the next visit.
+    final cached = await cachedFiles(entry) != null;
     if (!mounted) return;
     setState(() {
       state.downloading = false;
-      state.cached = true;
+      state.cached = cached;
     });
     await _load(
       name: entry.displayName,

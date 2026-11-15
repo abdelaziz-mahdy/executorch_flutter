@@ -46,13 +46,14 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
 ///
 /// - [load]'s `modelPath` and `tokenizerPath` are **URLs**. They are read from
 ///   the origin private file system (OPFS) when stored there — directory
-///   `executorch-llm`, file name `Uri.encodeComponent(url)` — so an app can
-///   download them once and keep them across reloads, and fetched otherwise.
-///   A URL that answers 404 may be served split, as `<url>.parts.json`
+///   `executorch-llm`, file name `Uri.encodeComponent` of the absolute URL
+///   (`Uri.base.resolve(path)`) — so an app can download them once and keep
+///   them across reloads, and fetched otherwise. A URL that fails (404, or
+///   403 from object stores) may be served split, as `<url>.parts.json`
 ///   (`{"size": bytes, "parts": [names relative to it]}`), for static hosts
 ///   that cap file size. A cross-origin URL must send CORS headers.
-/// - Only XNNPACK (CPU) exports run, on a single thread, so expect a fraction
-///   of native speed.
+/// - Only XNNPACK (CPU) exports with a KV cache run, on a single thread, so
+///   expect a fraction of native speed.
 ///
 /// The app must serve `js/executorch_llm_worker.js` and
 /// `wasm/executorch_llm.{js,wasm}` from its `web/` directory (copy them from

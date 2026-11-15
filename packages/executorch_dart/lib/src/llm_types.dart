@@ -68,3 +68,18 @@ class GenConfig {
     numEos: numEos ?? this.numEos,
   );
 }
+
+/// Why [config] can't be used, or null if it can. The runner rejects these
+/// too, but only after prefill; checking first fails fast, before any output,
+/// the same way on every platform.
+String? validateGenConfig(GenConfig config) {
+  final t = config.temperature;
+  if (!(t >= 0 && t <= 1)) {
+    return 'Temperature must be in [0, 1], got $t';
+  }
+  if (config.maxNewTokens == 0 || config.maxNewTokens < -1) {
+    return 'maxNewTokens must be -1 (fill the context) or at least 1, '
+        'got ${config.maxNewTokens}';
+  }
+  return null;
+}

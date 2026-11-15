@@ -6,6 +6,7 @@ library;
 
 import 'dart:async';
 
+import 'executorch_errors.dart';
 import 'ffi/native_llm.dart';
 import 'llm_types.dart';
 
@@ -63,6 +64,17 @@ class ExecuTorchLLM {
       tokenizerPath: tokenizerPath,
       dataPath: dataPath,
     );
+    // Load now rather than on the first generate, so a model that can't run
+    // fails here and isLoaded is true once this returns.
+    try {
+      await runner.loadAsync();
+    } on ExecuTorchMemoryException {
+      runner.dispose();
+      rethrow;
+    } on ExecuTorchException catch (e) {
+      runner.dispose();
+      throw ExecuTorchModelException('Could not load the LLM: ${e.message}');
+    }
     return ExecuTorchLLM._(runner);
   }
 

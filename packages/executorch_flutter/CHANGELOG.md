@@ -7,7 +7,7 @@
   page stays responsive, with stop and reset as on the other platforms. It
   supports XNNPACK (CPU) exports on one thread. On web, model and tokenizer
   paths are URLs, and files stored in the browser's origin private file system
-  are used without a download. A URL that answers 404 can be served split, as
+  are used without a download. A URL that fails can be served split, as
   `<url>.parts.json` plus its parts, for static hosts that cap file size.
   `setup_web` copies the new worker and Wasm files. See `docs/LLM.md`.
 - The example app's LLM chat downloads a hosted Qwen3 0.6B with one tap on
@@ -26,7 +26,10 @@
 - Web: models with a tensor larger than 512 MB no longer fail to load. An
   XNNPACK size check overflowed on 32-bit WebAssembly and rejected them.
 - `ExecuTorchLLM` replies with emoji or other multi-byte characters split
-  across tokens no longer fail. See the core package's changelog.
+  across tokens no longer fail, stopping during the prompt works, and
+  `load` reports a model that can't run. See the core package's changelog.
+- `setup_web` copies the web files of the `executorch_flutter` version the
+  app depends on. Before, it could pick any version found in the pub cache.
 
 ## 0.9.0
 

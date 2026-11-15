@@ -40,7 +40,8 @@ jobs:
         run: |
           flutter build web --release \
             --base-href "/executorch_flutter/" \
-            --dart-define=MODEL_BASE_URL=models
+            --dart-define=MODEL_BASE_URL=models \
+            --dart-define=LLM_CATALOG_URL=models/llms.json
 
       # GitHub release assets send no Access-Control-Allow-Origin header, so a
       # browser cannot fetch them cross-origin — model loading fails in the
@@ -147,6 +148,9 @@ jobs:
                   print(f"    split into {len(parts)} parts")
           print(f"Fetched {total / 1e6:.1f} MB of LLM files")
           PY
+          # The app reads this copy (LLM_CATALOG_URL above), not the live one,
+          # so its sizes and hashes always match the files served next to it.
+          cp /tmp/llms.json build/web/models/llms.json
 
           du -sh build/web
           # Nothing over GitHub's 100 MB push limit may reach the deploy.

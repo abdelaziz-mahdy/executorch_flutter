@@ -77,31 +77,13 @@ val result_error(const std::string& message, Error err) {
   return result_error(message, error_kind(err));
 }
 
-// Length of the prefix of [s] that does not end inside a UTF-8 sequence. A
-// byte-level BPE token can end partway through a multi-byte character; the
-// rest of it arrives with the next token.
-size_t complete_utf8_prefix(const std::string& s) {
-  const size_t n = s.size();
-  size_t start = n;
-  // Walk back over at most three continuation bytes to the lead byte.
-  while (start > 0 && n - start < 3 &&
-         (static_cast<unsigned char>(s[start - 1]) & 0xC0) == 0x80) {
-    --start;
-  }
-  if (start == 0) {
-    return n; // only continuation bytes: not ours to repair
-  }
-  const auto lead = static_cast<unsigned char>(s[start - 1]);
-  size_t needed = 1;
-  if ((lead & 0xE0) == 0xC0) {
-    needed = 2;
-  } else if ((lead & 0xF0) == 0xE0) {
-    needed = 3;
-  } else if ((lead & 0xF8) == 0xF0) {
-    needed = 4;
-  }
-  const size_t have = n - (start - 1);
-  return have < needed ? start - 1 : n;
+// A JS copy of [bytes]. Token pieces go to JS as bytes, not strings: a piece
+// can end partway through a UTF-8 character, and the worker's streaming
+// TextDecoder joins and validates them across pieces.
+val js_bytes(const std::string& bytes) {
+  return val::global("Uint8Array")
+      .new_(emscripten::typed_memory_view(
+          bytes.size(), reinterpret_cast<const uint8_t*>(bytes.data())));
 }
 
 class WebLLMRunner {
@@ -199,8 +181,9 @@ class WebLLMRunner {
     return "";
   }
 
-  // Encodes and prefills [prompt]. Returns {pieces: string[], done: bool} with
-  // the echoed prompt (if asked) and the first generated piece, or {error}.
+  // Encodes and prefills [prompt]. Returns {echo: string, bytes: Uint8Array,
+  // done: bool}: the prompt when echo is asked for ("" otherwise) and the
+  // first generated piece's bytes. Or {error, kind}.
   val begin(
       const std::string& prompt,
       int max_new_tokens,
@@ -214,14 +197,19 @@ class WebLLMRunner {
       return result_error("No model is loaded", Error::InvalidState);
     }
     done_ = true;
-    utf8_pending_.clear();
     if (prompt.empty()) {
       // Upstream: "Empty prompt requires a prior prefill() call".
       return result_error("The prompt is empty", Error::InvalidState);
     }
-    if (temperature < 0.0f || temperature > 1.0f) {
+    // Written so NaN fails too, as upstream's check does.
+    if (!(temperature >= 0.0f && temperature <= 1.0f)) {
       return result_error(
           "Temperature must be in [0, 1]", Error::InvalidArgument);
+    }
+    if (max_new_tokens == 0 || max_new_tokens < -1) {
+      return result_error(
+          "maxNewTokens must be -1 (fill the context) or at least 1",
+          Error::InvalidArgument);
     }
 
     auto encoded = tokenizer_->encode(prompt, num_bos, num_eos);
@@ -247,11 +235,6 @@ class WebLLMRunner {
       return result_error(
           "The prompt is longer than the model's context",
           Error::InvalidArgument);
-    }
-
-    val pieces = val::array();
-    if (echo) {
-      pieces.call<void>("push", prompt);
     }
 
     auto prefilled = prefiller_->prefill(tokens, pos_);
@@ -286,19 +269,20 @@ class WebLLMRunner {
     // Prefill produced one token; the rest come from step().
     remaining_ -= 1;
     done_ = remaining_ <= 0;
-    pieces.call<void>("push", take_complete(first.get()));
 
     val out = val::object();
-    out.set("pieces", pieces);
+    out.set("echo", echo ? prompt : std::string());
+    out.set("bytes", js_bytes(first.get()));
     out.set("done", done_);
     return out;
   }
 
-  // Generates one token. Returns {piece: string, done: bool} or {error}.
+  // Generates one token. Returns {bytes: Uint8Array, done: bool} or
+  // {error, kind}.
   val step() {
     val out = val::object();
     if (done_ || !module_) {
-      out.set("piece", std::string());
+      out.set("bytes", js_bytes(std::string()));
       out.set("done", true);
       return out;
     }
@@ -322,40 +306,18 @@ class WebLLMRunner {
     }
     done_ = remaining_ <= 0 ||
         (!ignore_eos_ && eos_ids_.count(cur_token_) > 0);
-    out.set("piece", take_complete(piece.get()));
+    out.set("bytes", js_bytes(piece.get()));
     out.set("done", done_);
     return out;
-  }
-
-  // Bytes held back because the last piece ended inside a UTF-8 character.
-  // The worker emits them when a generation ends early (stop), so nothing the
-  // model produced is dropped.
-  std::string flush() {
-    std::string rest;
-    rest.swap(utf8_pending_);
-    return rest;
   }
 
   // Starts a new conversation: the next prompt is written from position 0.
   void reset() {
     pos_ = 0;
     done_ = true;
-    utf8_pending_.clear();
   }
 
  private:
-  // Returns the part of utf8_pending_ + [piece] that ends on a character
-  // boundary and keeps the rest for the next piece. When the generation is
-  // done, everything goes out.
-  std::string take_complete(const std::string& piece) {
-    utf8_pending_ += piece;
-    const size_t keep_from =
-        done_ ? utf8_pending_.size() : complete_utf8_prefix(utf8_pending_);
-    std::string out = utf8_pending_.substr(0, keep_from);
-    utf8_pending_.erase(0, keep_from);
-    return out;
-  }
-
   void* model_data_ = nullptr;
   std::unique_ptr<tokenizers::Tokenizer> tokenizer_;
   std::unique_ptr<Module> module_;
@@ -371,7 +333,6 @@ class WebLLMRunner {
   float temperature_ = 0.0f;
   bool ignore_eos_ = false;
   bool done_ = true;
-  std::string utf8_pending_;
   std::vector<int64_t> token_data_;
   TensorPtr tokens_;
 };
@@ -384,6 +345,5 @@ EMSCRIPTEN_BINDINGS(executorch_llm_web) {
       .function("load", &WebLLMRunner::load)
       .function("begin", &WebLLMRunner::begin)
       .function("step", &WebLLMRunner::step)
-      .function("flush", &WebLLMRunner::flush)
       .function("reset", &WebLLMRunner::reset);
 }

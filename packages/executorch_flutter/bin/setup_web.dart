@@ -14,6 +14,7 @@
 library;
 
 import 'dart:io';
+import 'dart:isolate';
 
 void main(List<String> args) {
   print('🔧 ExecuTorch Flutter - Web Setup');
@@ -165,6 +166,21 @@ String? _findPackageRoot() {
       multiLine: true,
     ).hasMatch(content)) {
       return Directory.current.path;
+    }
+  }
+
+  // The version this app actually depends on: `dart run
+  // executorch_flutter:setup_web` runs with the app's package config. The
+  // worker and the Wasm files must match the Dart code exactly, so this comes
+  // before any guess below.
+  final library = Isolate.resolvePackageUriSync(
+    Uri.parse('package:executorch_flutter/executorch_flutter.dart'),
+  );
+  if (library != null && library.isScheme('file')) {
+    final libDir = File.fromUri(library).parent;
+    final root = libDir.parent.path;
+    if (File(_joinPath(root, 'pubspec.yaml')).existsSync()) {
+      return root;
     }
   }
 

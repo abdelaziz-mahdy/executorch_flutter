@@ -184,10 +184,12 @@ fi
 # Verify output files
 echo ""
 echo "Verifying build outputs..."
-if [ -f "${WEB_WASM_DIR}/executorch.js" ] && [ -f "${WEB_WASM_DIR}/executorch.wasm" ]; then
+if [ -f "${WEB_WASM_DIR}/executorch.js" ] && [ -f "${WEB_WASM_DIR}/executorch.wasm" ] \
+    && [ -f "${WEB_WASM_DIR}/executorch_llm.js" ] && [ -f "${WEB_WASM_DIR}/executorch_llm.wasm" ]; then
     echo -e "${GREEN}✅ Wasm library binaries successfully generated:${NC}"
     echo ""
-    ls -lh "${WEB_WASM_DIR}/executorch.js" "${WEB_WASM_DIR}/executorch.wasm"
+    ls -lh "${WEB_WASM_DIR}/executorch.js" "${WEB_WASM_DIR}/executorch.wasm" \
+        "${WEB_WASM_DIR}/executorch_llm.js" "${WEB_WASM_DIR}/executorch_llm.wasm"
     echo ""
     echo -e "${BLUE}Files are ready at: ${WEB_WASM_DIR}${NC}"
 else
@@ -205,9 +207,15 @@ echo ""
 echo -e "${BLUE}Setting up web files for example project...${NC}"
 EXAMPLE_WASM_DIR="${PACKAGE_ROOT}/packages/executorch_flutter/example/web/wasm"
 mkdir -p "${EXAMPLE_WASM_DIR}"
-cp "${WEB_WASM_DIR}/executorch.js" "${EXAMPLE_WASM_DIR}/"
-cp "${WEB_WASM_DIR}/executorch.wasm" "${EXAMPLE_WASM_DIR}/"
+cp "${WEB_WASM_DIR}/executorch.js" "${WEB_WASM_DIR}/executorch.wasm" \
+    "${WEB_WASM_DIR}/executorch_llm.js" "${WEB_WASM_DIR}/executorch_llm.wasm" \
+    "${EXAMPLE_WASM_DIR}/"
 echo -e "${GREEN}✅ Copied WASM files to packages/executorch_flutter/example/web/wasm/${NC}"
+# The LLM worker lives next to the wrapper script in web/js.
+EXAMPLE_JS_DIR="${PACKAGE_ROOT}/packages/executorch_flutter/example/web/js"
+mkdir -p "${EXAMPLE_JS_DIR}"
+cp "${PACKAGE_ROOT}/packages/executorch_flutter/web/js/executorch_llm_worker.js" "${EXAMPLE_JS_DIR}/"
+echo -e "${GREEN}✅ Copied executorch_llm_worker.js to packages/executorch_flutter/example/web/js/${NC}"
 
 echo ""
 echo -e "${GREEN}✅ Web setup complete!${NC}"

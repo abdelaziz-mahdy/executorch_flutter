@@ -92,7 +92,9 @@ class LlmEntry {
 }
 
 /// Catalog location override, injected with `--dart-define=LLM_CATALOG_URL=`.
-/// Lets a new catalog be tried before it is merged into the models repo.
+/// Lets a new catalog be tried before it is merged into the models repo, and
+/// lets the web deploy point the app at the catalog it published with the
+/// files. A relative URL resolves against the page.
 const String llmCatalogUrlOverride = String.fromEnvironment('LLM_CATALOG_URL');
 
 /// Fetches the LLM catalog for the ExecuTorch version the app was built with.
@@ -100,7 +102,7 @@ const String llmCatalogUrlOverride = String.fromEnvironment('LLM_CATALOG_URL');
 /// LLM exports only run on the runtime they were exported for, so unlike the
 /// vision playground there is no version picker.
 Future<List<LlmEntry>> fetchLlmCatalog({http.Client? client}) async {
-  final url = Uri.parse(
+  final url = Uri.base.resolve(
     llmCatalogUrlOverride.isNotEmpty
         ? llmCatalogUrlOverride
         : 'https://raw.githubusercontent.com/abdelaziz-mahdy/'

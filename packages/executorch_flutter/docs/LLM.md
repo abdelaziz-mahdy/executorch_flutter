@@ -259,14 +259,16 @@ final llm = await ExecuTorchLLM.load(
   "Serving models on web").
 - **Caching:** the worker reads a URL from the origin private file system
   (OPFS) when it is stored there — directory `executorch-llm`, file name
-  `Uri.encodeComponent(url)` — and downloads it otherwise. Store the files
+  `Uri.encodeComponent` of the absolute URL, i.e. after
+  `Uri.base.resolve(path)` — and downloads it otherwise. Store the files
   there yourself to download once with your own progress UI and keep them
   across reloads; the example app's `llm_files_web.dart` does this. (Cache
   Storage doesn't work for this: browsers cap a single entry, some at a few
   hundred MB.)
-- **Large files on capped hosts:** if the model URL answers 404, the worker
-  looks for `<url>.parts.json` (`{"size": bytes, "parts": [names relative to
-  it]}`) and joins the parts in order. GitHub Pages deploys refuse files over
+- **Large files on capped hosts:** if the model URL fails (404, or 403 from
+  object stores that hide missing keys), the worker looks for
+  `<url>.parts.json` (`{"size": bytes, "parts": [names relative to it]}`)
+  and joins the parts in order. GitHub Pages deploys refuse files over
   100 MB, so this repo's web demo serves the 470 MB model split into 90 MB
   parts; the example's download handles the same layout.
 - **Memory:** the weights live in the Wasm heap (up to 4 GB), so a 0.6B model
@@ -274,7 +276,8 @@ final llm = await ExecuTorchLLM.load(
 - **Speed:** one thread, since multi-threaded Wasm needs cross-origin isolation
   headers that GitHub Pages and most static hosts can't send. Qwen3 0.6B
   generates about 3 tokens/s on an M2 Pro.
-- **MLX** and separate `.ptd` weight files are not available on web.
+- **MLX**, separate `.ptd` weight files, and exports without a KV cache are
+  not available on web.
 
 ---
 

@@ -129,36 +129,64 @@ Future<Map<String, String>> downloadLlm(
       continue;
     }
     final start = done;
-    await _download(store, file, url, (received) {
-      done = start + received;
-      onProgress?.call(done, total);
-    });
+    try {
+      await _download(store, file, url, (received) {
+        done = start + received;
+        onProgress?.call(done, total);
+      });
+    } on _StorageFull {
+      // Not enough room to keep a copy (a private window's small quota, or a
+      // full disk): the worker fetches the files at load time instead.
+      onProgress?.call(total, total);
+      return urls;
+    }
   }
   return urls;
 }
 
-/// The URLs whose bodies, in order, make up [url]: the file itself, or its
-/// parts when the host serves it split.
-Future<List<String>> _sourceUrls(String url) async {
-  final head = await web.window
-      .fetch(url.toJS, web.RequestInit(method: 'HEAD'))
-      .toDart;
-  if (head.ok) return [url];
-  if (head.status == 404) {
-    final manifestUrl = '$url.parts.json';
-    final manifest = await web.window.fetch(manifestUrl.toJS).toDart;
-    if (manifest.ok) {
-      final json =
-          jsonDecode((await manifest.text().toDart).toDart)
-              as Map<String, dynamic>;
-      final base = Uri.parse(manifestUrl);
-      return [
-        for (final name in (json['parts'] as List).cast<String>())
-          base.resolve(name).toString(),
-      ];
-    }
+/// The browser refused to store more data.
+class _StorageFull implements Exception {}
+
+bool _isQuotaError(Object error) {
+  // Errors from browser APIs arrive as the JS exception object.
+  final jsError = error as JSAny?;
+  if (!jsError.isA<JSObject>()) return false;
+  final object = jsError as JSObject;
+  return object.has('name') && object['name'].dartify() == 'QuotaExceededError';
+}
+
+/// Opens the bodies that, in order, make up [url]: the file itself, or its
+/// parts when the host serves it split. Each part is fetched only when the
+/// previous one has been read.
+Future<List<Future<web.ReadableStream> Function()>> _openSource(
+  String url,
+) async {
+  final response = await web.window.fetch(url.toJS).toDart;
+  final body = response.body;
+  if (response.ok && body != null) return [() async => body];
+  // A split copy. Missing files answer 404, or 403 on object stores that
+  // hide missing keys, so look for the manifest whatever the failure.
+  final manifestUrl = '$url.parts.json';
+  final manifest = await web.window.fetch(manifestUrl.toJS).toDart;
+  if (!manifest.ok) {
+    throw StateError('Downloading $url failed (HTTP ${response.status})');
   }
-  throw StateError('Downloading $url failed (HTTP ${head.status})');
+  final json =
+      jsonDecode((await manifest.text().toDart).toDart) as Map<String, dynamic>;
+  final base = Uri.parse(manifestUrl);
+  return [
+    for (final name in (json['parts'] as List).cast<String>())
+      () => _openPart(base.resolve(name).toString()),
+  ];
+}
+
+Future<web.ReadableStream> _openPart(String url) async {
+  final response = await web.window.fetch(url.toJS).toDart;
+  final body = response.body;
+  if (!response.ok || body == null) {
+    throw StateError('Downloading $url failed (HTTP ${response.status})');
+  }
+  return body;
 }
 
 Future<void> _download(
@@ -170,7 +198,7 @@ Future<void> _download(
   // Drop the old hash first: from here until the new one is written, the
   // file doesn't count as stored.
   await _remove(store, _hashNameOf(url));
-  final sources = await _sourceUrls(url);
+  final bodies = await _openSource(url);
 
   final handle = await store
       .getFileHandle(_nameOf(url), web.FileSystemGetFileOptions(create: true))
@@ -182,20 +210,19 @@ Future<void> _download(
   final hasher = sha256.startChunkedConversion(digestSink);
   var received = 0;
   try {
-    for (final source in sources) {
-      final response = await web.window.fetch(source.toJS).toDart;
-      final body = response.body;
-      if (!response.ok || body == null) {
-        throw StateError(
-          'Downloading $source failed (HTTP ${response.status})',
-        );
-      }
+    for (final open in bodies) {
+      final body = await open();
       final reader = body.getReader() as web.ReadableStreamDefaultReader;
       for (;;) {
         final chunk = await reader.read().toDart;
         if (chunk.done) break;
         final data = chunk.value! as JSUint8Array;
-        await writable.write(data).toDart;
+        try {
+          await writable.write(data).toDart;
+        } catch (e) {
+          if (_isQuotaError(e)) throw _StorageFull();
+          rethrow;
+        }
         final bytes = data.toDart;
         hasher.add(bytes);
         received += bytes.length;
@@ -216,8 +243,15 @@ Future<void> _download(
     await _remove(store, _nameOf(url));
     rethrow;
   }
-  await writable.close().toDart;
-  await _writeText(store, _hashNameOf(url), file.sha256);
+  try {
+    await writable.close().toDart;
+    await _writeText(store, _hashNameOf(url), file.sha256);
+  } catch (e) {
+    // The commit or the hash note can hit the quota too.
+    await _remove(store, _nameOf(url));
+    if (_isQuotaError(e)) throw _StorageFull();
+    rethrow;
+  }
 }
 
 Future<void> _writeText(

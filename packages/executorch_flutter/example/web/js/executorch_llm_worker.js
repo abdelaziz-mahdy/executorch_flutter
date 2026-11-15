@@ -24,7 +24,8 @@
  *    rather than Cache Storage: browsers cap a single cache entry, some at a
  *    few hundred MB, below an LLM's size.)
  * 2. The URL itself.
- * 3. If the URL answers 404, a split copy described by url + '.parts.json':
+ * 3. If the URL fails (404, or 403 from object stores that hide missing
+ *    keys), a split copy described by url + '.parts.json':
  *    {"size": <bytes>, "parts": ["<name>", ...]}, part names relative to the
  *    manifest, concatenated in order. Static hosts that cap file size (GitHub
  *    Pages deploys refuse files over 100 MB) serve large models this way.
@@ -120,10 +121,12 @@ function partsStream(manifestUrl, manifest) {
   });
 }
 
-// Opens [url] as a stream of its bytes, with the expected length when known.
+// Opens [url] as a stream of its bytes. `length` is the expected size, and
+// `exact` says whether the body must be exactly that long (a stored file or a
+// split manifest) or the size is only a hint (Content-Length).
 async function openSource(url) {
   const stored = await openStored(url);
-  if (stored) return { body: stored.stream(), length: stored.size };
+  if (stored) return { body: stored.stream(), length: stored.size, exact: true };
 
   const response = await fetch(url);
   if (response.ok) {
@@ -131,23 +134,28 @@ async function openSource(url) {
     // is smaller than the body, and a cross-origin response hides the
     // Content-Encoding that would say so. It is only a size hint.
     const length = Number(response.headers.get('Content-Length')) || 0;
-    return { body: response.body, length };
+    return { body: response.body, length, exact: false };
   }
-  if (response.status === 404) {
-    const manifestUrl = url + '.parts.json';
-    const manifest = await fetch(manifestUrl);
-    if (manifest.ok) {
-      const parts = await manifest.json();
-      return { body: partsStream(manifestUrl, parts), length: parts.size };
-    }
+  const manifestUrl = url + '.parts.json';
+  const manifest = await fetch(manifestUrl);
+  if (manifest.ok) {
+    const parts = await manifest.json();
+    return { body: partsStream(manifestUrl, parts), length: parts.size, exact: true };
   }
   throw new Error(`Could not download ${url} (HTTP ${response.status})`);
 }
 
+// The largest buffer wasm32 can address; _malloc and _realloc take 32-bit
+// sizes, so anything larger would wrap.
+const MAX_HEAP_BYTES = 0xFFFFFFFF;
+
 // Copies a stream into a _malloc'd buffer in the Wasm heap, chunk by chunk, so
 // the weights are never held twice in full. The buffer starts at the expected
 // length and grows if the body turns out longer.
-async function readIntoHeap({ body, length }) {
+async function readIntoHeap({ body, length, exact }) {
+  if (length > MAX_HEAP_BYTES) {
+    throw new WorkerError(`A ${length}-byte model does not fit in WebAssembly memory`, 'memory');
+  }
   let capacity = length > 0 ? length : 64 * 1024 * 1024;
   let ptr = et._malloc(capacity);
   if (!ptr) throw new WorkerError(`Out of memory for a ${capacity}-byte model`, 'memory');
@@ -157,8 +165,14 @@ async function readIntoHeap({ body, length }) {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
+      if (exact && offset + value.length > length) {
+        throw new Error(`The model is longer than its expected ${length} bytes`);
+      }
       if (offset + value.length > capacity) {
-        const grown = Math.max(capacity * 2, offset + value.length);
+        const grown = Math.min(Math.max(capacity * 2, offset + value.length), MAX_HEAP_BYTES);
+        if (grown < offset + value.length) {
+          throw new WorkerError('The model does not fit in WebAssembly memory', 'memory');
+        }
         const moved = et._realloc(ptr, grown);
         if (!moved) throw new WorkerError(`Out of memory for a ${grown}-byte model`, 'memory');
         ptr = moved;
@@ -167,6 +181,9 @@ async function readIntoHeap({ body, length }) {
       // HEAPU8 is replaced when the heap grows, so read it on every chunk.
       et.HEAPU8.set(value, ptr + offset);
       offset += value.length;
+    }
+    if (exact && offset !== length) {
+      throw new Error(`The model stopped at ${offset} of ${length} bytes`);
     }
   } catch (err) {
     et._free(ptr);
@@ -179,8 +196,12 @@ async function readIntoHeap({ body, length }) {
   return { ptr, size: offset };
 }
 
-async function readAll({ body }) {
-  return new Uint8Array(await new Response(body).arrayBuffer());
+async function readAll({ body, length, exact }) {
+  const bytes = new Uint8Array(await new Response(body).arrayBuffer());
+  if (exact && bytes.length !== length) {
+    throw new Error(`The tokenizer is ${bytes.length} bytes, expected ${length}`);
+  }
+  return bytes;
 }
 
 async function load({ id, modelUrl, tokenizerUrl }) {
@@ -226,10 +247,18 @@ function generate({ id, prompt, config }) {
     config.numEos,
   );
   if (first.error) throw new WorkerError(first.error, first.kind);
-  for (const piece of first.pieces) {
-    if (piece) post({ id, type: 'piece', piece });
-  }
+
+  // Pieces arrive as bytes; a piece can end partway through a character, so
+  // one streaming decoder per generation joins them. Invalid bytes become
+  // U+FFFD, and a BOM the model generates is kept, as on native.
+  const decoder = new TextDecoder('utf-8', { ignoreBOM: true });
+  const emit = (text) => {
+    if (text) post({ id, type: 'piece', piece: text });
+  };
+  emit(first.echo);
+  emit(decoder.decode(first.bytes, { stream: true }));
   if (first.done) {
+    emit(decoder.decode());
     post({ id, type: 'done' });
     return;
   }
@@ -238,6 +267,7 @@ function generate({ id, prompt, config }) {
   const channel = new MessageChannel();
   const finish = (message) => {
     channel.port1.close();
+    emit(decoder.decode()); // bytes still held back, before the outcome
     const { resets } = generation;
     generation = null;
     post(message);
@@ -251,8 +281,6 @@ function generate({ id, prompt, config }) {
   // One token per task, so 'stop' and 'reset' messages run in between.
   channel.port1.onmessage = () => {
     if (generation.stopped) {
-      const rest = runner.flush();
-      if (rest) post({ id, type: 'piece', piece: rest });
       finish({ id, type: 'done' });
       return;
     }
@@ -267,7 +295,7 @@ function generate({ id, prompt, config }) {
       finish({ id, type: 'error', kind: next.kind, message: next.error });
       return;
     }
-    if (next.piece) post({ id, type: 'piece', piece: next.piece });
+    emit(decoder.decode(next.bytes, { stream: true }));
     if (next.done) {
       finish({ id, type: 'done' });
       return;

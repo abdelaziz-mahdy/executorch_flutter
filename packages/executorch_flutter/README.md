@@ -510,13 +510,13 @@ while it generates. `setup_web` copies both; nothing goes in `index.html`.
 - `load(modelPath:, tokenizerPath:)` takes **URLs**, with the same CORS rules
   as above.
 - Files stored in the origin private file system (OPFS), directory
-  `executorch-llm`, named by their percent-encoded URL, are used without a
-  download, so an app can download a model once (with its own progress UI)
-  and keep it across reloads. The example app does this. (Not Cache Storage:
-  browsers cap a single cache entry, some at a few hundred MB.)
-- A URL that answers 404 can be served split, as `<url>.parts.json` plus its
-  parts, for hosts that cap file size (GitHub Pages deploys refuse files over
-  100 MB).
+  `executorch-llm`, named by their percent-encoded absolute URL, are used
+  without a download, so an app can download a model once (with its own
+  progress UI) and keep it across reloads. The example app does this. (Not
+  Cache Storage: browsers cap a single cache entry, some at a few hundred MB.)
+- A URL that fails (404, or 403 from object stores) can be served split, as
+  `<url>.parts.json` plus its parts, for hosts that cap file size (GitHub
+  Pages deploys refuse files over 100 MB).
 - It runs on one thread, since GitHub Pages and most hosts can't send the
   cross-origin isolation headers that Wasm threads need. Expect a few tokens
   per second for a 0.6B model on a recent laptop.
