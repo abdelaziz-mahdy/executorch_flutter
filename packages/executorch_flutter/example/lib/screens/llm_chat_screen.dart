@@ -18,7 +18,8 @@ import 'package:flutter/services.dart';
 import '../llm/chat_format.dart';
 import '../llm/llm_catalog.dart';
 import '../llm/llm_files_stub.dart'
-    if (dart.library.io) '../llm/llm_files_io.dart';
+    if (dart.library.io) '../llm/llm_files_io.dart'
+    if (dart.library.js_interop) '../llm/llm_files_web.dart';
 
 /// A single chat turn.
 class _ChatMessage {
@@ -425,7 +426,7 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
                 ],
               ),
             )
-          : const _WebNotice(),
+          : const _UnsupportedNotice(),
     );
   }
 
@@ -787,9 +788,9 @@ class _HostedModelTile extends StatelessWidget {
   }
 }
 
-/// Shown on web, where there is no WebAssembly build of the LLM runner yet.
-class _WebNotice extends StatelessWidget {
-  const _WebNotice();
+/// Shown where the LLM runner isn't available.
+class _UnsupportedNotice extends StatelessWidget {
+  const _UnsupportedNotice();
 
   @override
   Widget build(BuildContext context) {
@@ -807,14 +808,14 @@ class _WebNotice extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              "LLM chat isn't supported on web yet",
+              "LLM chat isn't supported on this platform",
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Run the example on Android, iOS, macOS, Windows or Linux to '
-              'download a model and chat with it on-device.',
+              'Run the example on Android, iOS, macOS, Windows, Linux or the '
+              'web to download a model and chat with it on-device.',
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),

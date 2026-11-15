@@ -96,6 +96,37 @@ jobs:
 
           ls -la build/web/models | head -12
 
+      # The hosted LLMs hit the same CORS wall. The web runner is XNNPACK-only,
+      # so only the CPU builds are copied (Qwen3 0.6B: about 480 MB with its
+      # tokenizer; GitHub Pages allows a 1 GB site).
+      - name: Fetch hosted LLMs into the published site
+        working-directory: packages/executorch_flutter/example
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oE "executorchVersion = '[^']+'" \
+            ../../executorch_dart/lib/src/version.dart | cut -d"'" -f2)
+          LLMS="https://raw.githubusercontent.com/abdelaziz-mahdy/executorch_flutter_models/main/$VERSION/llms.json"
+          if ! curl -fsSL "$LLMS" -o /tmp/llms.json; then
+            echo "No hosted LLMs for $VERSION; skipping"
+            exit 0
+          fi
+
+          python3 - <<'PY'
+          import json, subprocess
+          llms = json.load(open('/tmp/llms.json'))['llms']
+          total = 0
+          for llm in (l for l in llms if l['backend'] == 'xnnpack'):
+              for f in llm['files'].values():
+                  print(f"  {f['name']} ({f['size'] / 1e6:.1f} MB)")
+                  subprocess.run(
+                      ['curl', '-fsSL', f['url'], '-o', f"build/web/models/{f['name']}"],
+                      check=True)
+                  total += f['size']
+          print(f"Fetched {total / 1e6:.1f} MB of LLM files")
+          PY
+
+          du -sh build/web
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

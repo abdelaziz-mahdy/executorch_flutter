@@ -6,9 +6,9 @@ separate from the vision/tensor API (`ExecuTorchModel`): an LLM is driven by a
 stateful decode loop, a real tokenizer, and a KV cache, and is loaded from
 **file paths** (weights are hundreds of MB) rather than `Uint8List`.
 
-> **Status:** experimental. Validated on **macOS** (XNNPACK CPU + MLX GPU). Other
-> platforms get the XNNPACK CPU runner; coverage expands over time. Not
-> available on web yet (there is no WebAssembly build of the LLM runner).
+> **Status:** experimental. Validated on **macOS** (XNNPACK CPU + MLX GPU),
+> **Android** and **web** (XNNPACK CPU). Other platforms get the XNNPACK CPU
+> runner too; coverage expands over time.
 
 ---
 
@@ -238,6 +238,41 @@ await llm.dispose();                // release native resources
 
 ---
 
+## 5. Web
+
+The same API works in the browser for XNNPACK exports. The LLM runner is its
+own WebAssembly module (`wasm/executorch_llm.{js,wasm}`), separate from the
+vision one, and runs in a Web Worker (`js/executorch_llm_worker.js`) so the
+page keeps painting while tokens are generated. `dart run
+executorch_flutter:setup_web` copies all three into your app's `web/`.
+
+```dart
+final llm = await ExecuTorchLLM.load(
+  modelPath: 'models/qwen3_0.6b_xnnpack.pte',      // URLs on web
+  tokenizerPath: 'models/qwen3_0.6b_tokenizer.json',
+);
+```
+
+- **Paths are URLs**, resolved against the page. Browsers enforce CORS, and
+  GitHub release assets send no CORS header, so serve the files from your own
+  origin or a host that sends `Access-Control-Allow-Origin` (see the README's
+  "Serving models on web").
+- **Caching:** the worker reads a URL from the origin private file system
+  (OPFS) when it is stored there — directory `executorch-llm`, file name
+  `Uri.encodeComponent(url)` — and downloads it otherwise. Store the files
+  there yourself to download once with your own progress UI and keep them
+  across reloads; the example app's `llm_files_web.dart` does this. (Cache
+  Storage doesn't work for this: browsers cap a single entry, some at a few
+  hundred MB.)
+- **Memory:** the weights live in the Wasm heap (up to 4 GB), so a 0.6B model
+  fits easily; much larger models will not.
+- **Speed:** one thread, since multi-threaded Wasm needs cross-origin isolation
+  headers that GitHub Pages and most static hosts can't send. Qwen3 0.6B
+  generates about 3 tokens/s on an M2 Pro.
+- **MLX** and separate `.ptd` weight files are not available on web.
+
+---
+
 ## Platform support
 
 | Platform | XNNPACK (CPU) LLM | MLX (GPU) LLM |
@@ -245,7 +280,7 @@ await llm.dispose();                // release native resources
 | macOS (arm64) | ✅ | ✅ (needs metallib + macOS 14) |
 | macOS (x64) | ✅ | — |
 | iOS / Android / Linux / Windows | ✅ (CPU) | — |
-| Web | — | — |
+| Web | ✅ (CPU, one thread; see §5) | — |
 
 Performance on an M2 Pro (release build, approx):
 

@@ -49,17 +49,16 @@ void main(List<String> args) {
     print('📁 Created: web/js/');
   }
 
-  // Copy JavaScript wrapper
-  final sourceJs = File(
-    _joinPath(packageRoot, 'web', 'js', 'executorch_wrapper.js'),
-  );
-  final destJs = File(_joinPath(webJsDir.path, 'executorch_wrapper.js'));
-
-  if (sourceJs.existsSync()) {
-    sourceJs.copySync(destJs.path);
-    print('✅ Copied: executorch_wrapper.js');
-  } else {
-    print('⚠️  Warning: executorch_wrapper.js not found in package');
+  // Copy the JavaScript files: the model wrapper the page loads, and the
+  // worker ExecuTorchLLM starts.
+  for (final name in ['executorch_wrapper.js', 'executorch_llm_worker.js']) {
+    final source = File(_joinPath(packageRoot, 'web', 'js', name));
+    if (source.existsSync()) {
+      source.copySync(_joinPath(webJsDir.path, name));
+      print('✅ Copied: $name');
+    } else {
+      print('⚠️  Warning: $name not found in package');
+    }
   }
 
   // Check if wasm directory exists and copy if present

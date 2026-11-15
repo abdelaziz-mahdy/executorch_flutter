@@ -74,6 +74,13 @@ RUN cd backends/xnnpack/third-party/XNNPACK && \
     ! grep -q 'xnn_f16_f32acc_v\(cos\|sin\)_ukernel__wasmrelaxedsimd' src/configs/unary-elementwise-config.c && \
     echo "Patched XNNPACK: removed -mfp16 and $(wc -l < /tmp/wasm_fp16_srcs.txt) FP16-only Wasm micro-kernels"
 
+# Fix XNNPACK's tensor size check on 32-bit targets. It counted bits in a
+# size_t, so any tensor over 512 MiB looked like an overflow on wasm32 and the
+# delegate refused it: an LLM's logits ([1, seq, vocab] fp32) reach that.
+COPY scripts/wasm/xnnpack-tensor-size-32bit.patch /tmp/
+RUN cd backends/xnnpack/third-party/XNNPACK && \
+    git apply /tmp/xnnpack-tensor-size-32bit.patch
+
 # Install minimal Python dependencies for Wasm build
 
 # Upgrade pip, setuptools, wheel first
@@ -92,6 +99,8 @@ ENV PYTHONPATH="/workspace/executorch:${PYTHONPATH}"
 
 # Build script that will be executed
 COPY scripts/build_wasm_in_container.sh /build_wasm.sh
+# Sources the script compiles in (the web LLM runner binding)
+COPY scripts/wasm /workspace/scripts/wasm
 RUN chmod +x /build_wasm.sh
 
 # Default command: build Wasm binaries

@@ -39,6 +39,10 @@ dependencies:
   # Cryptographic hashing for model integrity verification
   crypto: ^3.0.6
 
+  # Browser APIs (fetch streams, origin private file system) for the web LLM
+  # downloads
+  web: ^1.1.0
+
   # Path provider for file system access
   path_provider: ^2.1.3
 
