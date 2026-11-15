@@ -10,6 +10,9 @@ library;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../llm/llm_files_stub.dart'
+    if (dart.library.io) '../llm/llm_files_io.dart'
+    show llmSupported;
 import 'llm_chat_screen.dart';
 import 'unified_model_playground.dart';
 
@@ -21,6 +24,7 @@ class _Category {
     required this.icon,
     required this.color,
     required this.builder,
+    this.unavailable,
   });
 
   final String title;
@@ -28,6 +32,9 @@ class _Category {
   final IconData icon;
   final Color color;
   final WidgetBuilder builder;
+
+  /// Why this category can't run on this platform; null when it can.
+  final String? unavailable;
 }
 
 /// Landing screen that splits the example app by model category.
@@ -48,6 +55,8 @@ class HomeScreen extends StatelessWidget {
       icon: Icons.chat_bubble_outline,
       color: Color(0xFF34A853),
       builder: _buildChat,
+      // No WebAssembly build of the LLM runner yet.
+      unavailable: llmSupported ? null : 'Not available on web yet',
     ),
   ];
 
@@ -114,12 +123,15 @@ class _CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    final unavailable = category.unavailable;
+    final card = Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute<void>(builder: category.builder)),
+        onTap: unavailable != null
+            ? null
+            : () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: category.builder)),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -151,15 +163,31 @@ class _CategoryCard extends StatelessWidget {
               const SizedBox(height: 20),
               Align(
                 alignment: Alignment.bottomRight,
-                child: Icon(
-                  Icons.arrow_forward,
-                  color: scheme.onSurfaceVariant,
-                ),
+                child: unavailable == null
+                    ? Icon(Icons.arrow_forward, color: scheme.onSurfaceVariant)
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.block,
+                            size: 16,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            unavailable,
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
               ),
             ],
           ),
         ),
       ),
     );
+    // Greyed out and not tappable where the demo can't run.
+    return unavailable == null ? card : Opacity(opacity: 0.55, child: card);
   }
 }
