@@ -46,7 +46,8 @@ function tokenizerPath(url) {
     name = '';
   }
   name = name.replace(/[\/\\]/g, '_');
-  return '/' + (name || 'tokenizer.json');
+  // In a folder of its own: names like `tmp` or `dev` are folders at the root.
+  return '/tokenizer/' + (name || 'tokenizer.json');
 }
 
 // The wasm/ directory sits next to js/ in a Flutter web app; a page can point
@@ -241,6 +242,7 @@ async function load({ id, modelUrl, tokenizerUrl }) {
   });
 
   const tokenizerFile = tokenizerPath(tokenizerUrl);
+  et.FS.mkdirTree('/tokenizer');
   et.FS.writeFile(tokenizerFile, await readAll(await openSource(tokenizerUrl)));
   try {
     const model = await readIntoHeap(await openSource(modelUrl));

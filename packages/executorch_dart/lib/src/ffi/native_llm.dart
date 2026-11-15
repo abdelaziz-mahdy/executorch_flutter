@@ -109,6 +109,7 @@ class NativeLLMRunner implements ffi.Finalizable {
   /// drains the last generation; a generate() from one of them must not
   /// start work on a runner that is about to be freed.
   bool _disposing = false;
+  Future<void>? _disposal;
 
   static final _finalizer = ffi.NativeFinalizer(
     addresses.et_llm_runner_free.cast(),
@@ -262,8 +263,10 @@ class NativeLLMRunner implements ffi.Finalizable {
 
   /// Stop any in-flight generation, wait for it to finish, then free the
   /// runner.
-  Future<void> disposeAsync() async {
-    if (_disposed || _disposing) return;
+  Future<void> disposeAsync() => _disposal ??= _disposeAsync();
+
+  Future<void> _disposeAsync() async {
+    if (_disposed) return;
     _disposing = true;
     final generation = _generation;
     if (generation != null) {

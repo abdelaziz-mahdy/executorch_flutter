@@ -138,9 +138,6 @@ target_sources(
   executorch_llm_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/executorch_llm_web.cpp
 )
 target_include_directories(executorch_llm_lib PRIVATE ${EXECUTORCH_ROOT}/..)
-# The binding catches C++ exceptions so they reach JS as error results rather
-# than bare pointers; that needs exception support when compiling it too.
-target_compile_options(executorch_llm_lib PRIVATE -fexceptions)
 target_link_libraries(
   executorch_llm_lib
   PRIVATE embind
@@ -191,6 +188,11 @@ echo ""
 echo "Configuring CMake with Emscripten..."
 cd "${BUILD_DIR}"
 
+# C++ exceptions are compiled in everywhere (-fexceptions): Emscripten's default
+# lets code throw but never runs a catch block, and the tokenizers catch their
+# own exceptions in normal operation (an HF tokenizer.json parse failure falls
+# back to the next tokenizer type, optional JSON keys are probed with
+# try/catch), so without it most tokenizers fail to load.
 # Native builds: emsdk_env.sh puts emsdk's own Python first on PATH, and it has
 # no torch/torchgen. Set PYTHON_EXECUTABLE to a Python that has them, or codegen
 # fails (and an empty torchgen path turns its source glob into "/*.py").
@@ -211,6 +213,7 @@ emcmake cmake \
     -DEXECUTORCH_BUILD_EXTENSION_LLM_RUNNER=ON \
     -DEXECUTORCH_BUILD_KERNELS_QUANTIZED=ON \
     -DEXECUTORCH_ENABLE_LOGGING=ON \
+    -DCMAKE_CXX_FLAGS="-fexceptions" \
     -DEXECUTORCH_LOG_LEVEL=Error \
     ${PYTHON_EXECUTABLE:+-DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}"} \
     .
