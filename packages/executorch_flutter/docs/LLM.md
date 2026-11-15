@@ -274,8 +274,10 @@ final llm = await ExecuTorchLLM.load(
   and joins the parts in order. GitHub Pages deploys refuse files over
   100 MB, so this repo's web demo serves the 470 MB model split into 90 MB
   parts; the example's download handles the same layout.
-- **Memory:** the weights live in the Wasm heap (up to 4 GB), so a 0.6B model
-  fits easily; much larger models will not.
+- **Memory:** the model lives in the worker's Wasm heap (at most 4 GB) along
+  with XNNPACK's packed copy of its weights and the KV cache: Qwen3 0.6B (a
+  470 MB file) takes about 1.7 GB. Desktop browsers handle that; phones and
+  tablets often cap a tab lower, and much larger models won't fit at all.
 - **Speed:** one thread, since multi-threaded Wasm needs cross-origin isolation
   headers that GitHub Pages and most static hosts can't send. Qwen3 0.6B
   generates about 3 tokens/s on an M2 Pro.

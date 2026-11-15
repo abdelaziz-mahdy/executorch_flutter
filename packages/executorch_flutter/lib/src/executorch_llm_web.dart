@@ -7,6 +7,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:executorch_dart/executorch_dart_shared.dart'
@@ -128,6 +129,15 @@ class ExecuTorchLLM {
         'Separate .ptd weight files are not supported on web yet',
       );
     }
+    // Before the worker exists, so a malformed URL leaves nothing running.
+    final String modelUrl;
+    final String tokenizerUrl;
+    try {
+      modelUrl = _resolve(modelPath).toString();
+      tokenizerUrl = _resolve(tokenizerPath).toString();
+    } on FormatException catch (e) {
+      throw ExecuTorchValidationException('Not a valid URL: ${e.message}');
+    }
     final ExecuTorchLLM llm;
     try {
       llm = ExecuTorchLLM._(_Worker(workerUrl));
@@ -139,8 +149,8 @@ class ExecuTorchLLM {
     try {
       await llm._request({
         'type': 'load',
-        'modelUrl': _resolve(modelPath).toString(),
-        'tokenizerUrl': _resolve(tokenizerPath).toString(),
+        'modelUrl': modelUrl,
+        'tokenizerUrl': tokenizerUrl,
       });
     } on ExecuTorchMemoryException {
       llm._terminate();
@@ -214,7 +224,9 @@ class ExecuTorchLLM {
       {
         'id': id,
         'type': 'generate',
-        'prompt': prompt,
+        // As native's UTF-8 conversion does: a lone UTF-16 surrogate becomes
+        // U+FFFD. Emscripten's conversion would corrupt or cut the prompt.
+        'prompt': utf8.decode(utf8.encode(prompt)),
         'config': {
           'maxNewTokens': config.maxNewTokens,
           'seqLen': config.seqLen,
