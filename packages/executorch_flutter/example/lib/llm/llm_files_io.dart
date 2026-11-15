@@ -123,3 +123,7 @@ class _DigestSink implements Sink<Digest> {
   @override
   void close() {}
 }
+
+/// [url] resolved against the app's location (only absolute URLs reach this on
+/// native).
+Uri appUri(String url) => Uri.base.resolve(url);

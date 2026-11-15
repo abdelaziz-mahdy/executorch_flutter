@@ -17,3 +17,6 @@ Future<Map<String, String>> downloadLlm(
 }) => throw UnsupportedError('LLMs are not supported on this platform');
 
 Future<void> deleteLlm(LlmEntry entry) async {}
+
+/// [url] as given.
+Uri appUri(String url) => Uri.parse(url);

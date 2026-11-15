@@ -118,6 +118,11 @@ function partsStream(manifestUrl, manifest) {
         reader = null;
       }
     },
+    cancel(reason) {
+      // Stop the part being downloaded; later parts are never fetched.
+      if (reader) return reader.cancel(reason);
+      return undefined;
+    },
   });
 }
 
@@ -136,6 +141,7 @@ async function openSource(url) {
     const length = Number(response.headers.get('Content-Length')) || 0;
     return { body: response.body, length, exact: false };
   }
+  if (response.body) response.body.cancel().catch(() => {});
   const manifestUrl = url + '.parts.json';
   const manifest = await fetch(manifestUrl);
   if (manifest.ok) {
@@ -160,8 +166,8 @@ async function readIntoHeap({ body, length, exact }) {
   let ptr = et._malloc(capacity);
   if (!ptr) throw new WorkerError(`Out of memory for a ${capacity}-byte model`, 'memory');
   let offset = 0;
+  const reader = body.getReader();
   try {
-    const reader = body.getReader();
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -169,7 +175,10 @@ async function readIntoHeap({ body, length, exact }) {
         throw new Error(`The model is longer than its expected ${length} bytes`);
       }
       if (offset + value.length > capacity) {
-        const grown = Math.min(Math.max(capacity * 2, offset + value.length), MAX_HEAP_BYTES);
+        // Double while that's cheap; near the 4 GB limit grow in 256 MB steps,
+        // since realloc may need the old and new blocks at once.
+        const step = capacity * 2 <= MAX_HEAP_BYTES / 2 ? capacity : 256 * 1024 * 1024;
+        const grown = Math.min(Math.max(capacity + step, offset + value.length), MAX_HEAP_BYTES);
         if (grown < offset + value.length) {
           throw new WorkerError('The model does not fit in WebAssembly memory', 'memory');
         }
@@ -187,6 +196,7 @@ async function readIntoHeap({ body, length, exact }) {
     }
   } catch (err) {
     et._free(ptr);
+    reader.cancel().catch(() => {}); // don't keep downloading
     throw err;
   }
   if (offset === 0) {
@@ -236,17 +246,16 @@ function generate({ id, prompt, config }) {
     throw new WorkerError('A generation is already in progress on this runner', 'inference');
   }
 
-  const first = runner.begin(
+  const started = runner.start(
     prompt,
     config.maxNewTokens,
     config.seqLen,
     config.temperature,
-    config.echo,
     config.ignoreEos,
     config.numBos,
     config.numEos,
   );
-  if (first.error) throw new WorkerError(first.error, first.kind);
+  if (started.error) throw new WorkerError(started.error, started.kind);
 
   // Pieces arrive as bytes; a piece can end partway through a character, so
   // one streaming decoder per generation joins them. Invalid bytes become
@@ -255,7 +264,12 @@ function generate({ id, prompt, config }) {
   const emit = (text) => {
     if (text) post({ id, type: 'piece', piece: text });
   };
-  emit(first.echo);
+  // Echo where upstream does: after the checks, before prefill (so it also
+  // shows when prefill fails), straight from the caller's string.
+  if (config.echo) emit(prompt);
+
+  const first = runner.prefill();
+  if (first.error) throw new WorkerError(first.error, first.kind);
   emit(decoder.decode(first.bytes, { stream: true }));
   if (first.done) {
     emit(decoder.decode());

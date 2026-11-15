@@ -259,8 +259,8 @@ final llm = await ExecuTorchLLM.load(
   "Serving models on web").
 - **Caching:** the worker reads a URL from the origin private file system
   (OPFS) when it is stored there — directory `executorch-llm`, file name
-  `Uri.encodeComponent` of the absolute URL, i.e. after
-  `Uri.base.resolve(path)` — and downloads it otherwise. Store the files
+  `Uri.encodeComponent` of the absolute URL, resolved against the page's
+  `document.baseURI` — and downloads it otherwise. Store the files
   there yourself to download once with your own progress UI and keep them
   across reloads; the example app's `llm_files_web.dart` does this. (Cache
   Storage doesn't work for this: browsers cap a single entry, some at a few

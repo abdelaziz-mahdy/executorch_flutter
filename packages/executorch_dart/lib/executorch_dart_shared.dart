@@ -27,7 +27,7 @@ export 'src/executorch_errors.dart';
 export 'src/executorch_inference.dart';
 export 'src/executorch_manager_base.dart' show ExecutorchManagerBase;
 export 'src/executorch_model.dart';
-export 'src/llm_types.dart' show GenConfig;
+export 'src/llm_types.dart' show GenConfig, validateGenConfig;
 export 'src/processors/processors.dart';
 export 'src/types.dart'
     show

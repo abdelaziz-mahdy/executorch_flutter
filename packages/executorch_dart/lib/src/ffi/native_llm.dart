@@ -101,6 +101,10 @@ class NativeLLMRunner implements ffi.Finalizable {
   /// Whether stop() was asked for during the current generation.
   bool _stopRequested = false;
 
+  /// Whether reset() was asked for during the current generation; it applies
+  /// when the generation ends.
+  bool _resetPending = false;
+
   static final _finalizer = ffi.NativeFinalizer(
     addresses.et_llm_runner_free.cast(),
   );
@@ -170,6 +174,11 @@ class NativeLLMRunner implements ffi.Finalizable {
       calloc.free(cfgPtr);
       malloc.free(promptPtr);
       _generation = null;
+      // The generation has released the runner, so this doesn't block.
+      if (_resetPending && !_disposed) {
+        _resetPending = false;
+        et_llm_reset(_ptr);
+      }
       if (!generation.isCompleted) generation.complete();
     }
 
@@ -207,8 +216,12 @@ class NativeLLMRunner implements ffi.Finalizable {
     doneCallable = ffi.NativeCallable.listener(onDone);
 
     // Cooperatively stop generation if the consumer cancels. The native done
-    // callback still fires afterwards and runs cleanup().
-    controller.onCancel = stop;
+    // callback still fires afterwards and runs cleanup(). A subscription can
+    // be cancelled after its generation ended and another began; leave that
+    // one alone.
+    controller.onCancel = () {
+      if (identical(_generation, generation)) stop();
+    };
 
     et_llm_generate_async(
       _ptr,
@@ -230,8 +243,15 @@ class NativeLLMRunner implements ffi.Finalizable {
   }
 
   /// Clear the KV cache and start a fresh conversation.
+  ///
+  /// During a generation the reset waits for it to end: the runner is busy,
+  /// and waiting here would block the calling isolate until then.
   void reset() {
     _checkDisposed();
+    if (_generation != null) {
+      _resetPending = true;
+      return;
+    }
     et_llm_reset(_ptr);
   }
 
@@ -241,7 +261,7 @@ class NativeLLMRunner implements ffi.Finalizable {
     if (_disposed) return;
     final generation = _generation;
     if (generation != null) {
-      et_llm_stop(_ptr);
+      stop(); // also re-sent once tokens flow, if this lands in prefill
       await generation.future.catchError((_) {});
     }
     dispose();

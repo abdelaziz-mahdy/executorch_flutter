@@ -77,9 +77,25 @@ String? validateGenConfig(GenConfig config) {
   if (!(t >= 0 && t <= 1)) {
     return 'Temperature must be in [0, 1], got $t';
   }
-  if (config.maxNewTokens == 0 || config.maxNewTokens < -1) {
-    return 'maxNewTokens must be -1 (fill the context) or at least 1, '
-        'got ${config.maxNewTokens}';
+  const int32Max = 0x7FFFFFFF;
+  if (config.maxNewTokens == 0 ||
+      config.maxNewTokens < -1 ||
+      config.maxNewTokens > int32Max) {
+    return 'maxNewTokens must be -1 (fill the context) or between 1 and '
+        '$int32Max, got ${config.maxNewTokens}';
+  }
+  if (config.seqLen == 0 || config.seqLen < -1 || config.seqLen > int32Max) {
+    return "seqLen must be -1 (the model's context) or between 1 and "
+        '$int32Max, got ${config.seqLen}';
+  }
+  // The tokenizer takes these counts as 8-bit integers.
+  for (final (name, count) in [
+    ('numBos', config.numBos),
+    ('numEos', config.numEos),
+  ]) {
+    if (count < 0 || count > 127) {
+      return '$name must be between 0 and 127, got $count';
+    }
   }
   return null;
 }

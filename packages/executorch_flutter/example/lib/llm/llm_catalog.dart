@@ -13,6 +13,10 @@ import 'package:executorch_flutter/executorch_flutter.dart'
 import 'package:http/http.dart' as http;
 
 import 'chat_format.dart';
+import 'llm_files_stub.dart'
+    if (dart.library.io) 'llm_files_io.dart'
+    if (dart.library.js_interop) 'llm_files_web.dart'
+    show appUri;
 
 /// One downloadable file of a hosted LLM.
 class LlmFile {
@@ -94,7 +98,7 @@ class LlmEntry {
 /// Catalog location override, injected with `--dart-define=LLM_CATALOG_URL=`.
 /// Lets a new catalog be tried before it is merged into the models repo, and
 /// lets the web deploy point the app at the catalog it published with the
-/// files. A relative URL resolves against the page.
+/// files. A relative URL resolves against the page's base URL.
 const String llmCatalogUrlOverride = String.fromEnvironment('LLM_CATALOG_URL');
 
 /// Fetches the LLM catalog for the ExecuTorch version the app was built with.
@@ -102,12 +106,18 @@ const String llmCatalogUrlOverride = String.fromEnvironment('LLM_CATALOG_URL');
 /// LLM exports only run on the runtime they were exported for, so unlike the
 /// vision playground there is no version picker.
 Future<List<LlmEntry>> fetchLlmCatalog({http.Client? client}) async {
-  final url = Uri.base.resolve(
+  final base = appUri(
     llmCatalogUrlOverride.isNotEmpty
         ? llmCatalogUrlOverride
         : 'https://raw.githubusercontent.com/abdelaziz-mahdy/'
-              'executorch_flutter_models/main/$executorchVersion/llms.json'
-              '?t=${DateTime.now().millisecondsSinceEpoch}',
+              'executorch_flutter_models/main/$executorchVersion/llms.json',
+  );
+  // Past any HTTP cache: the catalog's hashes must match the files now served.
+  final url = base.replace(
+    queryParameters: {
+      ...base.queryParameters,
+      't': '${DateTime.now().millisecondsSinceEpoch}',
+    },
   );
   final c = client ?? http.Client();
   try {

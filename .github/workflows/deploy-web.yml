@@ -128,6 +128,12 @@ jobs:
           for llm in (l for l in llms if l['backend'] == 'xnnpack'):
               for f in llm['files'].values():
                   path = f"build/web/models/{f['name']}"
+                  # The app requests models/<last segment of url>; it must be
+                  # this name, and must not replace another model's file.
+                  if f['url'].split('?')[0].rsplit('/', 1)[-1] != f['name']:
+                      raise SystemExit(f"{f['name']}: name doesn't match {f['url']}")
+                  if os.path.exists(path):
+                      raise SystemExit(f"{f['name']} would overwrite another file")
                   print(f"  {f['name']} ({f['size'] / 1e6:.1f} MB)")
                   subprocess.run(['curl', '-fsSL', f['url'], '-o', path], check=True)
                   digest = hashlib.sha256(open(path, 'rb').read()).hexdigest()

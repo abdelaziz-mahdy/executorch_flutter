@@ -181,15 +181,14 @@ class WebLLMRunner {
     return "";
   }
 
-  // Encodes and prefills [prompt]. Returns {echo: string, bytes: Uint8Array,
-  // done: bool}: the prompt when echo is asked for ("" otherwise) and the
-  // first generated piece's bytes. Or {error, kind}.
-  val begin(
+  // Checks the settings and encodes [prompt] for prefill(). Returns {} or
+  // {error, kind}. Split from prefill() so the worker can echo the prompt
+  // where upstream does: after these checks, before prefill.
+  val start(
       const std::string& prompt,
       int max_new_tokens,
       int seq_len,
       float temperature,
-      bool echo,
       bool ignore_eos,
       int num_bos,
       int num_eos) {
@@ -197,6 +196,7 @@ class WebLLMRunner {
       return result_error("No model is loaded", Error::InvalidState);
     }
     done_ = true;
+    started_ = false;
     if (prompt.empty()) {
       // Upstream: "Empty prompt requires a prior prefill() call".
       return result_error("The prompt is empty", Error::InvalidState);
@@ -217,8 +217,8 @@ class WebLLMRunner {
       return result_error(
           "Could not tokenize the prompt", Error::InvalidArgument);
     }
-    std::vector<uint64_t> tokens = encoded.get();
-    const auto num_prompt_tokens = static_cast<int64_t>(tokens.size());
+    prompt_tokens_ = encoded.get();
+    const auto num_prompt_tokens = static_cast<int64_t>(prompt_tokens_.size());
     if (num_prompt_tokens < 1) {
       return result_error("The prompt has no tokens", Error::InvalidArgument);
     }
@@ -237,7 +237,26 @@ class WebLLMRunner {
           Error::InvalidArgument);
     }
 
-    auto prefilled = prefiller_->prefill(tokens, pos_);
+    max_new_tokens_ = max_new_tokens;
+    seq_len_ = seq_len;
+    temperature_ = temperature;
+    ignore_eos_ = ignore_eos;
+    started_ = true;
+    return val::object();
+  }
+
+  // Prefills the prompt start() encoded. Returns {bytes: Uint8Array, done:
+  // bool} with the first generated piece's bytes, or {error, kind}.
+  val prefill() {
+    if (!started_) {
+      return result_error("Call start() first", Error::InvalidState);
+    }
+    started_ = false;
+    const int64_t max_seq_len = metadata_.at(el::kMaxSeqLen);
+    const int64_t max_context_len = metadata_.at(el::kMaxContextLen);
+
+    auto prefilled = prefiller_->prefill(prompt_tokens_, pos_);
+    prompt_tokens_.clear();
     if (!prefilled.ok()) {
       return result_error(
           error_text("Prefill failed", prefilled.error()), prefilled.error());
@@ -245,8 +264,8 @@ class WebLLMRunner {
     cur_token_ = prefilled.get();
 
     el::GenerationConfig config;
-    config.max_new_tokens = max_new_tokens;
-    config.seq_len = seq_len;
+    config.max_new_tokens = max_new_tokens_;
+    config.seq_len = seq_len_;
     const int64_t occupied = max_seq_len < max_context_len ? 0 : pos_;
     remaining_ = config.resolve_max_new_tokens(max_context_len, occupied);
     if (remaining_ <= 0) {
@@ -261,8 +280,6 @@ class WebLLMRunner {
           "Could not decode the first token", Error::InvalidArgument);
     }
 
-    temperature_ = temperature;
-    ignore_eos_ = ignore_eos;
     token_data_.assign(1, static_cast<int64_t>(cur_token_));
     tokens_ = executorch::extension::from_blob(
         token_data_.data(), {1, 1}, ScalarType::Long);
@@ -271,7 +288,6 @@ class WebLLMRunner {
     done_ = remaining_ <= 0;
 
     val out = val::object();
-    out.set("echo", echo ? prompt : std::string());
     out.set("bytes", js_bytes(first.get()));
     out.set("done", done_);
     return out;
@@ -315,6 +331,7 @@ class WebLLMRunner {
   void reset() {
     pos_ = 0;
     done_ = true;
+    started_ = false;
   }
 
  private:
@@ -333,6 +350,10 @@ class WebLLMRunner {
   float temperature_ = 0.0f;
   bool ignore_eos_ = false;
   bool done_ = true;
+  bool started_ = false;
+  std::vector<uint64_t> prompt_tokens_;
+  int max_new_tokens_ = -1;
+  int seq_len_ = -1;
   std::vector<int64_t> token_data_;
   TensorPtr tokens_;
 };
@@ -343,7 +364,8 @@ EMSCRIPTEN_BINDINGS(executorch_llm_web) {
   emscripten::class_<WebLLMRunner>("LLMRunner")
       .constructor<>()
       .function("load", &WebLLMRunner::load)
-      .function("begin", &WebLLMRunner::begin)
+      .function("start", &WebLLMRunner::start)
+      .function("prefill", &WebLLMRunner::prefill)
       .function("step", &WebLLMRunner::step)
       .function("reset", &WebLLMRunner::reset);
 }

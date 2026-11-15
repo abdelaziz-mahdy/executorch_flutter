@@ -26,8 +26,9 @@
 - Web: models with a tensor larger than 512 MB no longer fail to load. An
   XNNPACK size check overflowed on 32-bit WebAssembly and rejected them.
 - `ExecuTorchLLM` replies with emoji or other multi-byte characters split
-  across tokens no longer fail, stopping during the prompt works, and
-  `load` reports a model that can't run. See the core package's changelog.
+  across tokens no longer fail, and stopping while the prompt is processed
+  works. See the core package's changelog, which also covers the changes to
+  `load`, `reset` and `GenConfig` checks.
 - `setup_web` copies the web files of the `executorch_flutter` version the
   app depends on. Before, it could pick any version found in the pub cache.
 

@@ -22,4 +22,17 @@ void main() {
     expect(validateGenConfig(const GenConfig(maxNewTokens: 0)), isNotNull);
     expect(validateGenConfig(const GenConfig(maxNewTokens: -2)), isNotNull);
   });
+
+  test('rejects counts that do not fit the native types', () {
+    expect(
+      validateGenConfig(const GenConfig(maxNewTokens: 0x80000000)),
+      isNotNull,
+    );
+    expect(validateGenConfig(const GenConfig(seqLen: 0)), isNotNull);
+    expect(validateGenConfig(const GenConfig(seqLen: -2)), isNotNull);
+    expect(validateGenConfig(const GenConfig(seqLen: 512)), isNull);
+    expect(validateGenConfig(const GenConfig(numBos: -1)), isNotNull);
+    expect(validateGenConfig(const GenConfig(numEos: 128)), isNotNull);
+    expect(validateGenConfig(const GenConfig(numBos: 1)), isNull);
+  });
 }

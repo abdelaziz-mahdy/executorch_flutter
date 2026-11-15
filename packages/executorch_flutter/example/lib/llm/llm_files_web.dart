@@ -29,8 +29,17 @@ bool backendRunsHere(String backend) => backend == 'xnnpack';
 /// is named by its URL, percent-encoded.
 const _storeDir = 'executorch-llm';
 
-String _urlOf(LlmFile file) =>
-    Uri.base.resolve(resolveModelUrl(file.url)).toString();
+/// [url] resolved against the page's base URL (`<base href>`), as fetch and
+/// ExecuTorchLLM's worker resolve it. Dart's `Uri.base` is the current
+/// location instead, which differs on deep links under a path URL strategy.
+Uri appUri(String url) => Uri.parse(web.document.baseURI).resolve(url);
+
+String _urlOf(LlmFile file) => appUri(resolveModelUrl(file.url)).toString();
+
+/// Fetches [url] revalidating any cached copy, so a redeploy's new files
+/// aren't mixed with stale ones from the HTTP cache.
+Future<web.Response> _fetch(String url) =>
+    web.window.fetch(url.toJS, web.RequestInit(cache: 'no-cache')).toDart;
 
 String _nameOf(String url) => Uri.encodeComponent(url);
 
@@ -136,7 +145,10 @@ Future<Map<String, String>> downloadLlm(
       });
     } on _StorageFull {
       // Not enough room to keep a copy (a private window's small quota, or a
-      // full disk): the worker fetches the files at load time instead.
+      // full disk): the worker fetches the files at load time instead. Remove
+      // every stored file of this model first, so it can't pair one of them
+      // with a newer file it fetches.
+      await deleteLlm(entry);
       onProgress?.call(total, total);
       return urls;
     }
@@ -161,13 +173,14 @@ bool _isQuotaError(Object error) {
 Future<List<Future<web.ReadableStream> Function()>> _openSource(
   String url,
 ) async {
-  final response = await web.window.fetch(url.toJS).toDart;
+  final response = await _fetch(url);
   final body = response.body;
   if (response.ok && body != null) return [() async => body];
+  await response.body?.cancel().toDart;
   // A split copy. Missing files answer 404, or 403 on object stores that
   // hide missing keys, so look for the manifest whatever the failure.
   final manifestUrl = '$url.parts.json';
-  final manifest = await web.window.fetch(manifestUrl.toJS).toDart;
+  final manifest = await _fetch(manifestUrl);
   if (!manifest.ok) {
     throw StateError('Downloading $url failed (HTTP ${response.status})');
   }
@@ -181,7 +194,7 @@ Future<List<Future<web.ReadableStream> Function()>> _openSource(
 }
 
 Future<web.ReadableStream> _openPart(String url) async {
-  final response = await web.window.fetch(url.toJS).toDart;
+  final response = await _fetch(url);
   final body = response.body;
   if (!response.ok || body == null) {
     throw StateError('Downloading $url failed (HTTP ${response.status})');
@@ -195,9 +208,11 @@ Future<void> _download(
   String url,
   void Function(int received) onReceived,
 ) async {
-  // Drop the old hash first: from here until the new one is written, the
-  // file doesn't count as stored.
+  // Drop the old copy first, hash and data: from here until the new hash is
+  // written the file doesn't count as stored, and if the download fails no
+  // stale copy is left for ExecuTorchLLM's worker to pick up.
   await _remove(store, _hashNameOf(url));
+  await _remove(store, _nameOf(url));
   final bodies = await _openSource(url);
 
   final handle = await store
@@ -209,10 +224,11 @@ Future<void> _download(
   final digestSink = _DigestSink();
   final hasher = sha256.startChunkedConversion(digestSink);
   var received = 0;
+  web.ReadableStreamDefaultReader? reader;
   try {
     for (final open in bodies) {
       final body = await open();
-      final reader = body.getReader() as web.ReadableStreamDefaultReader;
+      reader = body.getReader() as web.ReadableStreamDefaultReader;
       for (;;) {
         final chunk = await reader.read().toDart;
         if (chunk.done) break;
@@ -238,6 +254,10 @@ Future<void> _download(
       );
     }
   } catch (_) {
+    // Stop the transfer that's still running, and drop what was written.
+    try {
+      await reader?.cancel().toDart;
+    } catch (_) {}
     await writable.abort().toDart;
     // getFileHandle(create: true) left an empty file; don't keep it.
     await _remove(store, _nameOf(url));

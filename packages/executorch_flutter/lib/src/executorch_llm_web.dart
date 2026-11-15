@@ -17,7 +17,8 @@ import 'package:executorch_dart/executorch_dart_shared.dart'
         ExecuTorchModelException,
         ExecuTorchPlatformException,
         ExecuTorchValidationException,
-        GenConfig;
+        GenConfig,
+        validateGenConfig;
 
 export 'package:executorch_dart/executorch_dart_shared.dart' show GenConfig;
 
@@ -31,6 +32,14 @@ extension type _Worker._(JSObject _) implements JSObject {
   external JSFunction? get onerror;
   external set onerror(JSFunction? handler);
 }
+
+/// The page's base URL: `<base href>` when set, as fetch, workers and the
+/// vision path resolve against. Dart's `Uri.base` is the current location,
+/// which differs on deep links under a path URL strategy.
+@JS('document.baseURI')
+external String get _documentBase;
+
+Uri _resolve(String url) => Uri.parse(_documentBase).resolve(url);
 
 extension type _MessageEvent._(JSObject _) implements JSObject {
   external JSAny? get data;
@@ -46,12 +55,13 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
 ///
 /// - [load]'s `modelPath` and `tokenizerPath` are **URLs**. They are read from
 ///   the origin private file system (OPFS) when stored there — directory
-///   `executorch-llm`, file name `Uri.encodeComponent` of the absolute URL
-///   (`Uri.base.resolve(path)`) — so an app can download them once and keep
-///   them across reloads, and fetched otherwise. A URL that fails (404, or
-///   403 from object stores) may be served split, as `<url>.parts.json`
-///   (`{"size": bytes, "parts": [names relative to it]}`), for static hosts
-///   that cap file size. A cross-origin URL must send CORS headers.
+///   `executorch-llm`, file name `Uri.encodeComponent` of the absolute URL,
+///   resolved against `document.baseURI` — so an app can download them once
+///   and keep them across reloads, and fetched otherwise. A URL that fails
+///   (404, or 403 from object stores) may be served split, as
+///   `<url>.parts.json` (`{"size": bytes, "parts": [names relative to it]}`),
+///   for static hosts that cap file size. A cross-origin URL must send CORS
+///   headers.
 /// - Only XNNPACK (CPU) exports with a KV cache run, on a single thread, so
 ///   expect a fraction of native speed.
 ///
@@ -93,8 +103,8 @@ class ExecuTorchLLM {
     try {
       await llm._request({
         'type': 'load',
-        'modelUrl': Uri.base.resolve(modelPath).toString(),
-        'tokenizerUrl': Uri.base.resolve(tokenizerPath).toString(),
+        'modelUrl': _resolve(modelPath).toString(),
+        'tokenizerUrl': _resolve(tokenizerPath).toString(),
       });
     } on ExecuTorchMemoryException {
       llm._terminate();
@@ -145,10 +155,19 @@ class ExecuTorchLLM {
         'A generation is already in progress on this runner',
       );
     }
+    final invalid = validateGenConfig(config);
+    if (invalid != null) {
+      return Stream.error(ExecuTorchValidationException(invalid));
+    }
     final id = _nextId++;
-    // Closed by _endGeneration when the worker reports done or an error.
+    // Closed by _endGeneration when the worker reports done or an error. A
+    // subscription can be cancelled after its generation ended and another
+    // began; leave that one alone.
     // ignore: close_sinks
-    final controller = StreamController<String>()..onCancel = stop;
+    final controller = StreamController<String>()
+      ..onCancel = () {
+        if (_generationId == id) stop();
+      };
     _generation = controller;
     _generationId = id;
     _worker.postMessage(
