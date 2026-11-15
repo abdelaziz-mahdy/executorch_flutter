@@ -13,6 +13,7 @@ import 'package:executorch_flutter/executorch_flutter.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 import '../llm/chat_format.dart';
@@ -299,7 +300,13 @@ class _LlmChatScreenState extends State<LlmChatScreen> {
       acceptedTypeGroups: [XTypeGroup(label: label, extensions: extensions)],
     );
     if (file != null) {
-      setState(() => controller.text = file.path);
+      // On web the path is a blob: URL with no file name in it. The runner
+      // picks some tokenizer kinds by name (tekken.json), so pass the picked
+      // name along as the URL fragment, which ExecuTorchLLM's worker reads.
+      final path = kIsWeb
+          ? '${file.path}#${Uri.encodeComponent(file.name)}'
+          : file.path;
+      setState(() => controller.text = path);
     }
   }
 

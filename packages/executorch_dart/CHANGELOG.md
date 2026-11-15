@@ -9,7 +9,8 @@
 
 - `ExecuTorchLLM.load` loads the model before it returns, on a helper
   isolate, so `isLoaded` is true once it has, and a model that can't run
-  fails at load with `ExecuTorchModelException` instead of on the first
+  fails at load (with `ExecuTorchModelException`, or
+  `ExecuTorchMemoryException` when memory runs out) instead of on the first
   `generate`.
 - `generate` checks `GenConfig` before any output: a temperature outside
   `[0, 1]` (the range the runner accepts, now stated in the docs), a

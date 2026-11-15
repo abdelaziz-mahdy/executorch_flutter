@@ -54,7 +54,7 @@ For ExecuTorch 1.6.0:
 
 | File | Backend | Size |
 |------|---------|-----:|
-| [`qwen3_0.6b_xnnpack.pte`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_xnnpack.pte) | XNNPACK (CPU, every native platform) | 470 MB |
+| [`qwen3_0.6b_xnnpack.pte`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_xnnpack.pte) | XNNPACK (CPU, every platform including web) | 470 MB |
 | [`qwen3_0.6b_mlx.pte`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_mlx.pte) | MLX (Apple-Silicon GPU, macOS) | 617 MB |
 | [`qwen3_0.6b_tokenizer.json`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/qwen3_0.6b_tokenizer.json) | both | 11 MB |
 | [`mlx.metallib`](https://github.com/abdelaziz-mahdy/executorch_flutter_models/releases/download/v1.6.0/mlx.metallib) | MLX only (§3) | 1.4 MB |
@@ -283,6 +283,10 @@ final llm = await ExecuTorchLLM.load(
   generates about 3 tokens/s on an M2 Pro.
 - **MLX**, separate `.ptd` weight files, and exports without a KV cache are
   not available on web.
+- **Tokenizer file names:** the runner recognises some tokenizers by file name
+  (Mistral's `tekken.json`). For a URL whose path has no such name, such as a
+  `blob:` URL from a file picker, put the name in the fragment:
+  `blob:...#tekken.json`.
 
 ---
 

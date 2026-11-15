@@ -8,6 +8,7 @@
  *
  *   {id, type: 'load', modelUrl, tokenizerUrl}  -> {id, type: 'ok'} | error
  *   {id, type: 'generate', prompt, config}      -> {id, type: 'piece', piece}*,
+ *     (prompt: the UTF-8 bytes, as a Uint8Array)
  *                                                  then {id, type: 'done'} | error
  *   {type: 'stop'}                              -> ends the current generation
  *   {id, type: 'reset'}                         -> {id, type: 'ok'}, after the
@@ -37,11 +38,15 @@
 
 const STORE_DIR = 'executorch-llm';
 // The tokenizer goes into the Wasm file system under its own file name:
-// upstream picks some tokenizer kinds by name (Mistral's tekken.json).
+// upstream picks some tokenizer kinds by name (Mistral's tekken.json). A URL
+// fragment names the file when the path can't (blob: URLs, ?id= downloads).
 function tokenizerPath(url) {
   let name = '';
   try {
-    name = decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
+    const parsed = new URL(url);
+    name = decodeURIComponent(
+      parsed.hash.length > 1 ? parsed.hash.slice(1) : parsed.pathname.split('/').pop() || '',
+    );
   } catch (_) {
     name = '';
   }
@@ -70,7 +75,9 @@ function onStderr(line) {
   console.debug(line);
 }
 function withRuntimeErrors(message) {
-  const lines = stderrTail.filter((l) => /^E |error|failed|unsupported/i.test(l));
+  // ExecuTorch's own error lines ("E 00:00:01.234 executorch:...") and
+  // XNNPACK's; tokenizer libraries also print harmless "error" lines.
+  const lines = stderrTail.filter((l) => /^E \d\d:\d\d:\d\d|^Error in XNNPACK/.test(l));
   return lines.length ? `${message}\n${lines.slice(-8).join('\n')}` : message;
 }
 
@@ -286,8 +293,8 @@ function generate({ id, prompt, config }) {
     if (text) post({ id, type: 'piece', piece: text });
   };
   // Echo where upstream does: after the checks, before prefill (so it also
-  // shows when prefill fails), straight from the caller's string.
-  if (config.echo) emit(prompt);
+  // shows when prefill fails). Decoded like a piece, so it matches native.
+  if (config.echo) emit(new TextDecoder('utf-8', { ignoreBOM: true }).decode(prompt));
 
   const first = runner.prefill();
   if (first.error) throw new WorkerError(first.error, first.kind);

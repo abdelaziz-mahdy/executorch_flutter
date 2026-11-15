@@ -63,7 +63,9 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
 ///   `<url>.parts.json` (`{"size": bytes, "parts": [names relative to it]}`),
 ///   for static hosts that cap file size. A cross-origin URL must send CORS
 ///   headers. A stored file is used as is: store only complete, verified
-///   files, and delete one when the file at its URL changes.
+///   files, and delete one when the file at its URL changes. A tokenizer
+///   URL's fragment, if any, names the file (`blob:...#tekken.json`): the
+///   runner picks some tokenizer kinds by file name.
 /// - Only XNNPACK (CPU) exports with a KV cache run, on a single thread, so
 ///   expect a fraction of native speed.
 ///
@@ -136,7 +138,8 @@ class ExecuTorchLLM {
       modelUrl = _resolve(modelPath).toString();
       tokenizerUrl = _resolve(tokenizerPath).toString();
     } on FormatException catch (e) {
-      throw ExecuTorchValidationException('Not a valid URL: ${e.message}');
+      // Any path the runner can't open is a model error natively.
+      throw ExecuTorchModelException('Not a valid URL: ${e.message}');
     }
     final ExecuTorchLLM llm;
     try {
@@ -224,9 +227,11 @@ class ExecuTorchLLM {
       {
         'id': id,
         'type': 'generate',
-        // As native's UTF-8 conversion does: a lone UTF-16 surrogate becomes
-        // U+FFFD. Emscripten's conversion would corrupt or cut the prompt.
-        'prompt': utf8.decode(utf8.encode(prompt)),
+        // The UTF-8 bytes native sends: utf8.encode turns a lone UTF-16
+        // surrogate into U+FFFD and keeps a BOM. (Emscripten's string
+        // conversion would corrupt such a prompt; decoding back would drop
+        // the BOM.)
+        'prompt': utf8.encode(prompt),
         'config': {
           'maxNewTokens': config.maxNewTokens,
           'seqLen': config.seqLen,
